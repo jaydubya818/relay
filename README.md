@@ -91,5 +91,6 @@ Dashboard sessions and agent credentials are separate. All dashboard mutations e
 - [MCP guide](docs/mcp.md)
 - [Security model](docs/security.md)
 - [PostgreSQL development and migrations](docs/database.md)
+- [Connector operations](docs/connectors.md)
 - [ADR-015: V1 execution providers](docs/adr/ADR-015-relay-v1-execution-providers.md)
 - [Implementation plan and audit](docs/implementation-plan.md)

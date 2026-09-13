@@ -20,6 +20,7 @@
     "test:auth": "vitest run tests/auth",
     "test:database": "vitest run tests/database",
     "test:mcp": "vitest run tests/mcp",
+    "test:oauth": "vitest run tests/oauth",
     "test:security": "vitest run tests/security",
     "test:performance": "vitest run tests/performance",
     "test:e2e": "playwright test",

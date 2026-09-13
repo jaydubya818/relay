@@ -132,6 +132,19 @@ export const connectionCredentials = pgTable("connection_credentials", {
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 });
 
+export const oauthStates = pgTable("oauth_states", {
+  id: text("id").primaryKey(),
+  stateHash: text("state_hash").notNull(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(),
+  encryptedCodeVerifier: text("encrypted_code_verifier").notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("oauth_states_hash_idx").on(table.stateHash), index("oauth_states_expiry_idx").on(table.provider, table.expiresAt)]);
+
 export const agentSessions = pgTable("agent_sessions", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),

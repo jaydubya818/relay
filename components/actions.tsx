@@ -155,7 +155,7 @@ export function ForgetMemoryButton({ id }: { id: string }) {
   }}>{busy ? "Forgetting…" : "Forget"}</button>;
 }
 
-export function GitHubConnectionManager({ connected }: { connected: boolean }) {
+export function GitHubConnectionManager({ connected, oauthConfigured }: { connected: boolean; oauthConfigured: boolean }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -178,8 +178,13 @@ export function GitHubConnectionManager({ connected }: { connected: boolean }) {
   }
   return (
     <div className="stack">
+      {oauthConfigured
+        ? <a className="button" href="/api/connections/github/oauth/start">{connected ? "Reconnect with GitHub" : "Connect with GitHub"}</a>
+        : <div className="notice">GitHub OAuth is not configured for this deployment.</div>}
+      <div className="divider" />
+      <p className="subtle"><strong>Advanced development option</strong></p>
       <form className="form-grid" onSubmit={connect}>
-        <div className="field full"><label htmlFor="github-token">GitHub personal access token</label><input id="github-token" name="token" type="password" minLength={20} placeholder={connected ? "Enter a new token to reconnect" : "github_pat_…"} required /></div>
+        <div className="field full"><label htmlFor="github-token">Fine-grained personal access token</label><input id="github-token" name="token" type="password" minLength={20} placeholder={connected ? "Enter a new token to replace the connection" : "github_pat_…"} required /></div>
         <div className="field full"><div className="inline"><button className="button" disabled={busy}>{connected ? "Reconnect" : "Connect GitHub"}</button>{connected && <><button type="button" className="button secondary" onClick={() => action("POST")}>Test connection</button><button type="button" className="button danger" onClick={() => action("DELETE")}>Disconnect</button></>}</div></div>
       </form>
       {message && <div className={`notice ${message.includes("failed") ? "error" : ""}`}>{message}</div>}

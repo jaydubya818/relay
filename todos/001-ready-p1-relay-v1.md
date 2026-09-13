@@ -87,3 +87,15 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 **Learnings:**
 - Open production registration remains opt-in through `RELAY_ALLOW_SIGNUP`; local development registration remains available.
 - Password reset, MFA, and member invitations remain known limitations and are not being hidden behind placeholder UX.
+
+### 2026-09-13 — Phase 3 GitHub OAuth
+
+**By:** Codex
+
+**Actions:**
+- Added account/user-bound one-time OAuth state, ten-minute expiry, S256 PKCE, encrypted verifier storage, token exchange, token validation, encrypted access/refresh storage, refresh handling, reconnect, and disconnect.
+- Made OAuth the primary Connections UI action while retaining PAT entry as an explicitly labeled development fallback.
+- Added OAuth replay, cross-account callback, scope visibility, and encrypted-token tests.
+
+**Learnings:**
+- Live GitHub OAuth qualification is blocked until `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` identify a registered app with the Relay callback URL. The existing `GITHUB_PAT` cannot qualify the OAuth redirect flow.
