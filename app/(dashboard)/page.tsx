@@ -10,7 +10,7 @@ export default async function OverviewPage() {
   const [overview, activity, sandboxHealth, browserHealth] = await Promise.all([getOverview(user.accountId), listActivity(user.accountId, { limit: 6 }), sandboxProvider().health(), browserProvider().health()]);
   const metrics = [
     ["Agents", overview.counts.agents, "Durable identities"],
-    ["Operations / 24h", overview.counts.operations, "Capability calls"],
+    ["Successes / 24h", overview.counts.operations, "Completed operations"],
     ["Connections", overview.counts.connections, "Account-owned"],
     ["Denials / 24h", overview.counts.denials, "Authority enforced"],
     ["Failures / 24h", overview.counts.failures, "Needs attention"],

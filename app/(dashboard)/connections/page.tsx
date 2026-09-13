@@ -2,11 +2,12 @@ import { GitHubConnectionManager, GoogleConnectionManager } from "@/components/a
 import { PageHeader, Status } from "@/components/page";
 import { requireUser } from "@/lib/auth";
 import { listConnections } from "@/lib/connections";
+import { listActivity } from "@/lib/activity";
 
 export default async function ConnectionsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
   const params = await searchParams;
-  const connections = await listConnections(user.accountId);
+  const [connections, githubActivity, googleActivity] = await Promise.all([listConnections(user.accountId), listActivity(user.accountId, { provider: "GITHUB", limit: 5 }), listActivity(user.accountId, { provider: "GOOGLE", limit: 5 })]);
   const github = connections.find((connection) => connection.provider === "GITHUB");
   const google = connections.find((connection) => connection.provider === "GOOGLE");
   return (
@@ -34,6 +35,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
         </div>
         <div className="card"><h2>{google?.status === "CONNECTED" ? "Manage connection" : "Connect Google Workspace"}</h2><p className="subtle">OAuth credentials remain owned by the Account. Agents receive only explicit Relay grants.</p>{params.google === "connected" && <div className="notice">Google Workspace connected successfully.</div>}{params.google === "failed" && <div className="notice error">Google authorization could not be completed.</div>}{params.google === "cancelled" && <div className="notice">Google authorization was cancelled.</div>}<div className="divider" /><GoogleConnectionManager connected={google?.status === "CONNECTED"} oauthConfigured={Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)} /></div>
       </section>
+      <section className="card flush section-gap"><div style={{ padding: "18px 20px 5px" }}><h2>Recent connection activity</h2></div><table><thead><tr><th>Provider</th><th>Agent</th><th>Capability</th><th>Status</th><th>Time</th></tr></thead><tbody>{[...githubActivity, ...googleActivity].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8).map((item) => <tr key={item.id}><td>{item.provider}</td><td>{item.agentName ?? "System"}</td><td className="mono">{item.capability}</td><td><Status value={item.status} /></td><td className="subtle">{new Date(item.createdAt).toLocaleString()}</td></tr>)}</tbody></table>{!githubActivity.length && !googleActivity.length && <div className="empty">Connection-backed capability calls will appear here.</div>}</section>
     </>
   );
 }

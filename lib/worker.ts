@@ -12,6 +12,5 @@ export async function runMaintenanceCycle() {
 export function startMaintenanceWorker(intervalMs = Number(process.env.RELAY_WORKER_INTERVAL_MS ?? 30_000)) {
   let stopped = false;
   const timer = setInterval(() => { if (!stopped) void runMaintenanceCycle().catch((error) => console.error(JSON.stringify({ level: "error", event: "maintenance_failed", errorClass: error instanceof Error ? error.name : "UnknownError" }))); }, intervalMs);
-  timer.unref();
   return { stop() { stopped = true; clearInterval(timer); } };
 }

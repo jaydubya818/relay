@@ -8,6 +8,6 @@ export async function listEvents(accountId: string, limit = 100) {
 }
 
 export async function listAccountInbox(accountId: string, limit = 100) {
-  return db().select({ id: agentInbox.id, agentId: agentInbox.agentId, agentName: agents.name, eventId: agentInbox.eventId, status: agentInbox.status, priority: agentInbox.priority, createdAt: agentInbox.createdAt, completedAt: agentInbox.completedAt, type: events.type, subjectId: events.subjectId })
+  return db().select({ id: agentInbox.id, agentId: agentInbox.agentId, agentName: agents.name, eventId: agentInbox.eventId, status: agentInbox.status, priority: agentInbox.priority, createdAt: agentInbox.createdAt, completedAt: agentInbox.completedAt, type: events.type, source: events.source, subjectId: events.subjectId })
     .from(agentInbox).innerJoin(agents, eq(agents.id, agentInbox.agentId)).innerJoin(events, eq(events.id, agentInbox.eventId)).where(eq(agentInbox.accountId, accountId)).orderBy(desc(agentInbox.createdAt)).limit(limit);
 }

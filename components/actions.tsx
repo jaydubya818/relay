@@ -216,6 +216,12 @@ export function SandboxActions({ agents, sandboxId, ownerAgentId }: { agents: Ar
   return <form className="inline" onSubmit={async (event) => { event.preventDefault(); setBusy(true); setMessage(""); const agentId = new FormData(event.currentTarget).get("agentId"); try { await requestJson("/api/sandboxes", { method: "POST", body: JSON.stringify({ agentId }) }); setMessage("Sandbox created."); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Create failed."); } finally { setBusy(false); } }}><select name="agentId" aria-label="Owner Agent" required>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select><button className="button" disabled={busy || !agents.length}>{busy ? "Creating…" : "Create sandbox"}</button>{message && <span className="subtle">{message}</span>}</form>;
 }
 
+export function SandboxShareForm({ sandboxId, agents }: { sandboxId: string; agents: Array<{ id: string; name: string }> }) {
+  const router = useRouter(); const [busy, setBusy] = useState(false); const [message, setMessage] = useState("");
+  if (!agents.length) return <span className="subtle">Private</span>;
+  return <form className="inline" onSubmit={async (event) => { event.preventDefault(); setBusy(true); setMessage(""); const agentId = new FormData(event.currentTarget).get("agentId"); try { await requestJson("/api/sandboxes", { method: "PATCH", body: JSON.stringify({ sandboxId, agentId }) }); setMessage("Shared"); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Share failed."); } finally { setBusy(false); } }}><select name="agentId" aria-label="Share sandbox with Agent" required>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select><button className="button secondary small" disabled={busy}>{busy ? "Sharing…" : "Share"}</button>{message && <span className="subtle">{message}</span>}</form>;
+}
+
 export function BrowserCloseButton({ browserSessionId, agentId }: { browserSessionId: string; agentId: string }) {
   const router = useRouter(); const [busy, setBusy] = useState(false);
   return <button className="button danger small" disabled={busy} onClick={async () => { setBusy(true); try { await requestJson("/api/browsers", { method: "DELETE", body: JSON.stringify({ browserSessionId, agentId }) }); router.refresh(); } finally { setBusy(false); } }}>{busy ? "Closing…" : "Close"}</button>;

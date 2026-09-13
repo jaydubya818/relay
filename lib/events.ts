@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { agentInbox, agentWakeRequests, agents, events } from "@/lib/db/schema";
+import { activities, agentInbox, agentWakeRequests, agents, events } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 
@@ -37,6 +37,12 @@ export async function ingestEvent(input: EventEnvelope, route: { agentIds: strin
       const [existing] = await transaction.select().from(events).where(and(eq(events.accountId, input.accountId), eq(events.source, input.source), eq(events.providerDeliveryId, input.deliveryId))).limit(1);
       return { event: existing, duplicate: true, routed: 0 };
     }
+    await transaction.insert(activities).values({
+      id: id("act"), accountId: input.accountId, sessionId: `event:${input.source}:${input.deliveryId}`,
+      capability: "event.ingest", provider: input.source.toUpperCase(), action: "event.ingest",
+      status: "SUCCESS", durationMs: 0, resourceType: "event", resourceId: event.id,
+      createdAt: timestamp, metadata: { type: input.type, routedAgents: new Set(route.agentIds).size },
+    });
     for (const agentId of [...new Set(route.agentIds)]) {
       await transaction.insert(agentInbox).values({ id: id("inb"), accountId: input.accountId, agentId, eventId: event.id, priority: route.priority ?? 0, createdAt: timestamp });
       if (route.wake) await transaction.insert(agentWakeRequests).values({ id: id("wak"), accountId: input.accountId, agentId, eventId: event.id, reason: route.reason ?? input.type, preferredRuntime: route.preferredRuntime, createdAt: timestamp, updatedAt: timestamp });
