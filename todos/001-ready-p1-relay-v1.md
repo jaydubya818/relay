@@ -99,3 +99,16 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 
 **Learnings:**
 - Live GitHub OAuth qualification is blocked until `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` identify a registered app with the Relay callback URL. The existing `GITHUB_PAT` cannot qualify the OAuth redirect flow.
+
+### 2026-09-13 — Phase 4 governed sandbox capability
+
+**By:** Codex
+
+**Actions:**
+- Added the provider-neutral `SandboxProvider` contract and isolated the Docker CLI implementation behind the provider registry.
+- Added private Agent ownership, explicit sharing, account isolation, TTL cleanup, CPU/memory/process constraints, bounded output, command timeout, workspace file IO, network policy, MCP projection, and provider-independent Activity.
+- Qualified the contract with a fake provider and a live Docker container, including binary IO, network isolation, absence of Relay environment variables, timeout, and destroy cleanup.
+
+**Learnings:**
+- Alpine BusyBox reports command timeout with exit 143; the adapter normalizes provider timeout semantics into Relay's `timedOut` result and BLOCKED Activity state.
+- Docker socket access remains an operator-level deployment responsibility and is never exposed through Relay's capability contract.

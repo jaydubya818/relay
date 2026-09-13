@@ -5,7 +5,8 @@ import { githubProvider } from "@/lib/connectors/github";
 import { githubSecret } from "@/lib/connections";
 import { RelayError } from "@/lib/errors";
 import { addMemory, getMemory, listMemories } from "@/lib/memory";
-import type { AgentPrincipal, CapabilityName, MemoryScope, MemoryType } from "@/lib/types";
+import { createSandbox, destroySandbox, execSandbox, listSandboxFiles, readSandboxFile, writeSandboxFile } from "@/lib/sandboxes";
+import type { ActivityStatus, AgentPrincipal, CapabilityName, MemoryScope, MemoryType } from "@/lib/types";
 
 export async function executeCapability(input: {
   principal: AgentPrincipal;
@@ -16,7 +17,7 @@ export async function executeCapability(input: {
   arguments: Record<string, unknown>;
 }) {
   const started = performance.now();
-  let status: "SUCCESS" | "DENIED" | "FAILED" = "SUCCESS";
+  let status: ActivityStatus = "SUCCESS";
   try {
     await authorize(input.principal, input.capability);
     let result: unknown;
@@ -47,6 +48,26 @@ export async function executeCapability(input: {
           input.action === "github.repo.list" ? "repo.list" : "repo.get",
           input.arguments,
         );
+        break;
+      case "sandbox.create":
+        result = await createSandbox(input.principal, input.sessionId, input.arguments);
+        break;
+      case "sandbox.exec":
+        result = await execSandbox(input.principal, String(input.arguments.sandboxId ?? ""), String(input.arguments.command ?? ""));
+        if ((result as { timedOut?: boolean }).timedOut) status = "BLOCKED";
+        else if ((result as { exitCode?: number }).exitCode !== 0) status = "FAILED";
+        break;
+      case "sandbox.file.read":
+        result = await readSandboxFile(input.principal, String(input.arguments.sandboxId ?? ""), String(input.arguments.path ?? ""));
+        break;
+      case "sandbox.file.write":
+        result = await writeSandboxFile(input.principal, String(input.arguments.sandboxId ?? ""), String(input.arguments.path ?? ""), String(input.arguments.content ?? ""));
+        break;
+      case "sandbox.file.list":
+        result = await listSandboxFiles(input.principal, String(input.arguments.sandboxId ?? ""), String(input.arguments.path ?? ""));
+        break;
+      case "sandbox.destroy":
+        result = await destroySandbox(input.principal, String(input.arguments.sandboxId ?? ""));
         break;
       default:
         throw new RelayError("INVALID_INPUT", "Unknown capability action.", input.capability);

@@ -22,6 +22,7 @@
     "test:mcp": "vitest run tests/mcp",
     "test:oauth": "vitest run tests/oauth",
     "test:security": "vitest run tests/security",
+    "test:sandbox": "vitest run tests/sandbox",
     "test:performance": "vitest run tests/performance",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
