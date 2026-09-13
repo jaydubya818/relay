@@ -13,6 +13,7 @@
     "build": "next build",
     "start": "next start",
     "worker": "tsx scripts/worker.ts",
+    "v2:frontier:check": "tsx scripts/verify-v2-frontier.ts",
     "qualify:google": "tsx scripts/qualify-google.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
