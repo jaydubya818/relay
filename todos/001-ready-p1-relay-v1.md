@@ -37,9 +37,9 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 
 - [x] PostgreSQL and Drizzle replace SQLite production persistence with migrations and isolated tests.
 - [x] Multiple human users and accounts are isolated with durable secure sessions.
-- [ ] GitHub OAuth is primary while optional PAT development setup remains contained.
-- [ ] Sandbox and browser capabilities use provider-neutral contracts with ownership, grants, TTL, cleanup, and Activity.
-- [ ] Durable events route idempotently into Agent inboxes.
+- [x] GitHub OAuth is primary while optional PAT development setup remains contained.
+- [x] Sandbox and browser capabilities use provider-neutral contracts with ownership, grants, TTL, cleanup, and Activity.
+- [x] Durable events route idempotently into Agent inboxes.
 - [ ] Google email/calendar reads are account-owned and grant-projected.
 - [ ] MCP exposes only authorized V1 tools.
 - [ ] Security, load, E2E, migration, health, and provider contract tests pass.
@@ -112,3 +112,17 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 **Learnings:**
 - Alpine BusyBox reports command timeout with exit 143; the adapter normalizes provider timeout semantics into Relay's `timedOut` result and BLOCKED Activity state.
 - Docker socket access remains an operator-level deployment responsibility and is never exposed through Relay's capability contract.
+
+### 2026-09-13 — Phases 5–11 capability-plane foundation
+
+**By:** Codex
+
+**Actions:**
+- Added the provider-neutral `BrowserProvider` contract and isolated Playwright adapter with one context per session, ownership/grants, TTL cleanup, bounded extraction, screenshots, and public-network enforcement.
+- Qualified real Chromium context isolation and private-address blocking.
+- Added idempotent durable event ingestion, transactional inbox routing, queued wake requests, scoped inbox MCP tools, and registry-backed capability search.
+- Added durable Agent sessions and correlated provider-independent Activity with session and governed resource IDs.
+- Added migration-aware readiness, separate provider health, and provider-neutral operations/deployment guidance.
+
+**Learnings:**
+- Live Docker and Playwright adapters are qualified locally. GitHub OAuth still needs a registered OAuth app; Google read capabilities and the remaining V1 UI/golden-path work are not yet complete.
