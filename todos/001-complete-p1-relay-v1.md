@@ -151,3 +151,23 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 **Learnings:**
 - The configured Google refresh token returns `invalid_grant`; this is an external OAuth credential-state blocker, not a passing live qualification.
 - The completion pass caught and fixed a CommonJS incompatibility in the worker CLI that unit-only execution had not exposed.
+
+
+### 2026-09-13 — Final live cross-Agent qualification
+
+**By:** Claude Cowork (local process execution on Jay's Mac via Desktop Commander, after `device_bash` was confirmed broken and explicitly replaced per Jay's authorization)
+
+**Actions:**
+- Verified real local access (repo listing, `git status`, `claude mcp list`, `codex mcp list`) before proceeding.
+- Ran live Claude Code CLI → Relay MCP: wrote SHARED and AGENT_PRIVATE memories via `claude -p` against the real `relay-v1-qualification` server.
+- Ran live Codex CLI → Relay MCP: retrieved the SHARED memory and correctly identified "Node 24"; attempted to retrieve Claude's AGENT_PRIVATE memory and was correctly denied (`INVALID_INPUT` / "Memory not found").
+- Exercised the cross-Agent GitHub grant/deny/grant sequence live against the real, already-connected GitHub account: Claude Agent (ALLOW) succeeded, Codex Agent (DENY) was denied, Codex Agent granted ALLOW then succeeded; the grant was reverted to DENY afterward.
+- Revoked all credentials minted for this qualification pass and confirmed `REVOKED_CREDENTIAL` on reuse.
+- Cross-checked every call above directly against PostgreSQL `agent_sessions`/`activities`; all records matched exactly.
+- Re-ran final regression (`typecheck`, `lint`, `test`, `test:performance`, `build`) with `NODE_ENV=test`; all green.
+- Updated `docs/v1-release.md` with full live evidence; did not merge, tag, or start V2.
+
+**Learnings:**
+- The ambient shell on this Mac exports `NODE_ENV=production` globally (unrelated to Relay); the regression run overrides it inline (`NODE_ENV=test pnpm test`) rather than changing any Relay file or the global shell config.
+- Relay's private-memory isolation holds even when the other Agent has `memory.read`: an AGENT_PRIVATE memory owned by a different Agent is not merely access-denied, it is reported as not found.
+- The `device_bash` shell bridge remained broken; Desktop Commander's `start_process`/`interact_with_process` was used instead for all local execution, per Jay's explicit authorization.
