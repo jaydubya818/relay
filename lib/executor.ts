@@ -5,6 +5,8 @@ import { githubProvider } from "@/lib/connectors/github";
 import { githubSecret } from "@/lib/connections";
 import { RelayError } from "@/lib/errors";
 import { addMemory, getMemory, listMemories } from "@/lib/memory";
+import { searchCapabilities } from "@/lib/capabilities";
+import { acknowledgeInboxItem, getInboxItem, listInbox } from "@/lib/inbox";
 import { createSandbox, destroySandbox, execSandbox, listSandboxFiles, readSandboxFile, writeSandboxFile } from "@/lib/sandboxes";
 import { clickBrowser, closeBrowserSession, createBrowserSession, extractBrowser, navigateBrowser, screenshotBrowser, typeBrowser } from "@/lib/browsers";
 import type { ActivityStatus, AgentPrincipal, CapabilityName, MemoryScope, MemoryType } from "@/lib/types";
@@ -90,6 +92,18 @@ export async function executeCapability(input: {
         break;
       case "browser.close":
         result = await closeBrowserSession(input.principal, String(input.arguments.browserSessionId ?? ""));
+        break;
+      case "agent.inbox.list":
+        result = await listInbox(input.principal, input.arguments.status as "UNREAD" | "CLAIMED" | "PROCESSED" | "FAILED" | undefined, Number(input.arguments.limit ?? 50));
+        break;
+      case "agent.inbox.get":
+        result = await getInboxItem(input.principal, String(input.arguments.inboxItemId ?? ""));
+        break;
+      case "agent.inbox.ack":
+        result = await acknowledgeInboxItem(input.principal, String(input.arguments.inboxItemId ?? ""), (input.arguments.outcome as "PROCESSED" | "FAILED") ?? "PROCESSED");
+        break;
+      case "capabilities.search":
+        result = await searchCapabilities(String(input.arguments.query ?? ""), input.arguments.domain ? String(input.arguments.domain) : undefined, Number(input.arguments.limit ?? 25));
         break;
       default:
         throw new RelayError("INVALID_INPUT", "Unknown capability action.", input.capability);

@@ -11,7 +11,9 @@ describe("PostgreSQL migrations", () => {
   it("creates the V1 schema and canonical capability registry", async () => {
     await freshDatabase();
     const [result] = await db().select({ value: count() }).from(capabilities);
-    expect(result.value).toBe(20);
+    expect(result.value).toBe(24);
+    const inbox = await db().select({ name: capabilities.name }).from(capabilities).where(eq(capabilities.domain, "AGENT_INBOX"));
+    expect(inbox.map((entry) => entry.name)).toEqual(expect.arrayContaining(["agent.inbox.list", "agent.inbox.get", "agent.inbox.ack"]));
   });
 
   it("rolls back authority-sensitive writes atomically", async () => {

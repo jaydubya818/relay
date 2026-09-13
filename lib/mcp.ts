@@ -114,6 +114,26 @@ const toolDefinitions = {
     description: "Close an authorized Relay browser session.",
     inputSchema: { type: "object", required: ["browserSessionId"], properties: { browserSessionId: { type: "string" } } },
   },
+  relay_agent_inbox_list: {
+    capability: "agent.inbox.list", action: "agent.inbox.list", provider: "EVENTS",
+    description: "List durable inbox items routed to this Agent.",
+    inputSchema: { type: "object", properties: { status: { type: "string", enum: ["UNREAD", "CLAIMED", "PROCESSED", "FAILED"] }, limit: { type: "number" } } },
+  },
+  relay_agent_inbox_get: {
+    capability: "agent.inbox.get", action: "agent.inbox.get", provider: "EVENTS",
+    description: "Read one durable inbox item routed to this Agent.",
+    inputSchema: { type: "object", required: ["inboxItemId"], properties: { inboxItemId: { type: "string" } } },
+  },
+  relay_agent_inbox_ack: {
+    capability: "agent.inbox.ack", action: "agent.inbox.ack", provider: "EVENTS",
+    description: "Acknowledge an Agent inbox item as processed or failed.",
+    inputSchema: { type: "object", required: ["inboxItemId"], properties: { inboxItemId: { type: "string" }, outcome: { type: "string", enum: ["PROCESSED", "FAILED"] } } },
+  },
+  relay_capabilities_search: {
+    capability: "capabilities.search", action: "capabilities.search",
+    description: "Search active Relay capabilities by name, description, or domain.",
+    inputSchema: { type: "object", properties: { query: { type: "string" }, domain: { type: "string" }, limit: { type: "number" } } },
+  },
 } as const;
 
 export type RelayToolName = keyof typeof toolDefinitions;
@@ -155,6 +175,10 @@ const toolInputSchemas: Record<RelayToolName, z.ZodTypeAny> = {
   relay_browser_extract: z.object({ browserSessionId: z.string().min(1).max(100), selector: z.string().min(1).max(1_000).optional() }),
   relay_browser_screenshot: z.object({ browserSessionId: z.string().min(1).max(100) }),
   relay_browser_close: z.object({ browserSessionId: z.string().min(1).max(100) }),
+  relay_agent_inbox_list: z.object({ status: z.enum(["UNREAD", "CLAIMED", "PROCESSED", "FAILED"]).optional(), limit: z.number().int().min(1).max(100).default(50) }),
+  relay_agent_inbox_get: z.object({ inboxItemId: z.string().min(1).max(100) }),
+  relay_agent_inbox_ack: z.object({ inboxItemId: z.string().min(1).max(100), outcome: z.enum(["PROCESSED", "FAILED"]).default("PROCESSED") }),
+  relay_capabilities_search: z.object({ query: z.string().trim().max(200).default(""), domain: z.string().trim().max(100).optional(), limit: z.number().int().min(1).max(100).default(25) }),
 };
 
 export async function handleMcp(secret: string, request: McpRequest, requestId: string = randomUUID()) {

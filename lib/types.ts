@@ -16,6 +16,10 @@ export const CAPABILITIES = [
   "browser.extract",
   "browser.screenshot",
   "browser.close",
+  "agent.inbox.list",
+  "agent.inbox.get",
+  "agent.inbox.ack",
+  "capabilities.search",
 ] as const;
 
 export type CapabilityName = (typeof CAPABILITIES)[number];
