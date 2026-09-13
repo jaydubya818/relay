@@ -4,9 +4,10 @@ out/
 coverage/
 playwright-report/
 test-results/
+output/playwright/
 *.tsbuildinfo
 .env
 .env.local
 relay.db
 relay.db-journal
-
+.relay-e2e.db*

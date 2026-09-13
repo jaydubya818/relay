@@ -1,0 +1,45 @@
+{
+  "name": "relay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A universal capability plane for AI agents.",
+  "packageManager": "pnpm@9.0.0",
+  "engines": { "node": ">=22.5.0" },
+  "scripts": {
+    "dev": "next dev",
+    "dev:e2e": "pnpm db:seed && next dev --hostname 127.0.0.1 --port 3210",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --exclude 'tests/e2e/**' --exclude '**/*.performance.test.ts'",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:mcp": "vitest run tests/mcp",
+    "test:security": "vitest run tests/security",
+    "test:performance": "vitest run tests/performance",
+    "test:e2e": "playwright test",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "qualify": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:performance && pnpm build"
+  },
+  "dependencies": {
+    "next": "15.5.22",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.35.0",
+    "@playwright/test": "1.55.0",
+    "@types/node": "24.3.0",
+    "@types/react": "19.1.10",
+    "@types/react-dom": "19.1.7",
+    "eslint": "9.35.0",
+    "eslint-config-next": "15.5.22",
+    "tsx": "4.20.5",
+    "typescript": "5.9.2",
+    "typescript-eslint": "8.42.0",
+    "vitest": "3.2.4"
+  }
+}
