@@ -2,7 +2,8 @@ import { performance } from "node:perf_hooks";
 import { recordActivity } from "@/lib/activity";
 import { authorize } from "@/lib/authorization";
 import { githubProvider } from "@/lib/connectors/github";
-import { githubSecret } from "@/lib/connections";
+import { googleProvider } from "@/lib/connectors/google";
+import { githubSecret, googleSecret } from "@/lib/connections";
 import { RelayError } from "@/lib/errors";
 import { addMemory, getMemory, listMemories } from "@/lib/memory";
 import { searchCapabilities } from "@/lib/capabilities";
@@ -51,6 +52,13 @@ export async function executeCapability(input: {
           input.action === "github.repo.list" ? "repo.list" : "repo.get",
           input.arguments,
         );
+        break;
+      case "email.search":
+      case "email.read":
+      case "calendar.event.list":
+      case "calendar.event.read":
+      case "calendar.availability.read":
+        result = await googleProvider.execute(await googleSecret(input.principal.accountId, input.action), input.action, input.arguments);
         break;
       case "sandbox.create":
         result = await createSandbox(input.principal, input.sessionId, input.arguments);

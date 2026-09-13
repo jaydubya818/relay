@@ -46,6 +46,16 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 - [ ] Live qualification evidence is recorded where credentials and local providers permit.
 - [ ] Documentation and deployment configuration are complete.
 
+## Completion Pass
+
+- [ ] Google OAuth is account-owned, encrypted, refreshable, and revocable.
+- [ ] Gmail and Calendar read-only capabilities are grant-projected and audited.
+- [ ] Overview, Agent, Connections, Sandboxes, Browsers, Events, and Activity surfaces are complete.
+- [ ] Security, concurrency, idempotency, session-correlation, and final golden-path suites pass.
+- [ ] Browser E2E and route performance qualification pass.
+- [ ] Clean-database migrations, production start, readiness, MCP, cleanup, and worker shutdown pass.
+- [ ] Release documentation and explicit live-provider evidence/blockers are complete.
+
 ## Work Log
 
 ### 2026-09-12 — Baseline and architecture

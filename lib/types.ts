@@ -20,6 +20,11 @@ export const CAPABILITIES = [
   "agent.inbox.get",
   "agent.inbox.ack",
   "capabilities.search",
+  "email.search",
+  "email.read",
+  "calendar.event.list",
+  "calendar.event.read",
+  "calendar.availability.read",
 ] as const;
 
 export type CapabilityName = (typeof CAPABILITIES)[number];

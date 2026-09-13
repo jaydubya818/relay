@@ -135,6 +135,26 @@ const toolDefinitions = {
     description: "Search active Relay capabilities by name, description, or domain.",
     inputSchema: { type: "object", properties: { query: { type: "string" }, domain: { type: "string" }, limit: { type: "number" } } },
   },
+  relay_email_search: {
+    capability: "email.search", action: "email.search", provider: "GOOGLE", description: "Search email through the account-owned Google Workspace connection.",
+    inputSchema: { type: "object", required: ["query"], properties: { query: { type: "string" }, limit: { type: "number" } } },
+  },
+  relay_email_read: {
+    capability: "email.read", action: "email.read", provider: "GOOGLE", description: "Read one email through the account-owned Google Workspace connection.",
+    inputSchema: { type: "object", required: ["messageId"], properties: { messageId: { type: "string" } } },
+  },
+  relay_calendar_event_list: {
+    capability: "calendar.event.list", action: "calendar.event.list", provider: "GOOGLE", description: "List read-only calendar events.",
+    inputSchema: { type: "object", properties: { calendarId: { type: "string" }, timeMin: { type: "string" }, timeMax: { type: "string" }, query: { type: "string" }, limit: { type: "number" } } },
+  },
+  relay_calendar_event_read: {
+    capability: "calendar.event.read", action: "calendar.event.read", provider: "GOOGLE", description: "Read one calendar event.",
+    inputSchema: { type: "object", required: ["eventId"], properties: { calendarId: { type: "string" }, eventId: { type: "string" } } },
+  },
+  relay_calendar_availability_read: {
+    capability: "calendar.availability.read", action: "calendar.availability.read", provider: "GOOGLE", description: "Read calendar free/busy availability.",
+    inputSchema: { type: "object", required: ["timeMin", "timeMax"], properties: { calendarId: { type: "string" }, timeMin: { type: "string" }, timeMax: { type: "string" }, timeZone: { type: "string" } } },
+  },
 } as const;
 
 export type RelayToolName = keyof typeof toolDefinitions;
@@ -180,6 +200,11 @@ const toolInputSchemas: Record<RelayToolName, z.ZodTypeAny> = {
   relay_agent_inbox_get: z.object({ inboxItemId: z.string().min(1).max(100) }),
   relay_agent_inbox_ack: z.object({ inboxItemId: z.string().min(1).max(100), outcome: z.enum(["PROCESSED", "FAILED"]).default("PROCESSED") }),
   relay_capabilities_search: z.object({ query: z.string().trim().max(200).default(""), domain: z.string().trim().max(100).optional(), limit: z.number().int().min(1).max(100).default(25) }),
+  relay_email_search: z.object({ query: z.string().trim().min(1).max(1_000), limit: z.number().int().min(1).max(100).default(25) }),
+  relay_email_read: z.object({ messageId: z.string().trim().min(1).max(500) }),
+  relay_calendar_event_list: z.object({ calendarId: z.string().trim().min(1).max(500).default("primary"), timeMin: z.string().datetime().optional(), timeMax: z.string().datetime().optional(), query: z.string().trim().max(500).optional(), limit: z.number().int().min(1).max(100).default(50) }),
+  relay_calendar_event_read: z.object({ calendarId: z.string().trim().min(1).max(500).default("primary"), eventId: z.string().trim().min(1).max(1_000) }),
+  relay_calendar_availability_read: z.object({ calendarId: z.string().trim().min(1).max(500).default("primary"), timeMin: z.string().datetime(), timeMax: z.string().datetime(), timeZone: z.string().trim().max(100).optional() }).refine((value) => new Date(value.timeMin) < new Date(value.timeMax), "timeMin must precede timeMax"),
 };
 
 export async function handleMcp(secret: string, request: McpRequest, requestId: string = randomUUID()) {
