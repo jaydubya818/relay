@@ -10,4 +10,5 @@ output/playwright/
 .env.local
 relay.db
 relay.db-journal
+data/*.db-*
 .relay-e2e.db*
