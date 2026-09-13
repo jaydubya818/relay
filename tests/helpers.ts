@@ -24,7 +24,7 @@ export async function freshDatabase() {
   const accountId = id("acct");
   const timestamp = now();
   await db().insert(accounts).values({ id: accountId, name: "Test Account", createdAt: timestamp, updatedAt: timestamp });
-  await db().insert(users).values({ id: id("usr"), accountId, email: "operator@example.com", name: "Operator", passwordHash: hashPassword("correct-horse-battery-staple"), createdAt: timestamp });
+  await db().insert(users).values({ id: id("usr"), accountId, email: "operator@example.com", name: "Operator", role: "OWNER", passwordHash: hashPassword("correct-horse-battery-staple"), createdAt: timestamp });
   return { accountId };
 }
 

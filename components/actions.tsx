@@ -38,6 +38,32 @@ export function LoginForm({ defaultEmail }: { defaultEmail: string }) {
   );
 }
 
+export function RegisterForm() {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); setError("");
+    const data = new FormData(event.currentTarget);
+    try {
+      await requestJson("/api/auth/signup", { method: "POST", body: JSON.stringify({
+        accountName: data.get("accountName"), name: data.get("name"), email: data.get("email"), password: data.get("password"),
+      }) });
+      router.push("/"); router.refresh();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Account creation failed."); } finally { setBusy(false); }
+  }
+  return (
+    <form onSubmit={submit}>
+      <div className="field"><label htmlFor="account-name">Account name</label><input id="account-name" name="accountName" minLength={2} maxLength={100} autoComplete="organization" required /></div>
+      <div className="field"><label htmlFor="signup-name">Your name</label><input id="signup-name" name="name" minLength={2} maxLength={100} autoComplete="name" required /></div>
+      <div className="field"><label htmlFor="signup-email">Email</label><input id="signup-email" name="email" type="email" autoComplete="email" required /></div>
+      <div className="field"><label htmlFor="signup-password">Password</label><input id="signup-password" name="password" type="password" minLength={12} maxLength={200} autoComplete="new-password" required /><span className="subtle">At least 12 characters.</span></div>
+      {error && <div className="notice error">{error}</div>}
+      <button className="button" disabled={busy}>{busy ? "Creating account…" : "Create Relay account"}</button>
+    </form>
+  );
+}
+
 export function AgentCreateForm() {
   const router = useRouter();
   const [secret, setSecret] = useState("");

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { currentUser } from "@/lib/auth";
+import Link from "next/link";
+import { currentUser, signupEnabled } from "@/lib/auth";
 import { LoginForm } from "@/components/actions";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export default async function LoginPage() {
         <h1>Welcome to Relay</h1>
         <p className="subtle">Sign in to manage the shared capability plane for your AI agents.</p>
         <LoginForm defaultEmail={process.env.RELAY_ADMIN_EMAIL ?? "admin@relay.local"} />
+        {signupEnabled() && <p className="subtle">New to Relay? <Link href="/signup">Create an account</Link></p>}
       </section>
     </main>
   );

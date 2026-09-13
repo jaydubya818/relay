@@ -36,7 +36,7 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 ## Acceptance Criteria
 
 - [x] PostgreSQL and Drizzle replace SQLite production persistence with migrations and isolated tests.
-- [ ] Multiple human users and accounts are isolated with durable secure sessions.
+- [x] Multiple human users and accounts are isolated with durable secure sessions.
 - [ ] GitHub OAuth is primary while optional PAT development setup remains contained.
 - [ ] Sandbox and browser capabilities use provider-neutral contracts with ownership, grants, TTL, cleanup, and Activity.
 - [ ] Durable events route idempotently into Agent inboxes.
@@ -74,3 +74,16 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 **Learnings:**
 - PostgreSQL read-model p95 is 0.71 ms locally; warm browser route p95 remains below 49 ms.
 - The V0 SQLite data is development-only. Relay will not silently import it; an explicit offline migration remains required before any non-development V0 dataset is moved.
+
+### 2026-09-13 — Phase 2 production authentication
+
+**By:** Codex
+
+**Actions:**
+- Added explicit OWNER/MEMBER human roles without merging User and Agent identity.
+- Added guarded account registration, normalized email login, opaque hashed database sessions, secure production cookie naming, and server-side logout revocation.
+- Added authentication and browser tests for account isolation, duplicate registration, login, session persistence, and logout.
+
+**Learnings:**
+- Open production registration remains opt-in through `RELAY_ALLOW_SIGNUP`; local development registration remains available.
+- Password reset, MFA, and member invitations remain known limitations and are not being hidden behind placeholder UX.

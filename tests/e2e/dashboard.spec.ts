@@ -31,6 +31,21 @@ test("operator can sign in, inspect core pages, and create an agent credential",
   await expect(page.locator("body")).toContainText('"ok":true');
 });
 
+test("a new account owner can register and revoke the browser session on logout", async ({ page }) => {
+  await page.goto("/signup");
+  await page.getByLabel("Account name").fill("E2E Account");
+  await page.getByLabel("Your name").fill("E2E Owner");
+  await page.getByLabel("Email").fill("owner-e2e@example.com");
+  await page.getByLabel("Password").fill("e2e-password-long-enough");
+  await page.getByRole("button", { name: "Create Relay account" }).click();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByText("No agents yet. Create the first durable identity.")).toBeVisible();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome to Relay" })).toBeVisible();
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/login$/);
+});
+
 test("critical dashboard routes meet the warm local response target", async ({ page }) => {
   test.setTimeout(60_000);
   await signIn(page);

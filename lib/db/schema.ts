@@ -27,6 +27,7 @@ export const resourceStatus = pgEnum("resource_status", ["CREATING", "RUNNING", 
 export const inboxStatus = pgEnum("inbox_status", ["UNREAD", "CLAIMED", "PROCESSED", "FAILED"]);
 export const wakeStatus = pgEnum("wake_status", ["QUEUED", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED"]);
 export const sessionStatus = pgEnum("session_status", ["ACTIVE", "EXPIRED", "REVOKED"]);
+export const accountRole = pgEnum("account_role", ["OWNER", "MEMBER"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -39,6 +40,7 @@ export const users = pgTable("users", {
   accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
   name: text("name").notNull(),
+  role: accountRole("role").notNull().default("MEMBER"),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("users_email_idx").on(table.email), index("users_account_idx").on(table.accountId)]);

@@ -17,6 +17,7 @@
     "test": "vitest run --exclude 'tests/e2e/**' --exclude '**/*.performance.test.ts'",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
+    "test:auth": "vitest run tests/auth",
     "test:database": "vitest run tests/database",
     "test:mcp": "vitest run tests/mcp",
     "test:security": "vitest run tests/security",

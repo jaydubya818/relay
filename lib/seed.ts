@@ -14,7 +14,7 @@ export async function seedDemo() {
     const accountId = id("acct");
     const timestamp = now();
     await db().insert(accounts).values({ id: accountId, name: "Relay Demo", createdAt: timestamp, updatedAt: timestamp });
-    await db().insert(users).values({ id: id("usr"), accountId, email: email.toLowerCase(), name: "Relay Operator", passwordHash: hashPassword(password), createdAt: timestamp });
+    await db().insert(users).values({ id: id("usr"), accountId, email: email.toLowerCase(), name: "Relay Operator", role: "OWNER", passwordHash: hashPassword(password), createdAt: timestamp });
     account = { id: accountId };
   }
 

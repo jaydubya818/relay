@@ -2,9 +2,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { agentCredentials, agents, userSessions, users } from "@/lib/db/schema";
-import { hashSecret, verifyPassword } from "@/lib/crypto";
+import { db, withTransaction } from "@/lib/db";
+import { accounts, agentCredentials, agents, userSessions, users } from "@/lib/db/schema";
+import { hashPassword, hashSecret, verifyPassword } from "@/lib/crypto";
+import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import type { AgentPrincipal, SessionUser } from "@/lib/types";
 
@@ -12,9 +13,36 @@ const SESSION_COOKIE = "relay_session";
 const SESSION_SECONDS = 60 * 60 * 12;
 
 export async function authenticateDashboardUser(email: string, password: string) {
-  const [user] = await db().select({ id: users.id, accountId: users.accountId, email: users.email, name: users.name, passwordHash: users.passwordHash }).from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
+  const [user] = await db().select({ id: users.id, accountId: users.accountId, email: users.email, name: users.name, role: users.role, passwordHash: users.passwordHash }).from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
   if (!user || !verifyPassword(password, user.passwordHash)) return null;
-  return { id: user.id, accountId: user.accountId, email: user.email, name: user.name } satisfies SessionUser;
+  return { id: user.id, accountId: user.accountId, email: user.email, name: user.name, role: user.role } satisfies SessionUser;
+}
+
+export function signupEnabled() {
+  return process.env.RELAY_ALLOW_SIGNUP === "true" || process.env.NODE_ENV !== "production";
+}
+
+export async function createAccountOwner(input: { accountName: string; name: string; email: string; password: string }): Promise<SessionUser> {
+  if (!signupEnabled()) throw new RelayError("INVALID_INPUT", "Account registration is not enabled.", undefined, 403);
+  const email = input.email.trim().toLowerCase();
+  const accountName = input.accountName.trim();
+  const name = input.name.trim();
+  if (!accountName || !name || !email || input.password.length < 12) throw new RelayError("INVALID_INPUT", "Valid account, name, email, and a 12-character password are required.");
+  const existing = await db().select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  if (existing.length) throw new RelayError("INVALID_INPUT", "An account already exists for this email.", undefined, 409);
+  const accountId = id("acct");
+  const userId = id("usr");
+  const timestamp = now();
+  try {
+    await withTransaction(async (transaction) => {
+      await transaction.insert(accounts).values({ id: accountId, name: accountName, createdAt: timestamp, updatedAt: timestamp });
+      await transaction.insert(users).values({ id: userId, accountId, email, name, role: "OWNER", passwordHash: hashPassword(input.password), createdAt: timestamp });
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === "23505") throw new RelayError("INVALID_INPUT", "An account already exists for this email.", undefined, 409);
+    throw error;
+  }
+  return { id: userId, accountId, email, name, role: "OWNER" };
 }
 
 export async function createSession(user: SessionUser) {
@@ -27,10 +55,16 @@ export async function createSession(user: SessionUser) {
 
 export async function parseSession(value?: string): Promise<SessionUser | null> {
   if (!value) return null;
-  const [session] = await db().select({ sessionId: userSessions.id, id: users.id, accountId: users.accountId, email: users.email, name: users.name }).from(userSessions).innerJoin(users, and(eq(users.id, userSessions.userId), eq(users.accountId, userSessions.accountId))).where(and(eq(userSessions.tokenHash, hashSecret(value)), isNull(userSessions.revokedAt), gt(userSessions.expiresAt, now()))).limit(1);
+  const [session] = await db().select({ sessionId: userSessions.id, id: users.id, accountId: users.accountId, email: users.email, name: users.name, role: users.role }).from(userSessions).innerJoin(users, and(eq(users.id, userSessions.userId), eq(users.accountId, userSessions.accountId))).where(and(eq(userSessions.tokenHash, hashSecret(value)), isNull(userSessions.revokedAt), gt(userSessions.expiresAt, now()))).limit(1);
   if (!session) return null;
   await db().update(userSessions).set({ lastSeenAt: now() }).where(eq(userSessions.id, session.sessionId));
-  return { id: session.id, accountId: session.accountId, email: session.email, name: session.name };
+  return { id: session.id, accountId: session.accountId, email: session.email, name: session.name, role: session.role };
+}
+
+export async function revokeSession(value?: string) {
+  if (!value) return false;
+  const revoked = await db().update(userSessions).set({ revokedAt: now() }).where(and(eq(userSessions.tokenHash, hashSecret(value)), isNull(userSessions.revokedAt))).returning({ id: userSessions.id });
+  return revoked.length > 0;
 }
 
 export async function currentUser() {
@@ -45,7 +79,7 @@ export async function requireUser() {
 }
 
 export function sessionCookieName() {
-  return SESSION_COOKIE;
+  return process.env.NODE_ENV === "production" ? `__Host-${SESSION_COOKIE}` : SESSION_COOKIE;
 }
 
 export function sessionMaxAge() {

@@ -1,7 +1,9 @@
 import { authenticateDashboardUser, createSession, sessionCookieName, sessionMaxAge } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { verifySameOrigin } from "@/lib/api";
 
 export async function POST(request: Request) {
+  if (!verifySameOrigin(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
   const body = await request.json().catch(() => ({}));
   const user = await authenticateDashboardUser(String(body.email ?? ""), String(body.password ?? ""));
   if (!user) return Response.json({ error: "Email or password is incorrect." }, { status: 401 });

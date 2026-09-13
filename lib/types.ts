@@ -16,6 +16,7 @@ export type SessionUser = {
   accountId: string;
   email: string;
   name: string;
+  role: "OWNER" | "MEMBER";
 };
 
 export type AgentPrincipal = {
