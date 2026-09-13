@@ -1,12 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 
-test("operator can sign in, inspect core pages, and create an agent credential", async ({ page }) => {
+async function signIn(page: import("@playwright/test").Page) {
   await page.goto("/login");
   await page.getByLabel("Email").fill("admin@relay.local");
   await page.getByLabel("Password").fill("relay-e2e");
   await page.getByRole("button", { name: "Sign in to Relay" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+}
+
+test("operator can sign in, inspect core pages, and create an agent credential", async ({ page }) => {
+  await signIn(page);
   mkdirSync("output/playwright", { recursive: true });
   await page.screenshot({ path: "output/playwright/relay-overview.png", fullPage: true });
 
@@ -25,4 +29,24 @@ test("operator can sign in, inspect core pages, and create an agent credential",
   }
   await page.goto("/api/health");
   await expect(page.locator("body")).toContainText('"ok":true');
+});
+
+test("critical dashboard routes meet the warm local response target", async ({ page }) => {
+  test.setTimeout(60_000);
+  await signIn(page);
+  for (const route of ["/", "/agents", "/memory", "/connections", "/activity", "/developer"]) {
+    await page.goto(route);
+    const samples: number[] = [];
+    for (let sample = 0; sample < 10; sample += 1) {
+      const started = performance.now();
+      const response = await page.request.get(route);
+      samples.push(performance.now() - started);
+      expect(response.ok()).toBe(true);
+    }
+    samples.sort((a, b) => a - b);
+    const medianMs = samples[4];
+    const p95Ms = samples[9];
+    console.info(JSON.stringify({ benchmark: route, medianMs, p95Ms, samples: samples.length }));
+    expect(p95Ms).toBeLessThan(250);
+  }
 });
