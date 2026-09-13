@@ -111,7 +111,7 @@ export async function shareSandbox(accountId: string, sandboxId: string, agentId
 }
 
 export async function listSandboxes(accountId: string) {
-  return db().select({ id: sandboxes.id, ownerAgentId: sandboxes.ownerAgentId, ownerAgentName: agents.name, status: sandboxes.status, createdAt: sandboxes.createdAt, expiresAt: sandboxes.expiresAt, lastUsedAt: sandboxes.lastUsedAt, resourcePolicy: sandboxes.resourcePolicy }).from(sandboxes).innerJoin(agents, and(eq(agents.id, sandboxes.ownerAgentId), eq(agents.accountId, sandboxes.accountId))).where(eq(sandboxes.accountId, accountId)).orderBy(asc(sandboxes.createdAt));
+  return db().select({ id: sandboxes.id, ownerAgentId: sandboxes.ownerAgentId, ownerAgentName: agents.name, status: sandboxes.status, provider: sandboxes.provider, createdAt: sandboxes.createdAt, expiresAt: sandboxes.expiresAt, lastUsedAt: sandboxes.lastUsedAt, resourcePolicy: sandboxes.resourcePolicy }).from(sandboxes).innerJoin(agents, and(eq(agents.id, sandboxes.ownerAgentId), eq(agents.accountId, sandboxes.accountId))).where(eq(sandboxes.accountId, accountId)).orderBy(asc(sandboxes.createdAt));
 }
 
 export async function cleanupExpiredSandboxes() {

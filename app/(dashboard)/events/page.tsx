@@ -1,0 +1,9 @@
+import { InboxAcknowledgeButton } from "@/components/actions";
+import { PageHeader, Status } from "@/components/page";
+import { requireUser } from "@/lib/auth";
+import { listAccountInbox, listEvents } from "@/lib/event-queries";
+
+export default async function EventsPage() {
+  const user = await requireUser(); const [events, inbox] = await Promise.all([listEvents(user.accountId), listAccountInbox(user.accountId)]);
+  return <><PageHeader eyebrow="Event plane" title="Events & inbox" description="Durable normalized events and the Agent work items produced by routing." /><section className="stack"><div className="card flush table-wrap"><div className="section-pad"><h2>Recent events</h2></div><table><thead><tr><th>Type</th><th>Source</th><th>Subject</th><th>Occurred</th><th>Routed</th></tr></thead><tbody>{events.map((event) => <tr key={event.id}><td className="mono">{event.type}</td><td>{event.source}</td><td>{event.subjectType}: {event.subjectId}</td><td className="subtle">{new Date(event.occurredAt).toLocaleString()}</td><td>{event.routed}</td></tr>)}</tbody></table>{!events.length && <div className="empty">No events have been ingested.</div>}</div><div className="card flush table-wrap"><div className="section-pad"><h2>Agent inbox</h2></div><table><thead><tr><th>Agent</th><th>Event</th><th>Subject</th><th>Priority</th><th>Status</th><th>Created</th><th /></tr></thead><tbody>{inbox.map((item) => <tr key={item.id}><td>{item.agentName}</td><td className="mono">{item.type}</td><td>{item.subjectId}</td><td>{item.priority}</td><td><Status value={item.status} /></td><td className="subtle">{new Date(item.createdAt).toLocaleString()}</td><td>{["UNREAD", "CLAIMED"].includes(item.status) && <InboxAcknowledgeButton inboxItemId={item.id} agentId={item.agentId} />}</td></tr>)}</tbody></table>{!inbox.length && <div className="empty">No Agent inbox items.</div>}</div></section></>;
+}

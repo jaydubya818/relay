@@ -1,0 +1,7 @@
+import { z } from "zod";
+import { errorResponse, requireApiUser, verifySameOrigin } from "@/lib/api";
+import { dashboardAgent } from "@/lib/dashboard-agent";
+import { executeCapability } from "@/lib/executor";
+
+export async function POST(request: Request) { try { if (!verifySameOrigin(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 }); const user = await requireApiUser(); const input = z.object({ agentId: z.string().min(1), ttlSeconds: z.number().int().min(60).max(86400).optional() }).parse(await request.json()); const principal = await dashboardAgent(user, input.agentId); return Response.json(await executeCapability({ principal, capability: "sandbox.create", action: "sandbox.create", provider: "SANDBOX", sessionId: `dashboard:${user.id}`, arguments: input })); } catch (error) { return errorResponse(error); } }
+export async function DELETE(request: Request) { try { if (!verifySameOrigin(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 }); const user = await requireApiUser(); const input = z.object({ agentId: z.string().min(1), sandboxId: z.string().min(1) }).parse(await request.json()); const principal = await dashboardAgent(user, input.agentId); return Response.json(await executeCapability({ principal, capability: "sandbox.destroy", action: "sandbox.destroy", provider: "SANDBOX", sessionId: `dashboard:${user.id}`, arguments: input })); } catch (error) { return errorResponse(error); } }

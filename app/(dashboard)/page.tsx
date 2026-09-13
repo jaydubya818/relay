@@ -3,15 +3,17 @@ import { requireUser } from "@/lib/auth";
 import { getOverview } from "@/lib/overview";
 import { listActivity } from "@/lib/activity";
 import { PageHeader, Status } from "@/components/page";
+import { browserProvider, sandboxProvider } from "@/lib/providers";
 
 export default async function OverviewPage() {
   const user = await requireUser();
-  const [overview, activity] = await Promise.all([getOverview(user.accountId), listActivity(user.accountId, { limit: 6 })]);
+  const [overview, activity, sandboxHealth, browserHealth] = await Promise.all([getOverview(user.accountId), listActivity(user.accountId, { limit: 6 }), sandboxProvider().health(), browserProvider().health()]);
   const metrics = [
     ["Agents", overview.counts.agents, "Durable identities"],
     ["Operations / 24h", overview.counts.operations, "Capability calls"],
     ["Connections", overview.counts.connections, "Account-owned"],
-    ["Failures / 24h", overview.counts.failures, "Provider or runtime"],
+    ["Denials / 24h", overview.counts.denials, "Authority enforced"],
+    ["Failures / 24h", overview.counts.failures, "Needs attention"],
   ];
   return (
     <>
@@ -37,15 +39,17 @@ export default async function OverviewPage() {
         <div className="stack">
           <div className="card">
             <h2>Capability plane</h2>
-            <div className="kv"><div className="key">Memory</div><div><Status value="HEALTHY" /></div><div className="key">GitHub</div><div><Status value={overview.githubStatus} /></div><div className="key">MCP</div><div><Status value="HEALTHY" /></div></div>
+            <div className="kv"><div className="key">Postgres</div><div><Status value="HEALTHY" /></div><div className="key">MCP</div><div><Status value="HEALTHY" /></div><div className="key">Event system</div><div><Status value="HEALTHY" /></div><div className="key">Sandbox</div><div><Status value={sandboxHealth.ok ? "HEALTHY" : "FAILED"} /></div><div className="key">Browser</div><div><Status value={browserHealth.ok ? "HEALTHY" : "FAILED"} /></div><div className="key">GitHub</div><div><Status value={overview.githubStatus} /></div><div className="key">Google</div><div><Status value={overview.googleStatus} /></div></div>
           </div>
+          <div className="card"><h2>Active resources</h2><div className="kv"><div className="key">Sandboxes</div><div>{overview.counts.sandboxes}</div><div className="key">Browser sessions</div><div>{overview.counts.browsers}</div><div className="key">Events</div><div>{overview.counts.events}</div><div className="key">Unread inbox</div><div>{overview.counts.inbox}</div><div className="key">Queued wakes</div><div>{overview.counts.wakes}</div></div></div>
           <div className="card">
             <h2>Get started</h2>
             <div className="stack subtle">
               <div>✓ Create account</div>
               <div>{overview.counts.agents >= 1 ? "✓" : "○"} Create first agent</div>
               <div>{overview.counts.agents >= 2 ? "✓" : "○"} Add second agent</div>
-              <div>{overview.counts.connections >= 1 ? "✓" : "○"} Connect GitHub</div>
+              <div>{overview.githubStatus === "CONNECTED" ? "✓" : "○"} Connect GitHub</div>
+              <div>{overview.googleStatus === "CONNECTED" ? "✓" : "○"} Connect Google Workspace</div>
               <div>{overview.counts.operations >= 1 ? "✓" : "○"} Run first capability</div>
             </div>
           </div>

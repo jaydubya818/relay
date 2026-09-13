@@ -193,6 +193,39 @@ export function GitHubConnectionManager({ connected, oauthConfigured }: { connec
   );
 }
 
+export function GoogleConnectionManager({ connected, oauthConfigured }: { connected: boolean; oauthConfigured: boolean }) {
+  const router = useRouter();
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function action(method: "POST" | "DELETE") {
+    setBusy(true); setMessage("");
+    try { const result = await requestJson("/api/connections/google", { method }); setMessage(method === "POST" ? (result.ok ? "Google Workspace connection is healthy." : result.message) : "Google Workspace disconnected."); router.refresh(); }
+    catch (reason) { setMessage(reason instanceof Error ? reason.message : "Request failed."); }
+    finally { setBusy(false); }
+  }
+  return <div className="stack">
+    {oauthConfigured ? <a className="button" href="/api/connections/google/oauth/start">{connected ? "Reconnect Google Workspace" : "Connect Google Workspace"}</a> : <div className="notice">Google OAuth is not configured for this deployment.</div>}
+    {connected && <div className="inline"><button className="button secondary" disabled={busy} onClick={() => action("POST")}>Test connection</button><button className="button danger" disabled={busy} onClick={() => action("DELETE")}>Disconnect</button></div>}
+    {message && <div className="notice">{message}</div>}
+  </div>;
+}
+
+export function SandboxActions({ agents, sandboxId, ownerAgentId }: { agents: Array<{ id: string; name: string }>; sandboxId?: string; ownerAgentId?: string }) {
+  const router = useRouter(); const [busy, setBusy] = useState(false); const [message, setMessage] = useState("");
+  if (sandboxId && ownerAgentId) return <button className="button danger small" disabled={busy} onClick={async () => { setBusy(true); try { await requestJson("/api/sandboxes", { method: "DELETE", body: JSON.stringify({ sandboxId, agentId: ownerAgentId }) }); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Destroy failed."); } finally { setBusy(false); } }}>{message || (busy ? "Destroying…" : "Destroy")}</button>;
+  return <form className="inline" onSubmit={async (event) => { event.preventDefault(); setBusy(true); setMessage(""); const agentId = new FormData(event.currentTarget).get("agentId"); try { await requestJson("/api/sandboxes", { method: "POST", body: JSON.stringify({ agentId }) }); setMessage("Sandbox created."); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Create failed."); } finally { setBusy(false); } }}><select name="agentId" aria-label="Owner Agent" required>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select><button className="button" disabled={busy || !agents.length}>{busy ? "Creating…" : "Create sandbox"}</button>{message && <span className="subtle">{message}</span>}</form>;
+}
+
+export function BrowserCloseButton({ browserSessionId, agentId }: { browserSessionId: string; agentId: string }) {
+  const router = useRouter(); const [busy, setBusy] = useState(false);
+  return <button className="button danger small" disabled={busy} onClick={async () => { setBusy(true); try { await requestJson("/api/browsers", { method: "DELETE", body: JSON.stringify({ browserSessionId, agentId }) }); router.refresh(); } finally { setBusy(false); } }}>{busy ? "Closing…" : "Close"}</button>;
+}
+
+export function InboxAcknowledgeButton({ inboxItemId, agentId }: { inboxItemId: string; agentId: string }) {
+  const router = useRouter(); const [busy, setBusy] = useState(false);
+  return <button className="button secondary small" disabled={busy} onClick={async () => { setBusy(true); try { await requestJson("/api/events/inbox/ack", { method: "POST", body: JSON.stringify({ inboxItemId, agentId }) }); router.refresh(); } finally { setBusy(false); } }}>{busy ? "Saving…" : "Acknowledge"}</button>;
+}
+
 export function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   return <button className="button secondary small" onClick={async () => { await navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1200); }}>{copied ? "Copied" : "Copy"}</button>;

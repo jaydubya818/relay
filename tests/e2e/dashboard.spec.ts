@@ -23,10 +23,20 @@ test("operator can sign in, inspect core pages, and create an agent credential",
   await expect(page.getByText("Copy this credential now")).toBeVisible();
   await expect(page.locator(".secret")).toContainText("rly_");
 
-  for (const route of ["/memory", "/connections", "/activity", "/developer", "/settings"]) {
+  for (const route of ["/memory", "/connections", "/sandboxes", "/browsers", "/events", "/activity", "/developer", "/settings"]) {
     await page.goto(route);
     await expect(page.locator("main")).toBeVisible();
   }
+  await page.goto("/connections");
+  await expect(page.getByText("Google Workspace", { exact: true }).first()).toBeVisible();
+  await page.goto("/sandboxes");
+  await expect(page.getByText("docker")).toBeVisible();
+  await page.goto("/browsers");
+  await expect(page.getByText("https://example.com/")).toBeVisible();
+  await page.goto("/events");
+  await expect(page.getByText("github.push").first()).toBeVisible();
+  await page.getByRole("button", { name: "Acknowledge" }).click();
+  await expect(page.getByText("PROCESSED")).toBeVisible();
   await page.goto("/api/health");
   await expect(page.locator("body")).toContainText('"ok":true');
 });
@@ -40,6 +50,10 @@ test("a new account owner can register and revoke the browser session on logout"
   await page.getByRole("button", { name: "Create Relay account" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await expect(page.getByText("No agents yet. Create the first durable identity.")).toBeVisible();
+  for (const [route, empty] of [["/sandboxes", "No sandboxes"], ["/browsers", "No active or historical browser sessions"], ["/events", "No events have been ingested"]] as const) {
+    await page.goto(route);
+    await expect(page.getByText(empty, { exact: false })).toBeVisible();
+  }
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("heading", { name: "Welcome to Relay" })).toBeVisible();
   await page.goto("/");
@@ -49,19 +63,20 @@ test("a new account owner can register and revoke the browser session on logout"
 test("critical dashboard routes meet the warm local response target", async ({ page }) => {
   test.setTimeout(60_000);
   await signIn(page);
-  for (const route of ["/", "/agents", "/memory", "/connections", "/activity", "/developer"]) {
+  for (const route of ["/", "/agents", "/memory", "/connections", "/sandboxes", "/browsers", "/events", "/activity", "/developer"]) {
     await page.goto(route);
     const samples: number[] = [];
-    for (let sample = 0; sample < 10; sample += 1) {
+    for (let sample = 0; sample < 20; sample += 1) {
       const started = performance.now();
       const response = await page.request.get(route);
       samples.push(performance.now() - started);
       expect(response.ok()).toBe(true);
     }
     samples.sort((a, b) => a - b);
-    const medianMs = samples[4];
-    const p95Ms = samples[9];
-    console.info(JSON.stringify({ benchmark: route, medianMs, p95Ms, samples: samples.length }));
-    expect(p95Ms).toBeLessThan(250);
+    const p50Ms = samples[9];
+    const p95Ms = samples[18];
+    const p99Ms = samples[19];
+    console.info(JSON.stringify({ benchmark: route, p50Ms, p95Ms, p99Ms, samples: samples.length }));
+    expect(p95Ms).toBeLessThan(200);
   }
 });

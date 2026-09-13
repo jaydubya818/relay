@@ -21,3 +21,7 @@ export async function touchAgentSession(principal: AgentPrincipal, runtime = "mc
   const [session] = await db().insert(agentSessions).values({ id: id("ags"), accountId: principal.accountId, agentId: principal.agentId, runtime, credentialId: principal.credentialId, createdAt: timestamp, lastSeenAt: timestamp, expiresAt }).returning();
   return session;
 }
+
+export async function listAgentSessions(accountId: string, agentId: string) {
+  return db().select().from(agentSessions).where(and(eq(agentSessions.accountId, accountId), eq(agentSessions.agentId, agentId))).orderBy(desc(agentSessions.lastSeenAt)).limit(25);
+}

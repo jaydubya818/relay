@@ -121,7 +121,7 @@ export async function shareBrowserSession(accountId: string, browserSessionId: s
 }
 
 export async function listBrowserSessions(accountId: string) {
-  return db().select({ id: browserSessions.id, ownerAgentId: browserSessions.ownerAgentId, ownerAgentName: agents.name, status: browserSessions.status, currentUrl: browserSessions.currentUrl, createdAt: browserSessions.createdAt, expiresAt: browserSessions.expiresAt, lastUsedAt: browserSessions.lastUsedAt }).from(browserSessions).innerJoin(agents, and(eq(agents.id, browserSessions.ownerAgentId), eq(agents.accountId, browserSessions.accountId))).where(eq(browserSessions.accountId, accountId)).orderBy(asc(browserSessions.createdAt));
+  return db().select({ id: browserSessions.id, ownerAgentId: browserSessions.ownerAgentId, ownerAgentName: agents.name, status: browserSessions.status, provider: browserSessions.provider, currentUrl: browserSessions.currentUrl, createdAt: browserSessions.createdAt, expiresAt: browserSessions.expiresAt, lastUsedAt: browserSessions.lastUsedAt }).from(browserSessions).innerJoin(agents, and(eq(agents.id, browserSessions.ownerAgentId), eq(agents.accountId, browserSessions.accountId))).where(eq(browserSessions.accountId, accountId)).orderBy(asc(browserSessions.createdAt));
 }
 
 export async function cleanupExpiredBrowserSessions() {

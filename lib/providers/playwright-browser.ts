@@ -95,7 +95,10 @@ export class PlaywrightBrowserProvider implements BrowserProvider {
 
   async health() {
     try {
-      await this.runtime();
+      if (!this.browser) {
+        const probe = await chromium.launch({ headless: true });
+        await probe.close();
+      }
       return { ok: true };
     } catch (error) {
       return { ok: false, message: error instanceof Error ? error.message : "Playwright is unavailable." };
