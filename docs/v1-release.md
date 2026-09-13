@@ -38,6 +38,38 @@ Final local results on 2026-09-13:
 - Claude: `NOT_RUN`. The installed Claude CLI is not authenticated.
 - Codex: `NOT_RUN`. No already-authorized disposable Relay Agent credential was available through the product flow for a live runtime check. Automated MCP runtime/session/credential correlation passed.
 
+## Final external qualification — 2026-09-13
+
+Qualification baseline HEAD: `c2460e5c7e59151ddf7d0ca1b5c04a25ce38999b`. The release-report update is the commit containing this section.
+
+No implementation defect was found. The final external status is:
+
+- Docker sandbox: `PASSED` against the real local Docker provider.
+- Playwright browser: `PASSED` against real Chromium isolated contexts.
+- GitHub OAuth: `BLOCKED_EXTERNAL_CONFIGURATION`; `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are absent.
+- Google OAuth: `BLOCKED_EXTERNAL_CONFIGURATION`; client configuration is present, but the legitimate refresh exchange returns `invalid_grant`. OAuth validation was not weakened.
+- Claude MCP: `BLOCKED_EXTERNAL_CONFIGURATION`; Claude Code is installed but reports `loggedIn: false`.
+- Codex MCP: `NOT_RUN`; Codex is authenticated, but the host safety reviewer requires explicit authorization before creating a durable disposable Relay Agent credential. No bypass or test credential was used.
+- Live cross-Agent golden path: `NOT_RUN`; it depends on live Claude and Codex identities plus GitHub and Google connections.
+
+The release-candidate tag was not created because all required live qualification did not pass. After the external credentials and authorization are supplied, repeat the live runtime and cross-Agent path before creating `relay-v1.0.0-rc.1`.
+
+Final regression remained green: typecheck and lint passed; 39 default-suite tests passed with 3 live-only tests skipped by default; 2 performance tests, 3 browser E2E tests, and all 3 separately enabled live Docker/Chromium tests passed. Total qualified tests remain 47 with zero failures. Migrations applied twice, seed completed idempotently, the production build and startup passed, liveness/readiness/provider health returned 200, MCP rejected an invalid credential canonically, and the worker completed cleanup cycles and handled SIGINT.
+
+Current browser route results over 20 warm samples:
+
+| Route | p50 | p95 | p99 |
+| --- | ---: | ---: | ---: |
+| `/` | 151.58 ms | 158.38 ms | 170.20 ms |
+| `/agents` | 37.59 ms | 42.35 ms | 42.84 ms |
+| `/memory` | 34.24 ms | 37.90 ms | 38.78 ms |
+| `/connections` | 35.41 ms | 39.49 ms | 39.87 ms |
+| `/sandboxes` | 32.72 ms | 38.10 ms | 38.28 ms |
+| `/browsers` | 32.64 ms | 37.42 ms | 39.58 ms |
+| `/events` | 33.67 ms | 37.93 ms | 38.61 ms |
+| `/activity` | 35.12 ms | 39.25 ms | 40.37 ms |
+| `/developer` | 32.55 ms | 43.75 ms | 68.13 ms |
+
 ## External OAuth setup
 
 GitHub requires a registered OAuth App with `/api/connections/github/oauth/callback`. Google requires enabled Gmail and Calendar APIs, an OAuth consent screen, read-only scopes, and `/api/connections/google/oauth/callback`. Live checks must be reported as blocked—not passed—when these external requirements are unavailable.
