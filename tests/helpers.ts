@@ -1,36 +1,45 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { Client } from "pg";
 import { hashPassword } from "@/lib/crypto";
-import { closeDatabasesForTests, db } from "@/lib/db";
+import { closeDatabasesForTests, db, migrateDatabase } from "@/lib/db";
+import { accounts, users } from "@/lib/db/schema";
 import { id, now } from "@/lib/ids";
 
-let directory: string | undefined;
+let databaseName: string | undefined;
+const adminUrl = process.env.RELAY_TEST_DATABASE_URL ?? "postgresql://127.0.0.1:55432/postgres";
 
-export function freshDatabase() {
-  closeDatabasesForTests();
-  if (directory) rmSync(directory, { recursive: true, force: true });
-  directory = mkdtempSync(join(tmpdir(), "relay-test-"));
-  process.env.RELAY_DATABASE_PATH = join(directory, "relay.db");
+async function adminQuery(query: string) {
+  const client = new Client({ connectionString: adminUrl });
+  await client.connect();
+  try { await client.query(query); } finally { await client.end(); }
+}
+
+export async function freshDatabase() {
+  await cleanupDatabase();
+  databaseName = `relay_test_${process.pid}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  await adminQuery(`CREATE DATABASE ${databaseName}`);
+  process.env.RELAY_DATABASE_URL = new URL(databaseName, adminUrl.endsWith("/") ? adminUrl : `${adminUrl.slice(0, adminUrl.lastIndexOf("/") + 1)}`).toString();
   process.env.RELAY_SESSION_SECRET = "test-session-secret-with-enough-entropy";
   process.env.RELAY_ENCRYPTION_KEY = "test-encryption-key-with-enough-entropy";
+  await migrateDatabase();
   const accountId = id("acct");
   const timestamp = now();
-  db().prepare("INSERT INTO accounts (id, name, created_at, updated_at) VALUES (?, 'Test Account', ?, ?)").run(accountId, timestamp, timestamp);
-  db().prepare("INSERT INTO users (id, account_id, email, name, password_hash, created_at) VALUES (?, ?, 'operator@example.com', 'Operator', ?, ?)")
-    .run(id("usr"), accountId, hashPassword("correct-horse-battery-staple"), timestamp);
+  await db().insert(accounts).values({ id: accountId, name: "Test Account", createdAt: timestamp, updatedAt: timestamp });
+  await db().insert(users).values({ id: id("usr"), accountId, email: "operator@example.com", name: "Operator", passwordHash: hashPassword("correct-horse-battery-staple"), createdAt: timestamp });
   return { accountId };
 }
 
-export function secondAccount() {
+export async function secondAccount() {
   const accountId = id("acct");
   const timestamp = now();
-  db().prepare("INSERT INTO accounts (id, name, created_at, updated_at) VALUES (?, 'Other Account', ?, ?)").run(accountId, timestamp, timestamp);
+  await db().insert(accounts).values({ id: accountId, name: "Other Account", createdAt: timestamp, updatedAt: timestamp });
   return accountId;
 }
 
-export function cleanupDatabase() {
-  closeDatabasesForTests();
-  if (directory) rmSync(directory, { recursive: true, force: true });
-  directory = undefined;
+export async function cleanupDatabase() {
+  await closeDatabasesForTests();
+  if (databaseName) {
+    await adminQuery(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`);
+  }
+  databaseName = undefined;
+  delete process.env.RELAY_DATABASE_URL;
 }

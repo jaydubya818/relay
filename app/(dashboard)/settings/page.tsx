@@ -1,12 +1,19 @@
 import { PageHeader } from "@/components/page";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { accounts, agentCredentials, memories } from "@/lib/db/schema";
+import { and, count, eq, isNull } from "drizzle-orm";
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const account = db().prepare("SELECT id, name, created_at createdAt FROM accounts WHERE id = ?").get(user.accountId) as any;
-  const credentialCount = (db().prepare("SELECT COUNT(*) count FROM agent_credentials WHERE account_id = ? AND revoked_at IS NULL").get(user.accountId) as any).count;
-  const memoryCount = (db().prepare("SELECT COUNT(*) count FROM memories WHERE account_id = ? AND forgotten_at IS NULL").get(user.accountId) as any).count;
+  const [[account], [credentialResult], [memoryResult]] = await Promise.all([
+    db().select({ id: accounts.id, name: accounts.name, createdAt: accounts.createdAt }).from(accounts).where(eq(accounts.id, user.accountId)).limit(1),
+    db().select({ value: count() }).from(agentCredentials).where(and(eq(agentCredentials.accountId, user.accountId), isNull(agentCredentials.revokedAt))),
+    db().select({ value: count() }).from(memories).where(and(eq(memories.accountId, user.accountId), isNull(memories.forgottenAt))),
+  ]);
+  if (!account) throw new Error("Authenticated Relay account was not found.");
+  const credentialCount = credentialResult.value;
+  const memoryCount = memoryResult.value;
   return (
     <>
       <PageHeader eyebrow="Control" title="Settings" description="The small set of account, credential, and data controls needed for Relay V0." />

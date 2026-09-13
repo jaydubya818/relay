@@ -6,8 +6,7 @@ import { PageHeader, Status } from "@/components/page";
 
 export default async function OverviewPage() {
   const user = await requireUser();
-  const overview = getOverview(user.accountId);
-  const activity = listActivity(user.accountId, { limit: 6 });
+  const [overview, activity] = await Promise.all([getOverview(user.accountId), listActivity(user.accountId, { limit: 6 })]);
   const metrics = [
     ["Agents", overview.counts.agents, "Durable identities"],
     ["Operations / 24h", overview.counts.operations, "Capability calls"],

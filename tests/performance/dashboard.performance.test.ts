@@ -11,15 +11,15 @@ function percentile(values: number[], percentileValue: number) {
 
 describe("local dashboard qualification", () => {
   afterEach(cleanupDatabase);
-  it("keeps common local read models below the V0 p95 target", () => {
-    const { accountId } = freshDatabase();
-    for (let index = 0; index < 20; index += 1) createAgent(accountId, { name: `Agent ${index}` });
-    const timings = Array.from({ length: 50 }, () => {
+  it("keeps common local read models below the V1 p95 target", async () => {
+    const { accountId } = await freshDatabase();
+    for (let index = 0; index < 20; index += 1) await createAgent(accountId, { name: `Agent ${index}` });
+    const timings: number[] = [];
+    for (let index = 0; index < 50; index += 1) {
       const started = performance.now();
-      getOverview(accountId);
-      listActivity(accountId, { limit: 100 });
-      return performance.now() - started;
-    });
+      await Promise.all([getOverview(accountId), listActivity(accountId, { limit: 100 })]);
+      timings.push(performance.now() - started);
+    }
     const p95 = percentile(timings, 0.95);
     console.info(JSON.stringify({ benchmark: "overview-and-activity-read-models", medianMs: percentile(timings, 0.5), p95Ms: p95, samples: timings.length }));
     expect(p95).toBeLessThan(250);

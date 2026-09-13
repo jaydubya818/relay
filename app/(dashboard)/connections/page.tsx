@@ -5,7 +5,7 @@ import { listConnections } from "@/lib/connections";
 
 export default async function ConnectionsPage() {
   const user = await requireUser();
-  const github = listConnections(user.accountId).find((connection) => connection.provider === "GITHUB");
+  const github = (await listConnections(user.accountId)).find((connection) => connection.provider === "GITHUB");
   return (
     <>
       <PageHeader eyebrow="Capabilities" title="Connections" description="Connect an external system once, then grant individual agents scoped capability access." />

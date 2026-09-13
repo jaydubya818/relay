@@ -1,8 +1,10 @@
+import { and, desc, eq, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { activities, agents } from "@/lib/db/schema";
 import { id, now } from "@/lib/ids";
 import type { ActivityStatus } from "@/lib/types";
 
-export function recordActivity(input: {
+export async function recordActivity(input: {
   accountId: string;
   agentId?: string;
   sessionId: string;
@@ -13,24 +15,24 @@ export function recordActivity(input: {
   durationMs: number;
   metadata?: Record<string, string | number | boolean>;
 }) {
-  db().prepare(`
-    INSERT INTO activities (id, account_id, agent_id, session_id, capability, provider, action, status, duration_ms, created_at, metadata)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id("act"), input.accountId, input.agentId ?? null, input.sessionId, input.capability, input.provider ?? null, input.action, input.status, Math.max(0, Math.round(input.durationMs)), now(), JSON.stringify(input.metadata ?? {}));
+  await db().insert(activities).values({
+    id: id("act"), accountId: input.accountId, agentId: input.agentId,
+    sessionId: input.sessionId, capability: input.capability, provider: input.provider,
+    action: input.action, status: input.status, durationMs: Math.max(0, Math.round(input.durationMs)),
+    createdAt: now(), metadata: input.metadata ?? {},
+  });
 }
 
-export function listActivity(accountId: string, filters: { agentId?: string; capability?: string; status?: string; provider?: string; limit?: number } = {}) {
-  const conditions = ["a.account_id = ?"];
-  const params: Array<string | number | null> = [accountId];
-  for (const [column, value] of [["a.agent_id", filters.agentId], ["a.capability", filters.capability], ["a.status", filters.status], ["a.provider", filters.provider]] as const) {
-    if (value) { conditions.push(`${column} = ?`); params.push(value); }
-  }
-  params.push(Math.min(filters.limit ?? 100, 250));
-  return db().prepare(`
-    SELECT a.id, a.agent_id agentId, agents.name agentName, a.session_id sessionId, a.capability,
-      a.provider, a.action, a.status, a.duration_ms durationMs, a.created_at createdAt, a.metadata
-    FROM activities a LEFT JOIN agents ON agents.id = a.agent_id
-    WHERE ${conditions.join(" AND ")}
-    ORDER BY a.created_at DESC, a.rowid DESC LIMIT ?
-  `).all(...params) as any[];
+export async function listActivity(accountId: string, filters: { agentId?: string; capability?: string; status?: ActivityStatus; provider?: string; limit?: number } = {}) {
+  const conditions: SQL[] = [eq(activities.accountId, accountId)];
+  if (filters.agentId) conditions.push(eq(activities.agentId, filters.agentId));
+  if (filters.capability) conditions.push(eq(activities.capability, filters.capability));
+  if (filters.status) conditions.push(eq(activities.status, filters.status));
+  if (filters.provider) conditions.push(eq(activities.provider, filters.provider));
+  return db().select({
+    id: activities.id, agentId: activities.agentId, agentName: agents.name,
+    sessionId: activities.sessionId, capability: activities.capability, provider: activities.provider,
+    action: activities.action, status: activities.status, durationMs: activities.durationMs,
+    createdAt: activities.createdAt, metadata: activities.metadata,
+  }).from(activities).leftJoin(agents, eq(agents.id, activities.agentId)).where(and(...conditions)).orderBy(desc(activities.createdAt), desc(activities.id)).limit(Math.min(filters.limit ?? 100, 250));
 }

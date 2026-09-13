@@ -1,4 +1,4 @@
-# Relay V0 architecture
+# Relay architecture
 
 ## Product boundary
 
@@ -22,14 +22,14 @@ Central authorization
     ▼
 Capability executor ───► Activity ledger
     │
-    ├── Memory service ─► account-scoped SQLite records
+    ├── Memory service ─► account-scoped PostgreSQL records
     └── GitHub adapter ─► encrypted account connection ─► GitHub API
 ```
 
 ## Main decisions
 
 - **One deployable application:** Next.js hosts the dashboard, JSON APIs, domain services, and Streamable HTTP MCP endpoint. This is the smallest operationally coherent V0.
-- **SQLite persistence:** Node's built-in SQLite API provides transactions, foreign keys, indexes, and a zero-service local start. PostgreSQL is a future production migration point; SQL and service boundaries are intentionally explicit.
+- **PostgreSQL persistence:** Drizzle provides the typed schema, query layer, transactions, and checked-in SQL migrations. Every tenant-owned query carries the authenticated account ID.
 - **Separate authentication planes:** users receive signed, HTTP-only dashboard sessions. Agents receive independently hashed `rly_` credentials with status, revocation, last-used time, and optional expiry fields.
 - **Central authorization:** every MCP tool call goes through `executeCapability`, which checks a capability grant before invoking a service and records success, denial, failure, and duration.
 - **Account-owned connections:** one generic Connection record and separate encrypted credential are shared by all agents in the account. Grants control use.
@@ -44,6 +44,10 @@ The schema contains Account, User, Agent, AgentCredential, Capability, Capabilit
 
 Dashboard pages use server read models with indexed account/timestamp queries, persistent layout navigation, and bounded result sets. External provider health is never called during ordinary dashboard navigation.
 
+## Provider-neutral execution
+
+Sandbox and browser services depend on canonical `SandboxProvider` and `BrowserProvider` contracts. Docker resource IDs and Playwright objects remain inside their adapters. Agent grants, MCP contracts, and Activity records identify Relay capabilities and resources rather than provider-specific operations.
+
 ## Extension points
 
-The provider adapter and capability registry allow future connectors. Moving SQLite to PostgreSQL and adding distributed rate limiting are explicit production steps, not hidden V0 abstractions.
+The provider adapters and capability registry allow future connectors and managed execution providers without changing the Account/Agent authority model. Distributed rate limiting remains a production deployment concern.

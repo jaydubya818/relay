@@ -5,7 +5,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   try {
     if (!verifySameOrigin(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
     const user = await requireApiUser();
-    forgetMemoryAsUser(user.accountId, (await context.params).id);
+    await forgetMemoryAsUser(user.accountId, (await context.params).id);
     return Response.json({ ok: true });
   } catch (error) { return errorResponse(error); }
 }

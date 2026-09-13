@@ -23,7 +23,7 @@ export async function DELETE(request: Request) {
   try {
     if (!verifySameOrigin(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
     const user = await requireApiUser();
-    disconnectGitHub(user.accountId);
+    await disconnectGitHub(user.accountId);
     return Response.json({ ok: true });
   } catch (error) { return errorResponse(error); }
 }

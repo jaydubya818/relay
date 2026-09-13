@@ -35,7 +35,7 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 
 ## Acceptance Criteria
 
-- [ ] PostgreSQL and Drizzle replace SQLite production persistence with migrations and isolated tests.
+- [x] PostgreSQL and Drizzle replace SQLite production persistence with migrations and isolated tests.
 - [ ] Multiple human users and accounts are isolated with durable secure sessions.
 - [ ] GitHub OAuth is primary while optional PAT development setup remains contained.
 - [ ] Sandbox and browser capabilities use provider-neutral contracts with ownership, grants, TTL, cleanup, and Activity.
@@ -59,3 +59,18 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 **Learnings:**
 - Warm dashboard route p95 remains 33.9–40.9 ms; this is the V1 regression baseline.
 - Local PostgreSQL binaries and Docker Desktop are installed, but neither service was running at baseline inspection.
+
+### 2026-09-13 — Phase 1 PostgreSQL
+
+**By:** Codex
+
+**Actions:**
+- Replaced the synchronous SQLite persistence layer with pooled PostgreSQL access through Drizzle.
+- Added a 19-table V1 schema, generated migration, canonical capability seed data, and database transaction tests.
+- Converted V0 domain services, routes, dashboard reads, test helpers, and E2E setup to async PostgreSQL access.
+- Added isolated per-test databases and a guarded E2E database reset.
+- Qualified typecheck, lint, 8 V0 regression tests, 2 database tests, 1 performance test, 2 E2E tests, idempotent migration, seed, and production build.
+
+**Learnings:**
+- PostgreSQL read-model p95 is 0.71 ms locally; warm browser route p95 remains below 49 ms.
+- The V0 SQLite data is development-only. Relay will not silently import it; an explicit offline migration remains required before any non-development V0 dataset is moved.

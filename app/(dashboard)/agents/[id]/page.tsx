@@ -7,8 +7,8 @@ import { CAPABILITIES } from "@/lib/types";
 
 export default async function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
-  const agent = getAgent(user.accountId, (await params).id);
-  const activity = listActivity(user.accountId, { agentId: agent.id, limit: 8 });
+  const agent = await getAgent(user.accountId, (await params).id);
+  const activity = await listActivity(user.accountId, { agentId: agent.id, limit: 8 });
   const grants = new Map(agent.grants.map((grant: any) => [grant.capability, grant.effect]));
   return (
     <>

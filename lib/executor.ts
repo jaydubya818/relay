@@ -18,11 +18,11 @@ export async function executeCapability(input: {
   const started = performance.now();
   let status: "SUCCESS" | "DENIED" | "FAILED" = "SUCCESS";
   try {
-    authorize(input.principal, input.capability);
+    await authorize(input.principal, input.capability);
     let result: unknown;
     switch (input.action) {
       case "memory.add":
-        result = addMemory(input.principal, {
+        result = await addMemory(input.principal, {
           content: String(input.arguments.content ?? ""),
           type: String(input.arguments.type ?? "OTHER") as MemoryType,
           scope: String(input.arguments.scope ?? "SHARED") as MemoryScope,
@@ -30,7 +30,7 @@ export async function executeCapability(input: {
         break;
       case "memory.search":
       case "memory.list":
-        result = listMemories(input.principal, {
+        result = await listMemories(input.principal, {
           query: input.action === "memory.search" ? String(input.arguments.query ?? "") : undefined,
           type: input.arguments.type as MemoryType | undefined,
           scope: input.arguments.scope as MemoryScope | undefined,
@@ -38,12 +38,12 @@ export async function executeCapability(input: {
         });
         break;
       case "memory.get":
-        result = getMemory(input.principal, String(input.arguments.id ?? ""));
+        result = await getMemory(input.principal, String(input.arguments.id ?? ""));
         break;
       case "github.repo.list":
       case "github.repo.get":
         result = await githubProvider.execute(
-          githubSecret(input.principal.accountId),
+          await githubSecret(input.principal.accountId),
           input.action === "github.repo.list" ? "repo.list" : "repo.get",
           input.arguments,
         );
@@ -56,7 +56,7 @@ export async function executeCapability(input: {
     status = error instanceof RelayError && error.code === "CAPABILITY_DENIED" ? "DENIED" : "FAILED";
     throw error;
   } finally {
-    recordActivity({
+    await recordActivity({
       accountId: input.principal.accountId,
       agentId: input.principal.agentId,
       sessionId: input.sessionId,

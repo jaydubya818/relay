@@ -6,14 +6,15 @@ import { requireUser } from "@/lib/auth";
 
 export default async function AgentsPage() {
   const user = await requireUser();
-  const agents = listAgents(user.accountId);
+  const agents = await listAgents(user.accountId);
+  const details = new Map((await Promise.all(agents.map((agent) => getAgent(user.accountId, agent.id)))).map((agent) => [agent.id, agent]));
   return (
     <>
       <PageHeader eyebrow="Plane" title="Agents" description="Durable identities with independent credentials and explicitly scoped access." />
       <section className="grid two-col">
         <div className="grid cards">
           {agents.map((agent) => {
-            const detail = getAgent(user.accountId, agent.id);
+            const detail = details.get(agent.id)!;
             const allowed = detail.grants.filter((grant: any) => grant.effect === "ALLOW");
             return <Link className="card agent-card" href={`/agents/${agent.id}`} key={agent.id}>
               <div className="agent-top"><div><div className="agent-name">{agent.name}</div><div className="subtle">{agent.description || "No description"}</div></div><Status value={agent.status} /></div>

@@ -2,12 +2,15 @@ import { PageHeader, Status } from "@/components/page";
 import { listActivity } from "@/lib/activity";
 import { listAgents } from "@/lib/agents";
 import { requireUser } from "@/lib/auth";
+import type { ActivityStatus } from "@/lib/types";
 
 export default async function ActivityPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
   const params = await searchParams;
-  const activity = listActivity(user.accountId, { agentId: params.agent, capability: params.capability, status: params.status, provider: params.provider });
-  const agents = listAgents(user.accountId);
+  const [activity, agents] = await Promise.all([
+    listActivity(user.accountId, { agentId: params.agent, capability: params.capability, status: params.status as ActivityStatus | undefined, provider: params.provider }),
+    listAgents(user.accountId),
+  ]);
   return (
     <>
       <PageHeader eyebrow="Plane" title="Activity" description="A compact operational ledger of what agents did—and what Relay prevented." />

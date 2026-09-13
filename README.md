@@ -6,14 +6,15 @@ Connect your digital capabilities once and make them available to any authorized
 
 Models provide intelligence. Relay provides continuity, state, tools, permissions, and access to the digital world.
 
-## What V0 proves
+## Proven foundation
 
 Two independent agent identities can connect to one Relay MCP endpoint with separate credentials and permissions. One agent can write shared memory that another authorized agent retrieves, private memory stays private, GitHub is connected once at the account level, denied calls are rejected, and every capability call is audited.
 
 ## Requirements
 
-- Node.js 22.5 or newer (Relay uses the built-in SQLite API)
+- Node.js 22.5 or newer
 - pnpm 9
+- PostgreSQL 14 or newer
 - A fine-grained GitHub token only when exercising the live connector
 
 ## Quick start
@@ -38,7 +39,7 @@ Open [http://localhost:3000](http://localhost:3000). The local seed creates:
 
 ## Architecture
 
-Relay is a single Next.js application with server-rendered dashboard pages, server-side domain services, an HTTP MCP endpoint, and a durable SQLite database for V0. Capability authorization is centralized in the executor shared by memory and provider tools. Provider credentials are account-owned and AES-256-GCM encrypted; agent credentials are SHA-256 hashed and cannot be recovered.
+Relay is a single Next.js application with server-rendered dashboard pages, server-side domain services, an HTTP MCP endpoint, and PostgreSQL persistence accessed through Drizzle. Capability authorization is centralized in the executor shared by memory and provider tools. Provider credentials are account-owned and AES-256-GCM encrypted; agent credentials are SHA-256 hashed and cannot be recovered.
 
 See [docs/architecture.md](docs/architecture.md) for the request path and domain boundaries.
 
@@ -68,6 +69,7 @@ Each runtime should use its own Relay agent identity. Details and raw request ex
 pnpm typecheck
 pnpm lint
 pnpm test
+pnpm test:database
 pnpm test:mcp
 pnpm test:security
 pnpm test:performance
@@ -88,4 +90,6 @@ Dashboard sessions and agent credentials are separate. All dashboard mutations e
 - [API contract](docs/api.md)
 - [MCP guide](docs/mcp.md)
 - [Security model](docs/security.md)
+- [PostgreSQL development and migrations](docs/database.md)
+- [ADR-015: V1 execution providers](docs/adr/ADR-015-relay-v1-execution-providers.md)
 - [Implementation plan and audit](docs/implementation-plan.md)

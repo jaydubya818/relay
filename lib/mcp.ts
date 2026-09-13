@@ -76,10 +76,10 @@ const toolInputSchemas: Record<RelayToolName, z.ZodTypeAny> = {
 };
 
 export async function handleMcp(secret: string, request: McpRequest, requestId: string = randomUUID()) {
-  const auth = authenticateAgent(secret);
+  const auth = await authenticateAgent(secret);
   if (!auth.ok) {
     if (auth.principal) {
-      recordActivity({ accountId: auth.principal.accountId, agentId: auth.principal.agentId, sessionId: requestId, capability: "agent.authenticate", action: request.method ?? "unknown", status: "DENIED", durationMs: 0 });
+      await recordActivity({ accountId: auth.principal.accountId, agentId: auth.principal.agentId, sessionId: requestId, capability: "agent.authenticate", action: request.method ?? "unknown", status: "DENIED", durationMs: 0 });
     }
     throw new RelayError(auth.code, auth.code === "REVOKED_CREDENTIAL" ? "This Relay credential has been revoked." : "Relay agent credential is invalid.", undefined, 401);
   }
@@ -90,7 +90,7 @@ export async function handleMcp(secret: string, request: McpRequest, requestId: 
   }
   if (request.method === "ping") return {};
   if (request.method === "tools/list") {
-    const allowed = new Set(listAllowedCapabilities(auth.principal.agentId));
+    const allowed = new Set(await listAllowedCapabilities(auth.principal.accountId, auth.principal.agentId));
     return {
       tools: Object.entries(toolDefinitions)
         .filter(([, definition]) => allowed.has(definition.capability as CapabilityName))

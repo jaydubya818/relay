@@ -1,13 +1,16 @@
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { capabilityGrants } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import type { AgentPrincipal, CapabilityName } from "@/lib/types";
 
-export function listAllowedCapabilities(agentId: string): CapabilityName[] {
-  return (db().prepare("SELECT capability FROM capability_grants WHERE agent_id = ? AND effect = 'ALLOW' ORDER BY capability").all(agentId) as Array<{ capability: CapabilityName }>).map((row) => row.capability);
+export async function listAllowedCapabilities(accountId: string, agentId: string): Promise<CapabilityName[]> {
+  const rows = await db().select({ capability: capabilityGrants.capability }).from(capabilityGrants).where(and(eq(capabilityGrants.accountId, accountId), eq(capabilityGrants.agentId, agentId), eq(capabilityGrants.effect, "ALLOW"))).orderBy(asc(capabilityGrants.capability));
+  return rows.map((row) => row.capability as CapabilityName);
 }
 
-export function authorize(principal: AgentPrincipal, capability: CapabilityName) {
-  const grant = db().prepare("SELECT effect FROM capability_grants WHERE account_id = ? AND agent_id = ? AND capability = ?").get(principal.accountId, principal.agentId, capability) as { effect: "ALLOW" | "DENY" } | undefined;
+export async function authorize(principal: AgentPrincipal, capability: CapabilityName) {
+  const [grant] = await db().select({ effect: capabilityGrants.effect }).from(capabilityGrants).where(and(eq(capabilityGrants.accountId, principal.accountId), eq(capabilityGrants.agentId, principal.agentId), eq(capabilityGrants.capability, capability))).limit(1);
   if (grant?.effect !== "ALLOW") {
     throw new RelayError("CAPABILITY_DENIED", `This Relay agent is not permitted to use ${capability}.`, capability, 403);
   }
