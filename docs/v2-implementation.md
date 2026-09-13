@@ -17,8 +17,8 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WorkOrder | Title | Dependencies | State | Commit | Qualification | Blockers / deviations |
 |---|---|---|---|---|---|---|
 | WO-00 | Establish V2 isolation and governance | — | QUALIFIED | `07b1427` | LOCAL PASS | Remote branch/deploy protection: BLOCKED_EXTERNAL_CONFIGURATION |
-| WO-01 | Freeze vocabulary, schemas, and state machines | WO-00 | QUALIFIED | pending commit | LOCAL PASS | — |
-| WO-02 | Complete security architecture and abuse cases | WO-01 | NOT_STARTED | — | — | — |
+| WO-01 | Freeze vocabulary, schemas, and state machines | WO-00 | QUALIFIED | `b468a38` | LOCAL PASS | — |
+| WO-02 | Complete security architecture and abuse cases | WO-01 | IMPLEMENTED | pending commit | LOCAL PASS | Independent security-owner sign-off: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | NOT_STARTED | — | — | — |
 | WO-04 | Build evidence and append-only audit substrate | WO-01, WO-02, WO-03 | NOT_STARTED | — | — | — |
 | WO-05 | Build Agent Passport and runtime attribution | WO-03, WO-04 | NOT_STARTED | — | — | — |
@@ -58,3 +58,10 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added stable JSON Schema 2020-12 identifiers, reason codes, and explicit task/action/approval/lease transition maps.
 - Added deterministic canonical JSON and SHA-256 action hashing with invalid-value rejection.
 - Qualification passed: typecheck, lint, and focused contract/hygiene tests (9/9).
+
+### 2026-09-13 — WO-02 security architecture
+
+- Documented six enforcement boundaries, authoritative fact ownership, tenant isolation, classifications, key/credential lifecycle, runner assurance, egress, approval integrity, and fail-closed behavior.
+- Mapped all 20 approved threats to preventative controls, detective/recovery controls, and required qualification test IDs.
+- Qualification passed: typecheck, lint, contract tests, and security-architecture completeness tests (9/9).
+- Independent security-owner acceptance remains `BLOCKED_EXTERNAL_CONFIGURATION`; no self-approval is recorded.
