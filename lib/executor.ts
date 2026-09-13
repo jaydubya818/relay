@@ -6,6 +6,7 @@ import { githubSecret } from "@/lib/connections";
 import { RelayError } from "@/lib/errors";
 import { addMemory, getMemory, listMemories } from "@/lib/memory";
 import { createSandbox, destroySandbox, execSandbox, listSandboxFiles, readSandboxFile, writeSandboxFile } from "@/lib/sandboxes";
+import { clickBrowser, closeBrowserSession, createBrowserSession, extractBrowser, navigateBrowser, screenshotBrowser, typeBrowser } from "@/lib/browsers";
 import type { ActivityStatus, AgentPrincipal, CapabilityName, MemoryScope, MemoryType } from "@/lib/types";
 
 export async function executeCapability(input: {
@@ -68,6 +69,27 @@ export async function executeCapability(input: {
         break;
       case "sandbox.destroy":
         result = await destroySandbox(input.principal, String(input.arguments.sandboxId ?? ""));
+        break;
+      case "browser.create":
+        result = await createBrowserSession(input.principal, input.arguments);
+        break;
+      case "browser.navigate":
+        result = await navigateBrowser(input.principal, String(input.arguments.browserSessionId ?? ""), String(input.arguments.url ?? ""));
+        break;
+      case "browser.click":
+        result = await clickBrowser(input.principal, String(input.arguments.browserSessionId ?? ""), String(input.arguments.selector ?? ""));
+        break;
+      case "browser.type":
+        result = await typeBrowser(input.principal, String(input.arguments.browserSessionId ?? ""), String(input.arguments.selector ?? ""), String(input.arguments.text ?? ""));
+        break;
+      case "browser.extract":
+        result = await extractBrowser(input.principal, String(input.arguments.browserSessionId ?? ""), input.arguments.selector ? String(input.arguments.selector) : undefined);
+        break;
+      case "browser.screenshot":
+        result = await screenshotBrowser(input.principal, String(input.arguments.browserSessionId ?? ""));
+        break;
+      case "browser.close":
+        result = await closeBrowserSession(input.principal, String(input.arguments.browserSessionId ?? ""));
         break;
       default:
         throw new RelayError("INVALID_INPUT", "Unknown capability action.", input.capability);

@@ -9,6 +9,13 @@ export const CAPABILITIES = [
   "sandbox.file.write",
   "sandbox.file.list",
   "sandbox.destroy",
+  "browser.create",
+  "browser.navigate",
+  "browser.click",
+  "browser.type",
+  "browser.extract",
+  "browser.screenshot",
+  "browser.close",
 ] as const;
 
 export type CapabilityName = (typeof CAPABILITIES)[number];

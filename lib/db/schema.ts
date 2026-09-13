@@ -205,6 +205,7 @@ export const browserSessions = pgTable("browser_sessions", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
   lastUsedAt: timestamp("last_used_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  resourcePolicy: jsonb("resource_policy").notNull().default({}),
 }, (table) => [index("browser_sessions_account_owner_idx").on(table.accountId, table.ownerAgentId), index("browser_sessions_expiry_idx").on(table.status, table.expiresAt)]);
 
 export const browserSessionGrants = pgTable("browser_session_grants", {

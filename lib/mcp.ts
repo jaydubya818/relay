@@ -79,6 +79,41 @@ const toolDefinitions = {
     description: "Destroy an authorized Relay sandbox.",
     inputSchema: { type: "object", required: ["sandboxId"], properties: { sandboxId: { type: "string" } } },
   },
+  relay_browser_create: {
+    capability: "browser.create", action: "browser.create", provider: "BROWSER",
+    description: "Create an isolated Relay browser session owned by this Agent.",
+    inputSchema: { type: "object", properties: { ttlSeconds: { type: "number" }, operationTimeoutMs: { type: "number" }, maxExtractChars: { type: "number" }, network: { type: "string", enum: ["PUBLIC_ONLY", "OPEN"] } } },
+  },
+  relay_browser_navigate: {
+    capability: "browser.navigate", action: "browser.navigate", provider: "BROWSER",
+    description: "Navigate an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId", "url"], properties: { browserSessionId: { type: "string" }, url: { type: "string" } } },
+  },
+  relay_browser_click: {
+    capability: "browser.click", action: "browser.click", provider: "BROWSER",
+    description: "Click an element in an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId", "selector"], properties: { browserSessionId: { type: "string" }, selector: { type: "string" } } },
+  },
+  relay_browser_type: {
+    capability: "browser.type", action: "browser.type", provider: "BROWSER",
+    description: "Type into an element in an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId", "selector", "text"], properties: { browserSessionId: { type: "string" }, selector: { type: "string" }, text: { type: "string" } } },
+  },
+  relay_browser_extract: {
+    capability: "browser.extract", action: "browser.extract", provider: "BROWSER",
+    description: "Extract bounded text from an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId"], properties: { browserSessionId: { type: "string" }, selector: { type: "string" } } },
+  },
+  relay_browser_screenshot: {
+    capability: "browser.screenshot", action: "browser.screenshot", provider: "BROWSER",
+    description: "Capture a PNG screenshot of an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId"], properties: { browserSessionId: { type: "string" } } },
+  },
+  relay_browser_close: {
+    capability: "browser.close", action: "browser.close", provider: "BROWSER",
+    description: "Close an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId"], properties: { browserSessionId: { type: "string" } } },
+  },
 } as const;
 
 export type RelayToolName = keyof typeof toolDefinitions;
@@ -113,6 +148,13 @@ const toolInputSchemas: Record<RelayToolName, z.ZodTypeAny> = {
   relay_sandbox_file_write: z.object({ sandboxId: z.string().min(1).max(100), path: z.string().min(1).max(500), content: z.string().max(1024 * 1024) }),
   relay_sandbox_file_list: z.object({ sandboxId: z.string().min(1).max(100), path: z.string().max(500).default("") }),
   relay_sandbox_destroy: z.object({ sandboxId: z.string().min(1).max(100) }),
+  relay_browser_create: z.object({ ttlSeconds: z.number().int().min(60).max(86_400).optional(), operationTimeoutMs: z.number().int().min(500).max(60_000).optional(), maxExtractChars: z.number().int().min(1_000).max(500_000).optional(), network: z.enum(["PUBLIC_ONLY", "OPEN"]).optional() }),
+  relay_browser_navigate: z.object({ browserSessionId: z.string().min(1).max(100), url: z.string().url().max(2_000) }),
+  relay_browser_click: z.object({ browserSessionId: z.string().min(1).max(100), selector: z.string().min(1).max(1_000) }),
+  relay_browser_type: z.object({ browserSessionId: z.string().min(1).max(100), selector: z.string().min(1).max(1_000), text: z.string().max(100_000) }),
+  relay_browser_extract: z.object({ browserSessionId: z.string().min(1).max(100), selector: z.string().min(1).max(1_000).optional() }),
+  relay_browser_screenshot: z.object({ browserSessionId: z.string().min(1).max(100) }),
+  relay_browser_close: z.object({ browserSessionId: z.string().min(1).max(100) }),
 };
 
 export async function handleMcp(secret: string, request: McpRequest, requestId: string = randomUUID()) {
