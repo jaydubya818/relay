@@ -122,6 +122,8 @@ export async function executeCapability(input: {
       action: input.action,
       status,
       durationMs: performance.now() - started,
+      resourceType: input.arguments.sandboxId ? "sandbox" : input.arguments.browserSessionId ? "browser_session" : input.arguments.inboxItemId ? "agent_inbox_item" : undefined,
+      resourceId: String(input.arguments.sandboxId ?? input.arguments.browserSessionId ?? input.arguments.inboxItemId ?? "") || undefined,
     });
     console.info(JSON.stringify({
       level: "info",

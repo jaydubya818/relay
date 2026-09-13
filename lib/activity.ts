@@ -13,12 +13,15 @@ export async function recordActivity(input: {
   action: string;
   status: ActivityStatus;
   durationMs: number;
+  resourceType?: string;
+  resourceId?: string;
   metadata?: Record<string, string | number | boolean>;
 }) {
   await db().insert(activities).values({
     id: id("act"), accountId: input.accountId, agentId: input.agentId,
     sessionId: input.sessionId, capability: input.capability, provider: input.provider,
     action: input.action, status: input.status, durationMs: Math.max(0, Math.round(input.durationMs)),
+    resourceType: input.resourceType, resourceId: input.resourceId,
     createdAt: now(), metadata: input.metadata ?? {},
   });
 }
@@ -32,6 +35,7 @@ export async function listActivity(accountId: string, filters: { agentId?: strin
   return db().select({
     id: activities.id, agentId: activities.agentId, agentName: agents.name,
     sessionId: activities.sessionId, capability: activities.capability, provider: activities.provider,
+    resourceType: activities.resourceType, resourceId: activities.resourceId,
     action: activities.action, status: activities.status, durationMs: activities.durationMs,
     createdAt: activities.createdAt, metadata: activities.metadata,
   }).from(activities).leftJoin(agents, eq(agents.id, activities.agentId)).where(and(...conditions)).orderBy(desc(activities.createdAt), desc(activities.id)).limit(Math.min(filters.limit ?? 100, 250));

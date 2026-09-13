@@ -7,6 +7,7 @@ import { RelayError } from "@/lib/errors";
 import { executeCapability } from "@/lib/executor";
 import { checkAgentRateLimit } from "@/lib/rate-limit";
 import type { CapabilityName } from "@/lib/types";
+import { touchAgentSession } from "@/lib/agent-sessions";
 
 type McpRequest = { jsonrpc?: string; id?: string | number | null; method?: string; params?: any };
 
@@ -209,12 +210,13 @@ export async function handleMcp(secret: string, request: McpRequest, requestId: 
     if (!definition) throw new RelayError("INVALID_INPUT", "Unknown Relay MCP tool.");
     const parsedArguments = toolInputSchemas[name].safeParse(request.params?.arguments ?? {});
     if (!parsedArguments.success) throw new RelayError("INVALID_INPUT", "Tool arguments are invalid.", definition.capability);
+    const session = await touchAgentSession(auth.principal);
     const result = await executeCapability({
       principal: auth.principal,
       capability: definition.capability,
       action: definition.action,
       provider: "provider" in definition ? definition.provider : undefined,
-      sessionId: requestId,
+      sessionId: session.id,
       arguments: parsedArguments.data,
     });
     return { content: [{ type: "text", text: JSON.stringify(result) }] };
