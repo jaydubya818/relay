@@ -36,7 +36,7 @@ Final local results on 2026-09-13:
 - Google OAuth: `BLOCKED_EXTERNAL_CONFIGURATION`. The configured refresh-token exchange returned `invalid_grant`. Issue a new offline refresh token for the configured OAuth client, confirm the Gmail and Calendar APIs and Relay read-only scopes are enabled, then run `pnpm qualify:google`.
 - GitHub OAuth: `BLOCKED_EXTERNAL_CONFIGURATION`. Configure a registered OAuth App, its exact Relay callback URL, `GITHUB_CLIENT_ID`, and `GITHUB_CLIENT_SECRET`.
 - Claude: `NOT_RUN`. The installed Claude CLI is not authenticated.
-- Codex: `NOT_RUN`. No already-authorized disposable Relay Agent credential was available through the product flow for a live runtime check. Automated MCP runtime/session/credential correlation passed.
+- Codex: `PASSED LIVE`. A real Codex CLI qualification was completed against Relay MCP. Jay verified the resulting Agent, Session, Memory, credential-revocation, and Activity records directly in Relay's persisted PostgreSQL state (`relay_e2e_playwright`). Claude Cowork was unable to independently re-query those records in this session because local shell execution (`device_bash`) remained unavailable. Evidence: Agent `agt_f23ff83728944ddd8960fd1bfd75ef08`; Session `ags_aa313b8103d745a483ac8bc2d5850ba4`; Memory `mem_72f67539fe4a47d686f72fb1034979be`; credential prefix `rly_tt5mExEL`; `memory.add`/`memory.write` SUCCESS (2 ms); `memory.search`/`memory.read` SUCCESS (2 ms); credential revoked at `2026-09-13 10:13:19.592-07`; post-revocation `initialize` DENIED; post-revocation `tools/list` DENIED. Relay currently records the client runtime generically as `mcp`, not specifically `codex` — a known attribution limitation.
 
 ## Final external qualification — 2026-09-13
 
@@ -49,7 +49,7 @@ No implementation defect was found. The final external status is:
 - GitHub OAuth: `BLOCKED_EXTERNAL_CONFIGURATION`; `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are absent.
 - Google OAuth: `BLOCKED_EXTERNAL_CONFIGURATION`; client configuration is present, but the legitimate refresh exchange returns `invalid_grant`. OAuth validation was not weakened.
 - Claude MCP: `BLOCKED_EXTERNAL_CONFIGURATION`; Claude Code is installed but reports `loggedIn: false`.
-- Codex MCP: `NOT_RUN`; Codex is authenticated, but the host safety reviewer requires explicit authorization before creating a durable disposable Relay Agent credential. No bypass or test credential was used.
+- Codex MCP: `PASSED LIVE`. A real Codex CLI qualification was completed against Relay MCP. Jay subsequently verified the resulting Agent, Session, Memory, credential-revocation, and Activity records directly in Relay's persisted PostgreSQL state. Claude Cowork was unable to independently re-query those records in this session because local shell execution remained unavailable. Relay persisted the runtime generically as `mcp`, which remains a known attribution limitation.
 - Live cross-Agent golden path: `NOT_RUN`; it depends on live Claude and Codex identities plus GitHub and Google connections.
 
 The release-candidate tag was not created because all required live qualification did not pass. After the external credentials and authorization are supplied, repeat the live runtime and cross-Agent path before creating `relay-v1.0.0-rc.1`.
