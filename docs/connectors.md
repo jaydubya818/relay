@@ -27,6 +27,18 @@ A fine-grained PAT can still be entered as an explicitly labeled development fal
 
 Disconnecting deletes encrypted credentials immediately and changes the account connection to `DISCONNECTED`. Existing Agent grants remain visible but calls fail with `CONNECTION_REQUIRED` until the Account reconnects.
 
+## Google Workspace
+
+Google Workspace uses the same account-owned connection model. Configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `NEXT_PUBLIC_RELAY_URL`, then register:
+
+```text
+https://relay.example.com/api/connections/google/oauth/callback
+```
+
+Relay requests offline access with one-time account/user-bound state, S256 PKCE, and only `gmail.readonly`, `calendar.readonly`, OpenID, and email identity scopes. Access and refresh tokens are encrypted at rest. Expired access tokens refresh server-side; a rejected refresh marks the connection unhealthy and requires reconnection.
+
+V1 exposes `email.search`, `email.read`, `calendar.event.list`, `calendar.event.read`, and `calendar.availability.read`. Mail sending, deletion, calendar writes, and provider credentials owned by individual Agents are intentionally excluded.
+
 ## Live qualification
 
-Live OAuth requires a registered GitHub OAuth application whose callback exactly matches the Relay deployment URL. Unit and integration qualification cannot substitute for this final provider check.
+Live OAuth requires registered GitHub and Google OAuth applications whose callbacks exactly match the Relay deployment URL. Unit and integration qualification cannot substitute for final provider checks.
