@@ -18,11 +18,19 @@ Credentials are created per agent, displayed once, hashed at rest, independently
 - `tools/list`: returns only tools whose capabilities are allowed for the agent.
 - `tools/call`: validates input, authorizes the capability centrally, executes it, and records Activity.
 
-V0 tools:
+V1 capability groups:
 
 - `relay_memory_add` → `memory.write`
 - `relay_memory_search`, `relay_memory_get`, `relay_memory_list` → `memory.read`
 - `relay_github_repo_list`, `relay_github_repo_get` → `github.repo.read`
+- `relay_email_search`, `relay_email_read` → Gmail read-only capabilities
+- `relay_calendar_event_list`, `relay_calendar_event_read`, `relay_calendar_availability_read` → Calendar reads
+- `relay_sandbox_*` → governed sandbox lifecycle, execution, and file operations
+- `relay_browser_*` → isolated browser lifecycle, navigation, interaction, extraction, and screenshot
+- `relay_agent_inbox_*` → durable per-Agent inbox reads and acknowledgement
+- `relay_capabilities_search` → active capability registry discovery
+
+Every `tools/call` resolves a durable Agent session by account, Agent, runtime, and credential. Activity links the capability call to that session and any canonical resource ID.
 
 ## Example
 

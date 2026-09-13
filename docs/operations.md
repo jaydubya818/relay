@@ -10,4 +10,4 @@ Run migrations before shifting traffic:
 pnpm db:migrate
 ```
 
-Expired sandbox and browser resources must be cleaned by periodically invoking the exported cleanup functions from a trusted worker. V1 stores wake requests durably but does not automatically launch arbitrary Agent runtimes.
+Run `pnpm worker` as a trusted companion process. It cleans expired sandbox and browser resources on `RELAY_WORKER_INTERVAL_MS`, releases its timer, closes PostgreSQL, and exits cleanly on SIGINT/SIGTERM. V1 stores wake requests durably but does not automatically launch arbitrary Agent runtimes.

@@ -1,4 +1,4 @@
-# Relay
+# Relay V1
 
 Relay is a universal capability plane for AI agents.
 
@@ -15,7 +15,9 @@ Two independent agent identities can connect to one Relay MCP endpoint with sepa
 - Node.js 22.5 or newer
 - pnpm 9
 - PostgreSQL 14 or newer
-- A fine-grained GitHub token only when exercising the live connector
+- Docker for the initial self-hosted sandbox provider
+- Chromium installed through Playwright for the initial browser provider
+- Registered GitHub/Google OAuth applications for live connector use
 
 ## Quick start
 
@@ -39,7 +41,7 @@ Open [http://localhost:3000](http://localhost:3000). The local seed creates:
 
 ## Architecture
 
-Relay is a single Next.js application with server-rendered dashboard pages, server-side domain services, an HTTP MCP endpoint, and PostgreSQL persistence accessed through Drizzle. Capability authorization is centralized in the executor shared by memory and provider tools. Provider credentials are account-owned and AES-256-GCM encrypted; agent credentials are SHA-256 hashed and cannot be recovered.
+Relay is a Next.js web/API service plus a stoppable maintenance worker, backed by PostgreSQL through Drizzle. Capability authorization is centralized across memory, connectors, execution resources, browsers, events, and inbox tools. Provider credentials are account-owned and AES-256-GCM encrypted; Agent credentials are hashed and cannot be recovered.
 
 See [docs/architecture.md](docs/architecture.md) for the request path and domain boundaries.
 
@@ -76,13 +78,14 @@ pnpm test:performance
 pnpm exec playwright install chromium
 pnpm test:e2e
 pnpm build
+RELAY_LIVE_DOCKER=1 RELAY_LIVE_PLAYWRIGHT=1 pnpm vitest run tests/sandbox/docker-live.test.ts tests/browser/playwright-live.test.ts
 ```
 
-The GitHub integration suite uses a mock provider boundary; connect a fine-grained token in the dashboard for live qualification.
+Live OAuth qualification requires registered provider applications and valid refresh/authorization state. `pnpm qualify:google` performs only read-only Gmail and Calendar checks and never prints tokens or message bodies.
 
 ## Security model
 
-Dashboard sessions and agent credentials are separate. All dashboard mutations enforce same-origin requests, all agent tool calls pass through centralized authorization, tenant-owned records are filtered by `accountId`, revoked credentials fail immediately, provider tokens are encrypted, and logs omit bearer tokens and memory bodies. See [docs/security.md](docs/security.md) for V0 limitations and production requirements.
+Dashboard sessions and Agent credentials are separate. All dashboard mutations enforce same-origin requests, all Agent tool calls pass through centralized authorization, tenant-owned records are filtered by `accountId`, revoked credentials fail immediately, provider tokens are encrypted, and logs omit bearer tokens and capability payloads. See [docs/security.md](docs/security.md) for limitations and production requirements.
 
 ## Project documents
 
@@ -93,5 +96,10 @@ Dashboard sessions and agent credentials are separate. All dashboard mutations e
 - [PostgreSQL development and migrations](docs/database.md)
 - [Connector operations](docs/connectors.md)
 - [Sandbox provider and security](docs/sandboxes.md)
+- [Browser provider and security](docs/browser.md)
+- [Events and Agent inbox](docs/events.md)
+- [Operations](docs/operations.md)
+- [Deployment](docs/deployment.md)
+- [V1 release candidate](docs/v1-release.md)
 - [ADR-015: V1 execution providers](docs/adr/ADR-015-relay-v1-execution-providers.md)
 - [Implementation plan and audit](docs/implementation-plan.md)

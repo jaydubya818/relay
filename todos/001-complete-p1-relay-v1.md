@@ -1,5 +1,5 @@
 ---
-status: ready
+status: complete
 priority: p1
 issue_id: "001"
 tags: [relay-v1, postgres, auth, providers, events, mcp]
@@ -40,21 +40,21 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 - [x] GitHub OAuth is primary while optional PAT development setup remains contained.
 - [x] Sandbox and browser capabilities use provider-neutral contracts with ownership, grants, TTL, cleanup, and Activity.
 - [x] Durable events route idempotently into Agent inboxes.
-- [ ] Google email/calendar reads are account-owned and grant-projected.
-- [ ] MCP exposes only authorized V1 tools.
-- [ ] Security, load, E2E, migration, health, and provider contract tests pass.
-- [ ] Live qualification evidence is recorded where credentials and local providers permit.
-- [ ] Documentation and deployment configuration are complete.
+- [x] Google email/calendar reads are account-owned and grant-projected.
+- [x] MCP exposes only authorized V1 tools.
+- [x] Security, load, E2E, migration, health, and provider contract tests pass.
+- [x] Live qualification evidence is recorded where credentials and local providers permit.
+- [x] Documentation and deployment configuration are complete.
 
 ## Completion Pass
 
-- [ ] Google OAuth is account-owned, encrypted, refreshable, and revocable.
-- [ ] Gmail and Calendar read-only capabilities are grant-projected and audited.
-- [ ] Overview, Agent, Connections, Sandboxes, Browsers, Events, and Activity surfaces are complete.
-- [ ] Security, concurrency, idempotency, session-correlation, and final golden-path suites pass.
-- [ ] Browser E2E and route performance qualification pass.
-- [ ] Clean-database migrations, production start, readiness, MCP, cleanup, and worker shutdown pass.
-- [ ] Release documentation and explicit live-provider evidence/blockers are complete.
+- [x] Google OAuth is account-owned, encrypted, refreshable, and revocable.
+- [x] Gmail and Calendar read-only capabilities are grant-projected and audited.
+- [x] Overview, Agent, Connections, Sandboxes, Browsers, Events, and Activity surfaces are complete.
+- [x] Security, concurrency, idempotency, session-correlation, and final golden-path suites pass.
+- [x] Browser E2E and route performance qualification pass.
+- [x] Clean-database migrations, production start, readiness, MCP, cleanup, and worker shutdown pass.
+- [x] Release documentation and explicit live-provider evidence/blockers are complete.
 
 ## Work Log
 
@@ -136,3 +136,18 @@ Deliver V1 in focused, independently qualified commits: persistence, auth/connec
 
 **Learnings:**
 - Live Docker and Playwright adapters are qualified locally. GitHub OAuth still needs a registered OAuth app; Google read capabilities and the remaining V1 UI/golden-path work are not yet complete.
+
+### 2026-09-13 — V1 completion and release-candidate qualification
+
+**By:** Codex
+
+**Actions:**
+- Added account-owned Google OAuth and grant-projected Gmail/Calendar reads without exposing provider credentials to Agents.
+- Completed the V1 dashboards, event/inbox audit coverage, explicit sandbox sharing, security/load suites, final golden path, and stoppable maintenance worker.
+- Passed 39 default-suite tests, 2 performance tests, 3 browser E2E tests, and 3 separately enabled live Docker/Chromium tests.
+- Qualified repeated migrations/seeds, production build/start, health/readiness/provider endpoints, MCP routing, cleanup, and graceful web/worker shutdown.
+- Recorded exact Google, GitHub, Claude, and Codex external/live qualification status in the release document.
+
+**Learnings:**
+- The configured Google refresh token returns `invalid_grant`; this is an external OAuth credential-state blocker, not a passing live qualification.
+- The completion pass caught and fixed a CommonJS incompatibility in the worker CLI that unit-only execution had not exposed.

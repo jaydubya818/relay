@@ -12,8 +12,11 @@
 - Capability grants have explicit ALLOW/DENY effects. Missing grants deny by default.
 - MCP tools are projected from grants, and direct calls still pass centralized authorization.
 - Every domain query scopes records to the authenticated account.
-- GitHub credentials live in a separate table encrypted with AES-256-GCM and are never returned by ordinary APIs.
-- Provider tokens, bearer tokens, and memory bodies are omitted from structured logs and Activity metadata.
+- GitHub and Google credentials live in a separate table encrypted with AES-256-GCM and are never returned by ordinary APIs.
+- Provider tokens, bearer tokens, memory bodies, email bodies, commands, and browser content are omitted from structured logs and Activity metadata.
+- Sandbox and browser resources are Agent-private by default, account-scoped, explicitly shareable, and time-bounded.
+- Browser public-network policy blocks localhost, private/link-local IP space, unsafe schemes, redirects, and subresources.
+- Event ingestion requires an account/source delivery key and transactionally deduplicates Agent inbox routing.
 - Agent calls have a bounded per-process rate limit.
 - Tool and dashboard inputs are validated and bounded.
 
@@ -26,6 +29,8 @@
 - Rate limiting is process-local, not distributed.
 - Password reset, email verification, MFA, and member invitations are not yet implemented. V1 account creation establishes one OWNER; additional membership management remains deployment-admin controlled until an invitation flow is qualified.
 - Connector encryption uses an application-managed key rather than a cloud KMS.
-- GitHub uses a fine-grained personal access token rather than a full OAuth installation flow.
+- OAuth provider verification/consent requirements remain external deployment responsibilities.
+- Google V1 is read-only; mail/calendar writes are intentionally absent.
+- Live Playwright contexts are process-local and become invalid after a web process restart.
 - Forgotten memory remains tombstoned for audit/storage cleanup; it is excluded from active retrieval.
-- The MCP endpoint implements the V0 JSON-RPC methods needed for Relay clients, not every optional MCP transport feature.
+- The MCP endpoint implements Relay's required JSON-RPC lifecycle and tool methods, not every optional MCP transport feature.
