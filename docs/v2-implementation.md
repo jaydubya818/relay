@@ -16,8 +16,8 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 
 | WorkOrder | Title | Dependencies | State | Commit | Qualification | Blockers / deviations |
 |---|---|---|---|---|---|---|
-| WO-00 | Establish V2 isolation and governance | — | QUALIFIED | pending commit | LOCAL PASS | Remote branch/deploy protection: BLOCKED_EXTERNAL_CONFIGURATION |
-| WO-01 | Freeze vocabulary, schemas, and state machines | WO-00 | NOT_STARTED | — | — | — |
+| WO-00 | Establish V2 isolation and governance | — | QUALIFIED | `07b1427` | LOCAL PASS | Remote branch/deploy protection: BLOCKED_EXTERNAL_CONFIGURATION |
+| WO-01 | Freeze vocabulary, schemas, and state machines | WO-00 | QUALIFIED | pending commit | LOCAL PASS | — |
 | WO-02 | Complete security architecture and abuse cases | WO-01 | NOT_STARTED | — | — | — |
 | WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | NOT_STARTED | — | — | — |
 | WO-04 | Build evidence and append-only audit substrate | WO-01, WO-02, WO-03 | NOT_STARTED | — | — | — |
@@ -51,3 +51,10 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added ADR-016 and `pnpm v2:frontier:check` to enforce immutable tag, ancestry, branch, and protected-ref invariants.
 - Qualification passed: frontier check, typecheck, lint, and unit tests (4/4).
 - Live verification of GitHub branch protections and V2-only deployment credentials is `BLOCKED_EXTERNAL_CONFIGURATION`; no administrative mutation was attempted.
+
+### 2026-09-13 — WO-01 contracts
+
+- Added strict V2 action, event, capability-lease, resource, capability-reference, and approval-scope validators.
+- Added stable JSON Schema 2020-12 identifiers, reason codes, and explicit task/action/approval/lease transition maps.
+- Added deterministic canonical JSON and SHA-256 action hashing with invalid-value rejection.
+- Qualification passed: typecheck, lint, and focused contract/hygiene tests (9/9).

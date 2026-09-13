@@ -1,0 +1,33 @@
+export const TASK_STATES = ["RECEIVED", "ROUTED", "QUEUED", "STARTING", "RUNNING", "PAUSED", "WAITING_APPROVAL", "SUCCEEDED", "FAILED", "CANCELLED", "DEAD_LETTERED"] as const;
+export const APPROVAL_STATES = ["PENDING", "APPROVED", "DENIED", "EXPIRED", "CANCELLED", "SUPERSEDED", "REVOKED"] as const;
+export const LEASE_STATES = ["REQUESTED", "EVALUATED", "ISSUED", "ACTIVE", "EXHAUSTED", "EXPIRED", "REVOKED", "COMPLETED"] as const;
+export const ACTION_STATES = ["PROPOSED", "AUTHORIZING", "WAITING_APPROVAL", "AUTHORIZED", "EXECUTING", "SUCCEEDED", "FAILED", "CANCELLED", "EFFECT_UNKNOWN"] as const;
+export type TaskState = (typeof TASK_STATES)[number];
+export type ApprovalState = (typeof APPROVAL_STATES)[number];
+export type LeaseState = (typeof LEASE_STATES)[number];
+export type ActionState = (typeof ACTION_STATES)[number];
+
+export const taskTransitions: Readonly<Record<TaskState, readonly TaskState[]>> = {
+  RECEIVED: ["ROUTED", "CANCELLED", "DEAD_LETTERED"], ROUTED: ["QUEUED", "CANCELLED", "DEAD_LETTERED"],
+  QUEUED: ["STARTING", "CANCELLED", "DEAD_LETTERED"], STARTING: ["RUNNING", "FAILED", "CANCELLED", "DEAD_LETTERED"],
+  RUNNING: ["PAUSED", "WAITING_APPROVAL", "SUCCEEDED", "FAILED", "CANCELLED"], PAUSED: ["RUNNING", "CANCELLED", "FAILED"],
+  WAITING_APPROVAL: ["RUNNING", "CANCELLED", "FAILED"], SUCCEEDED: [], FAILED: [], CANCELLED: [], DEAD_LETTERED: [],
+};
+export const approvalTransitions: Readonly<Record<ApprovalState, readonly ApprovalState[]>> = {
+  PENDING: ["APPROVED", "DENIED", "EXPIRED", "CANCELLED", "SUPERSEDED"], APPROVED: ["REVOKED"],
+  DENIED: [], EXPIRED: [], CANCELLED: [], SUPERSEDED: [], REVOKED: [],
+};
+export const leaseTransitions: Readonly<Record<LeaseState, readonly LeaseState[]>> = {
+  REQUESTED: ["EVALUATED", "REVOKED"], EVALUATED: ["ISSUED", "REVOKED"], ISSUED: ["ACTIVE", "EXPIRED", "REVOKED"],
+  ACTIVE: ["EXHAUSTED", "EXPIRED", "REVOKED", "COMPLETED"], EXHAUSTED: [], EXPIRED: [], REVOKED: [], COMPLETED: [],
+};
+export const actionTransitions: Readonly<Record<ActionState, readonly ActionState[]>> = {
+  PROPOSED: ["AUTHORIZING", "CANCELLED"], AUTHORIZING: ["WAITING_APPROVAL", "AUTHORIZED", "FAILED", "CANCELLED"],
+  WAITING_APPROVAL: ["AUTHORIZING", "FAILED", "CANCELLED"], AUTHORIZED: ["EXECUTING", "CANCELLED"],
+  EXECUTING: ["SUCCEEDED", "FAILED", "EFFECT_UNKNOWN"], SUCCEEDED: [], FAILED: [], CANCELLED: [], EFFECT_UNKNOWN: [],
+};
+export function canTransition<T extends string>(transitions: Readonly<Record<T, readonly T[]>>, from: T, to: T) { return transitions[from].includes(to); }
+
+export const REASON_CODES = ["ALLOWED_BY_POLICY", "APPROVAL_REQUIRED", "APPROVAL_EXPIRED", "APPROVAL_MISMATCH", "BUDGET_EXHAUSTED", "CAPABILITY_NOT_GRANTED", "CONFLICTING_POLICY", "EFFECT_UNKNOWN", "INVALID_SIGNATURE", "LEASE_EXHAUSTED", "LEASE_EXPIRED", "LEASE_REPLAYED", "LEASE_REVOKED", "MISSING_AUTHORITATIVE_FACT", "POLICY_DENIED", "POLICY_UNAVAILABLE", "PROVIDER_UNAVAILABLE", "RESOURCE_OUT_OF_SCOPE", "RUNNER_ASSURANCE_INSUFFICIENT", "TENANT_MISMATCH", "WRONG_AUDIENCE"] as const;
+export type ReasonCode = (typeof REASON_CODES)[number];
+
