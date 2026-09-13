@@ -30,6 +30,15 @@ describe("durable events and Agent inbox", () => {
     expect(await db().select().from(agentWakeRequests).where(eq(agentWakeRequests.accountId, accountId))).toHaveLength(1);
   });
 
+  it("deduplicates concurrent provider retries without duplicating inbox delivery", async () => {
+    const agent = await createAgent(accountId, { name: "Concurrent Worker", capabilities: ["agent.inbox.list"] });
+    const envelope = { accountId, type: "github.push", source: "github", deliveryId: "delivery-concurrent", occurredAt: new Date().toISOString(), subjectType: "repository", subjectId: "acme/relay" };
+    const results = await Promise.all(Array.from({ length: 10 }, () => ingestEvent(envelope, { agentIds: [agent.agentId] })));
+    expect(results.filter((result) => !result.duplicate)).toHaveLength(1);
+    expect(await db().select().from(events).where(and(eq(events.accountId, accountId), eq(events.providerDeliveryId, envelope.deliveryId)))).toHaveLength(1);
+    expect(await db().select().from(agentInbox).where(and(eq(agentInbox.accountId, accountId), eq(agentInbox.agentId, agent.agentId)))).toHaveLength(1);
+  });
+
   it("exposes only the owning Agent's inbox and acknowledges durably", async () => {
     const owner = await createAgent(accountId, { name: "Owner", capabilities: ["agent.inbox.list", "agent.inbox.get", "agent.inbox.ack"] });
     const peer = await createAgent(accountId, { name: "Peer", capabilities: ["agent.inbox.list", "agent.inbox.get", "agent.inbox.ack"] });

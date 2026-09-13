@@ -54,3 +54,7 @@ export async function closeDatabase() {
 }
 
 export const closeDatabasesForTests = closeDatabase;
+
+export function databasePoolStats() {
+  return pool ? { total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount, max: Number(process.env.RELAY_DATABASE_POOL_SIZE ?? 10) } : { total: 0, idle: 0, waiting: 0, max: Number(process.env.RELAY_DATABASE_POOL_SIZE ?? 10) };
+}
