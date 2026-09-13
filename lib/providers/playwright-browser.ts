@@ -5,7 +5,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { RelayError } from "@/lib/errors";
 import type { BrowserProvider, BrowserProviderRef, BrowserResourcePolicy } from "@/lib/providers/browser";
 
-type Session = { context: BrowserContext; page: Page };
+type Session = { context: BrowserContext; page: Page; expires: ReturnType<typeof setTimeout> };
 
 function privateIp(address: string) {
   if (isIP(address) === 4) {
@@ -53,7 +53,11 @@ export class PlaywrightBrowserProvider implements BrowserProvider {
     page.setDefaultTimeout(policy.operationTimeoutMs);
     page.setDefaultNavigationTimeout(policy.operationTimeoutMs);
     const resourceId = randomUUID();
-    this.sessions.set(resourceId, { context, page });
+    const expires = setTimeout(() => {
+      void this.close({ resourceId }).catch(() => undefined);
+    }, policy.ttlSeconds * 1000);
+    expires.unref();
+    this.sessions.set(resourceId, { context, page, expires });
     return { resourceId };
   }
 
@@ -94,6 +98,7 @@ export class PlaywrightBrowserProvider implements BrowserProvider {
     const session = this.sessions.get(resource.resourceId);
     if (!session) return;
     this.sessions.delete(resource.resourceId);
+    clearTimeout(session.expires);
     await session.context.close();
     if (this.sessions.size === 0 && this.browser) {
       await this.browser.close();
