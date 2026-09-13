@@ -60,6 +60,14 @@ function migrate(database: DatabaseSync) {
       last_used_at TEXT
     );
     CREATE INDEX IF NOT EXISTS credentials_agent_idx ON agent_credentials(agent_id);
+    CREATE TABLE IF NOT EXISTS capabilities (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      domain TEXT NOT NULL,
+      description TEXT NOT NULL,
+      risk_level TEXT NOT NULL CHECK(risk_level IN ('LOW', 'MEDIUM', 'HIGH')),
+      enabled INTEGER NOT NULL DEFAULT 1
+    );
     CREATE TABLE IF NOT EXISTS capability_grants (
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -113,6 +121,11 @@ function migrate(database: DatabaseSync) {
       metadata TEXT NOT NULL DEFAULT '{}'
     );
     CREATE INDEX IF NOT EXISTS activity_account_created_idx ON activities(account_id, created_at DESC);
+    INSERT OR IGNORE INTO capabilities (id, name, domain, description, risk_level, enabled) VALUES
+      ('cap_memory_read', 'memory.read', 'MEMORY', 'Read authorized account and private memory.', 'LOW', 1),
+      ('cap_memory_write', 'memory.write', 'MEMORY', 'Create durable memory.', 'MEDIUM', 1),
+      ('cap_memory_forget', 'memory.forget', 'MEMORY', 'Remove memory from active retrieval.', 'HIGH', 1),
+      ('cap_github_repo_read', 'github.repo.read', 'GITHUB', 'Read repositories through the account connection.', 'MEDIUM', 1);
   `);
 }
 

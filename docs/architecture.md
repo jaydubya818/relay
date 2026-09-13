@@ -38,7 +38,7 @@ Capability executor ───► Activity ledger
 
 ## Data model
 
-The schema contains Account, User, Agent, AgentCredential, CapabilityGrant, Memory, Connection, ConnectionCredential, and Activity. Foreign keys enforce ownership relationships; service queries also require the authenticated account ID to prevent cross-account direct-object access.
+The schema contains Account, User, Agent, AgentCredential, Capability, CapabilityGrant, Memory, Connection, ConnectionCredential, and Activity. The capability registry is seeded by migration with domain, description, risk, and enabled state. Foreign keys enforce ownership relationships; service queries also require the authenticated account ID to prevent cross-account direct-object access.
 
 ## Performance
 
