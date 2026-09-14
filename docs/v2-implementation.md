@@ -35,7 +35,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-16 | Qualify Slack and Telegram communications | WO-07, WO-10 | IMPLEMENTED | `c7e545a` | LOCAL PASS | Live Slack/Telegram channel qualification: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-17 | Qualify Google Drive and Linear connectors | WO-06, WO-08, WO-10 | IMPLEMENTED | `67faf40` | LOCAL PASS | Live Google Drive/Linear qualification: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-18 | Build financial domain and controlled purchase intents | WO-07, WO-09, WO-15 | IMPLEMENTED | `e8eaa88` | LOCAL PASS | Aggregator disabled; independent PCI review and production protected-view qualification pending WO-22 |
-| WO-19 | Build same-account Agent delegation | WO-04, WO-05, WO-08–WO-10 | NOT_STARTED | — | — | — |
+| WO-19 | Build same-account Agent delegation | WO-04, WO-05, WO-08–WO-10 | QUALIFIED | `eb00d61` | LOCAL PASS | Production-scale revocation/outbox/load evidence remains WO-22 |
 | WO-20 | Publish REST, events, MCP, and client SDKs | WO-05–WO-10, WO-19 | NOT_STARTED | — | — | — |
 | WO-21 | Build operator and user dashboard | WO-04, WO-07, WO-10, WO-15–WO-18 | NOT_STARTED | — | — | — |
 | WO-22 | Qualify V2 for limited beta and GA | WO-12–WO-21 | NOT_STARTED | — | — | — |
@@ -234,3 +234,16 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added focused tenant-isolation coverage for financial records, credential references, intents, reservations, checkout permits, control-session bindings, receipts, and aggregator access, plus a concurrent purchase-budget fixture.
 - Qualification passed: focused money suite (6/6), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (152/152); 4 opt-in live-provider tests remained intentionally skipped.
 - Independent PCI/security/legal assessment, financial-aggregator selection, and production protected-view suppression validation remain external qualifications and do not authorize unattended payment execution.
+
+### 2026-09-13 — WO-19 same-account Agent delegation
+
+- Added attached same-account parent/child task delegation with one immutable `agents.task.delegate@1.0` action binding the child, objective, authority promises, context memory IDs, budget ceilings, and idempotency key.
+- Added newly allocated child tasks, explicit parent relationships, maximum depth 8, active fan-out 16, durable start commands/outbox delivery, and no detachable or cross-account child mode.
+- Added child-Passport capability/data-access intersection, parent-task lease validation, pending-promise accounting, single-winner authority claim, and normal WO-08 parent-linked child leases.
+- Corrected parent lease revocation so it recursively revokes all descendant leases rather than checking only an immediate parent at call time.
+- Restricted context transfer to authoritative, explicitly named same-account memory records; private records must be parent-created and child context APIs return no undeclared memory. Provenance exports contain context hashes, not content.
+- Added delegation-scoped child budgets with sibling/live-parent ceiling checks and authoritative lineage resolution inside WO-09 reservation transactions. Caller-declared parent task/Agent identity is not accepted.
+- Added terminal result return with redaction, hashes, same-account evidence references, parent-task outbox notification, automatic unused-authority/budget shutdown, recursive delegation revoke, and signed provenance export.
+- Added focused tenant-isolation coverage for delegation records, task relationships, contexts, authority promises/claims, child leases, budgets, results, evidence references, queries, and provenance exports.
+- Qualification passed: focused delegation suite (6/6), affected lease/budget/delegation suites (21/21), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (158/158); 4 opt-in live-provider tests remained intentionally skipped.
+- Production-scale depth/fan-out load, recursive revocation latency, outbox recovery, and worker-loss claim reconciliation remain WO-22 qualification work.
