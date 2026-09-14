@@ -16,7 +16,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 
 | WorkOrder | Title | Dependencies | State | Commit | Qualification | Blockers / deviations |
 |---|---|---|---|---|---|---|
-| WO-00 | Establish V2 isolation and governance | — | QUALIFIED | `07b1427` | LOCAL PASS | Remote protection was initially BLOCKED_EXTERNAL_CONFIGURATION; authenticated WO-22 inspection now records FAILED |
+| WO-00 | Establish V2 isolation and governance | — | QUALIFIED | `07b1427` | LOCAL + REMOTE PARTIAL | Main review/force/delete and V2 tag controls PASSED_LIVE; checks and deployment environment BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-01 | Freeze vocabulary, schemas, and state machines | WO-00 | QUALIFIED | `b468a38` | LOCAL PASS | — |
 | WO-02 | Complete security architecture and abuse cases | WO-01 | IMPLEMENTED | `dbb48a0` | LOCAL PASS | Independent security-owner review pending |
 | WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | QUALIFIED | `b5400fd` | SCOPED PASS | Acceptance sequencing corrected by Product Owner; live OIDC/WebAuthn pending provider qualification |
@@ -38,7 +38,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-19 | Build same-account Agent delegation | WO-04, WO-05, WO-08–WO-10 | QUALIFIED | `eb00d61` | LOCAL PASS | Production-scale revocation/outbox/load evidence remains WO-22 |
 | WO-20 | Publish REST, events, MCP, and client SDKs | WO-05–WO-10, WO-19 | QUALIFIED | `352c8e1` | LOCAL PASS | Live vendor/client and hosted authorization-server conformance remain external |
 | WO-21 | Build operator and user dashboard | WO-04, WO-07, WO-10, WO-15–WO-18 | IMPLEMENTED | `8109a47` | LOCAL PASS | Formal screen-reader and multi-participant comprehension evidence pending WO-22 |
-| WO-22 | Qualify V2 for limited beta and GA | WO-12–WO-21 | BLOCKED_EXTERNAL_QUALIFICATION | `ec10c27`, `a7ed00f`, `6b72301` | LOCAL + RELAY-MANAGED LIVE PARTIAL | External providers/channels/topology and human reviews remain blocked; remote governance controls are FAILED |
+| WO-22 | Qualify V2 for limited beta and GA | WO-12–WO-21 | BLOCKED_EXTERNAL_QUALIFICATION | `ec10c27`, `a7ed00f`, `6b72301` + governance evidence | LOCAL + RELAY-MANAGED/GITHUB LIVE PARTIAL | External providers/channels/topology, CI/deployment governance, and human reviews remain blocked |
 
 ## Work log
 
@@ -297,3 +297,14 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added the bounded WO-02 independent review package, independent penetration checklist, and human accessibility/approval-comprehension protocol. Those independent gates remain `REQUIRES_HUMAN_REVIEW`; the Product Owner release choice remains `REQUIRES_PRODUCT_OWNER_DECISION`.
 - Authenticated GitHub inspection transitioned remote main/tag/deployment protections from historical `BLOCKED_EXTERNAL_CONFIGURATION` to current `FAILED`: `main` is unprotected, repository rulesets and environments are empty, and no release/tag protection was found. No remote mutation was authorized or made.
 - WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION` and the recommendation is `NOT_READY_FOR_LIMITED_BETA`. No V2 RC tag, main merge, V1 modification, V2.1 work or V3 work occurred.
+
+### 2026-09-13 — WO-22 release-governance hardening
+
+- Captured the authenticated pre-change state: default branch `main`; branch unprotected; no rulesets, status checks, check runs, tag protection or environments; all three merge methods enabled; repository-admin permission available.
+- Defined and applied the minimum enforceable `main` policy: pull request required, one approval, stale approvals dismissed, last-push approval separation, conversation resolution, admin enforcement, force pushes blocked and deletion blocked.
+- Did not require code-owner review because no `CODEOWNERS` file exists. Did not require signed commits because no established signing workflow exists. Did not constrain merge methods because review and immutable-ref controls do not depend on merge style.
+- Created active repository tag ruleset `23264220` for exactly `refs/tags/relay-v2.*`, prohibiting deletion and non-fast-forward updates with no bypass actors. No existing V0/V1 tag or release was changed, and no V2 tag was created.
+- Verified remote read-back: `main` protected; review/admin/conversation controls present; force push and deletion disabled; V2 tag ruleset active.
+- Required status checks remain `BLOCKED_EXTERNAL_CONFIGURATION`: no workflow, check run or status context exists, so no check name or up-to-date rule was invented.
+- Deployment-environment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`: no deployment pipeline or GitHub environment exists, so no placeholder infrastructure or secrets were created.
+- Unrelated WO-22 provider, topology, independent-review and human-study blockers are unchanged. The release recommendation remains `NOT_READY_FOR_LIMITED_BETA`.

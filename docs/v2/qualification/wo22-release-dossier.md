@@ -36,7 +36,7 @@ Local criteria 1, 2, 6, 8, 9, 10, 12, and 13 have deterministic passing evidence
 
 ## Release decision
 
-`assertV2ReleaseReady` intentionally throws with the current evidence set. Relay V2 must not be labeled limited-beta-ready or GA-ready yet. Remote branch/deployment protections were subsequently inspected and found absent; their current state is `FAILED`. Independent security-owner review of WO-02 remains `REQUIRES_HUMAN_REVIEW`. These statuses do not invalidate locally completed WorkOrders, but they are mandatory WO-22 release blockers.
+`assertV2ReleaseReady` intentionally throws with the current evidence set. Relay V2 must not be labeled limited-beta-ready or GA-ready yet. Main review/force-push/deletion protection and V2 tag immutability are now `PASSED_LIVE`; required CI checks and deployment-environment enforcement remain `BLOCKED_EXTERNAL_CONFIGURATION`. Independent security-owner review of WO-02 remains `REQUIRES_HUMAN_REVIEW`. These statuses do not invalidate locally completed WorkOrders, but the incomplete gates remain mandatory WO-22 release blockers.
 
 ## 2026-09-13 external qualification campaign
 
@@ -97,8 +97,23 @@ Human screen-reader/platform and multi-participant actor/destination/consequence
 - Historical transition: remote protections changed from `BLOCKED_EXTERNAL_CONFIGURATION` (not inspectable/qualified) to `FAILED` (authenticated inspection proved controls absent). No governance setting was changed.
 - Required authorized change: protect `main`; require pull-request review and named CI checks; block force push/deletion; add tag/release rules; create a protected deployment environment with V2-only secrets and required reviewers.
 
+#### Release-governance hardening transition
+
+Authenticated repository-admin authorization was available and the release-hardening task explicitly authorized minimum governance changes. The following settings were applied and read back:
+
+- `PASSED_LIVE` — `main` is protected and requires a pull request with one approving review.
+- `PASSED_LIVE` — stale approvals are dismissed, the most recent pusher cannot approve, all conversations must be resolved, and rules apply to administrators.
+- `PASSED_LIVE` — force pushes and branch deletion are disabled.
+- `PASSED_LIVE` — repository ruleset `23264220`, “Relay V2 release tags,” is active for only `refs/tags/relay-v2.*`; deletion and non-fast-forward updates are prohibited and no bypass actor exists.
+- `BLOCKED_EXTERNAL_CONFIGURATION` — required status checks and “branch must be up to date” cannot be configured truthfully. The repository contains no GitHub workflow, the `main` commit has no check runs and no status contexts, and no check name was invented.
+- `BLOCKED_EXTERNAL_CONFIGURATION` — deployment-environment protection. The repository has no environment or deployment pipeline, so no placeholder environment or secret scope was invented.
+
+Code-owner review is not required because no `CODEOWNERS` file exists. Signed commits are not required because no established signing/verification workflow exists. Existing merge methods—merge commit, squash, and rebase—remain enabled; constraining merge style is not necessary for the minimum review/immutability policy and was not changed. Auto-merge remains disabled.
+
+Historical transition: branch/tag/deployment governance was `FAILED` before hardening. Branch review/admin/force-push/deletion and V2 tag controls transitioned to `PASSED_LIVE`; checks and deployment environments transitioned to the narrower truthful `BLOCKED_EXTERNAL_CONFIGURATION`.
+
 ### Release recommendation
 
-Engineering-controlled local and Relay-managed qualification is green after the focused accessibility correction, but the release is `NOT_READY_FOR_LIMITED_BETA`: remote governance controls are failed; independent security, penetration, accessibility/comprehension and payment-scope reviews are incomplete; and the intended live provider/channel/connector/runner and production topology are unqualified.
+Engineering-controlled local and Relay-managed qualification is green after the focused accessibility correction, but the release is `NOT_READY_FOR_LIMITED_BETA`: required CI checks and deployment-environment enforcement are not available; independent security, penetration, accessibility/comprehension and payment-scope reviews are incomplete; and the intended live provider/channel/connector/runner and production topology are unqualified.
 
 The Product Owner decision remains `REQUIRES_PRODUCT_OWNER_DECISION`. GA remains `BLOCKED_EXTERNAL_QUALIFICATION`. No tag, merge, V1 change, V2.1 work or V3 work was performed.
