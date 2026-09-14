@@ -4,6 +4,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -47,6 +48,11 @@ export const approvalDecisionValue = pgEnum("approval_decision_value", ["APPROVE
 export const notificationStatus = pgEnum("notification_status", ["PENDING", "SENT", "FAILED", "CANCELLED"]);
 export const workloadStatus = pgEnum("workload_status", ["BOOTSTRAPPING", "ACTIVE", "REVOKED", "EXPIRED"]);
 export const capabilityLeaseStatus = pgEnum("capability_lease_status", ["REQUESTED", "EVALUATED", "ISSUED", "ACTIVE", "EXHAUSTED", "EXPIRED", "REVOKED", "COMPLETED"]);
+export const budgetDimension = pgEnum("budget_dimension", ["TOKENS", "MODEL_SPEND", "CONNECTOR_CALLS", "COMPUTE_SECONDS", "COMPUTER_SECONDS", "PURCHASE_AMOUNT"]);
+export const budgetScope = pgEnum("budget_scope", ["ACCOUNT", "AGENT", "TASK", "DELEGATION"]);
+export const budgetStatus = pgEnum("budget_status", ["ACTIVE", "EXHAUSTED", "DISABLED"]);
+export const budgetBalanceStatus = pgEnum("budget_balance_status", ["CURRENT", "STALE", "UNKNOWN"]);
+export const budgetReservationStatus = pgEnum("budget_reservation_status", ["RESERVED", "COMMITTED", "RELEASED", "EXPIRED", "UNKNOWN"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -342,6 +348,7 @@ export const capabilityDefinitions = pgTable("capability_definitions", {
   resourceType: text("resource_type").notNull(),
   inputSchema: jsonb("input_schema").notNull(),
   outputSchema: jsonb("output_schema").notNull(),
+  meteringDimensions: text("metering_dimensions").array().notNull().default([]),
   enabled: boolean("enabled").notNull().default(true),
   definitionHash: text("definition_hash").notNull(),
   signature: text("signature").notNull(),
@@ -523,6 +530,69 @@ export const leaseCallReceipts = pgTable("lease_call_receipts", {
   workloadId: text("workload_id").notNull(),
   consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("lease_call_idempotency_idx").on(table.leaseId, table.callId), index("lease_call_account_idx").on(table.accountId, table.leaseId)]);
+
+export const budgets = pgTable("budgets", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  parentBudgetId: text("parent_budget_id"),
+  scope: budgetScope("scope").notNull(),
+  scopeId: text("scope_id"),
+  dimension: budgetDimension("dimension").notNull(),
+  unit: text("unit").notNull(),
+  currency: text("currency"),
+  hardLimit: numeric("hard_limit", { precision: 30, scale: 9 }).notNull(),
+  softLimit: numeric("soft_limit", { precision: 30, scale: 9 }),
+  reservedAmount: numeric("reserved_amount", { precision: 30, scale: 9 }).notNull().default("0"),
+  consumedAmount: numeric("consumed_amount", { precision: 30, scale: 9 }).notNull().default("0"),
+  status: budgetStatus("status").notNull().default("ACTIVE"),
+  balanceStatus: budgetBalanceStatus("balance_status").notNull().default("CURRENT"),
+  balanceAsOf: timestamp("balance_as_of", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [index("budget_account_dimension_idx").on(table.accountId, table.dimension, table.status), index("budget_scope_idx").on(table.accountId, table.scope, table.scopeId), index("budget_parent_idx").on(table.accountId, table.parentBudgetId)]);
+
+export const budgetReservations = pgTable("budget_reservations", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  leafBudgetId: text("leaf_budget_id").notNull().references(() => budgets.id, { onDelete: "restrict" }),
+  appliedBudgetIds: text("applied_budget_ids").array().notNull(),
+  agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  taskId: text("task_id").notNull(),
+  actionIntentId: text("action_intent_id").notNull(),
+  leaseId: text("lease_id"),
+  dimension: budgetDimension("dimension").notNull(),
+  unit: text("unit").notNull(),
+  currency: text("currency"),
+  amount: numeric("amount", { precision: 30, scale: 9 }).notNull(),
+  actualAmount: numeric("actual_amount", { precision: 30, scale: 9 }),
+  idempotencyKey: text("idempotency_key").notNull(),
+  status: budgetReservationStatus("status").notNull().default("RESERVED"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  reconciledAt: timestamp("reconciled_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("budget_reservation_idempotency_idx").on(table.accountId, table.idempotencyKey), index("budget_reservation_account_status_idx").on(table.accountId, table.status, table.expiresAt), index("budget_reservation_task_idx").on(table.accountId, table.taskId)]);
+
+export const budgetUsageRecords = pgTable("budget_usage_records", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  reservationId: text("reservation_id").notNull().references(() => budgetReservations.id, { onDelete: "restrict" }),
+  leaseId: text("lease_id"),
+  dimension: budgetDimension("dimension").notNull(),
+  amount: numeric("amount", { precision: 30, scale: 9 }).notNull(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  source: text("source").notNull(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "string" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("budget_usage_idempotency_idx").on(table.accountId, table.idempotencyKey), index("budget_usage_reservation_idx").on(table.accountId, table.reservationId)]);
+
+export const budgetEvents = pgTable("budget_events", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  budgetId: text("budget_id").notNull().references(() => budgets.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  payload: jsonb("payload").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [index("budget_event_account_idx").on(table.accountId, table.createdAt), index("budget_event_budget_idx").on(table.accountId, table.budgetId)]);
 
 export const sandboxes = pgTable("sandboxes", {
   id: text("id").primaryKey(),

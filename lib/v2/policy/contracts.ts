@@ -5,8 +5,10 @@ export const capabilityDefinitionSchema = z.object({
   name: capabilityReferenceSchema.shape.name, version: capabilityReferenceSchema.shape.version,
   domain: z.string().min(1).max(128), description: z.string().min(1).max(2_000),
   effectClass: effectClassSchema, riskClass: riskClassSchema, resourceType: z.string().min(1).max(128),
-  inputSchema: z.record(z.unknown()), outputSchema: z.record(z.unknown()),
-}).strict();
+  inputSchema: z.record(z.unknown()), outputSchema: z.record(z.unknown()), meteringDimensions: z.array(z.enum(["TOKENS", "MODEL_SPEND", "CONNECTOR_CALLS", "COMPUTE_SECONDS", "COMPUTER_SECONDS", "PURCHASE_AMOUNT"])).max(6).optional(),
+}).strict().superRefine((definition, context) => {
+  if (definition.meteringDimensions?.includes("PURCHASE_AMOUNT") && definition.effectClass !== "financial") context.addIssue({ code: z.ZodIssueCode.custom, path: ["effectClass"], message: "purchase-metered capabilities must be financial" });
+});
 
 const factValue = z.union([z.string(), z.number(), z.boolean()]);
 export const policyRuleSchema = z.object({

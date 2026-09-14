@@ -27,7 +27,8 @@ function actionMaterial(action: ActionIntent) {
 }
 
 export async function registerCapabilityDefinition(input: CapabilityDefinition, signer: AuditSigner) {
-  const definition = capabilityDefinitionSchema.parse(input);
+  const parsed = capabilityDefinitionSchema.parse(input);
+  const definition = { ...parsed, meteringDimensions: parsed.meteringDimensions ?? [] };
   const definitionHash = canonicalHash(definition);
   const signature = await signer.sign(definitionHash);
   const capabilityId = id("cap");
@@ -80,7 +81,7 @@ async function loadEvaluationInputs(accountId: string, action: ActionIntent) {
   const rows = await db().select().from(policyBundles).where(and(or(isNull(policyBundles.accountId), eq(policyBundles.accountId, accountId)), eq(policyBundles.status, "ACTIVE")));
   const bundles = rows.map((row) => policyBundleDocumentSchema.parse({ schemaVersion: "relay.policy-bundle.v1", name: row.name, layer: row.layer, version: row.version, accountId: row.accountId, rules: row.rules }));
   return {
-    capability: capabilityDefinitionSchema.parse({ name: capability.name, version: capability.version, domain: capability.domain, description: capability.description, effectClass: capability.effectClass, riskClass: capability.riskClass, resourceType: capability.resourceType, inputSchema: capability.inputSchema, outputSchema: capability.outputSchema }),
+    capability: capabilityDefinitionSchema.parse({ name: capability.name, version: capability.version, domain: capability.domain, description: capability.description, effectClass: capability.effectClass, riskClass: capability.riskClass, resourceType: capability.resourceType, inputSchema: capability.inputSchema, outputSchema: capability.outputSchema, meteringDimensions: capability.meteringDimensions }),
     capabilityHash: capability.definitionHash,
     passport: agentPassportSchema.parse(passportRow.payload),
     bundles,

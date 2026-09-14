@@ -1,9 +1,9 @@
 import { createHash, createPublicKey, randomBytes, verify as verifySignature } from "node:crypto";
-import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { hashSecret } from "@/lib/crypto";
 import { db, withTransaction } from "@/lib/db";
-import { agentPassports, agentRevocationEpochs, capabilityDefinitions, capabilityLeases, leaseCallReceipts, policyDecisions, runtimeClients, workloadBootstraps, workloads } from "@/lib/db/schema";
+import { agentPassports, agentRevocationEpochs, budgetReservations, budgets, capabilityDefinitions, capabilityLeases, leaseCallReceipts, policyDecisions, runtimeClients, workloadBootstraps, workloads } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { consumeApprovalInTransaction } from "@/lib/v2/approvals";
@@ -118,6 +118,17 @@ export async function issueCapabilityLease(input: { accountId: string; action: A
     const [capability] = await transaction.select().from(capabilityDefinitions).where(and(eq(capabilityDefinitions.definitionHash, decision.capabilityDefinitionHash), eq(capabilityDefinitions.name, action.capability.name), eq(capabilityDefinitions.version, action.capability.version), eq(capabilityDefinitions.enabled, true))).limit(1);
     const [passportRow] = await transaction.select().from(agentPassports).where(and(eq(agentPassports.accountId, input.accountId), eq(agentPassports.agentId, action.agentId), eq(agentPassports.status, "ACTIVE"), gt(agentPassports.expiresAt, issuedAt))).orderBy(desc(agentPassports.version)).limit(1);
     if (!capability || !passportRow) throw new RelayError("CAPABILITY_DENIED", "Capability or Passport is unavailable.", undefined, 403);
+    const meteringDimensions = capability.meteringDimensions;
+    if (meteringDimensions.length && !input.budgetReservationId) throw new RelayError("CAPABILITY_DENIED", "A live budget reservation is required for this metered capability.", undefined, 403);
+    let budgetReservation: typeof budgetReservations.$inferSelect | undefined;
+    if (input.budgetReservationId) {
+      await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`budget:${input.accountId}`}, 0))`);
+      const [reservation] = await transaction.select().from(budgetReservations).where(and(eq(budgetReservations.accountId, input.accountId), eq(budgetReservations.id, input.budgetReservationId), eq(budgetReservations.agentId, action.agentId), eq(budgetReservations.taskId, action.taskId), eq(budgetReservations.actionIntentId, action.id), eq(budgetReservations.status, "RESERVED"), gt(budgetReservations.expiresAt, issuedAt), isNull(budgetReservations.leaseId))).limit(1);
+      if (!reservation || !meteringDimensions.includes(reservation.dimension)) throw new RelayError("CAPABILITY_DENIED", "Budget reservation is unavailable or does not meter this capability.", undefined, 403);
+      const appliedBudgets = await transaction.select().from(budgets).where(and(eq(budgets.accountId, input.accountId), inArray(budgets.id, reservation.appliedBudgetIds), eq(budgets.status, "ACTIVE")));
+      if (appliedBudgets.length !== reservation.appliedBudgetIds.length || (reservation.dimension === "PURCHASE_AMOUNT" && appliedBudgets.some((budget) => budget.balanceStatus !== "CURRENT" || Date.parse(budget.balanceAsOf) < Date.now() - 5 * 60_000))) throw new RelayError("CAPABILITY_DENIED", "Budget state is inactive, stale, or unknown.", undefined, 403);
+      budgetReservation = reservation;
+    }
     const decisionFacts = decision.materialFacts as Array<{ name: string; value: unknown }>;
     const recipientRelationship = decisionFacts.find((fact) => fact.name === "recipient.relationship")?.value;
     const hardApprovalFloor = capability.effectClass === "financial" || capability.effectClass === "destructive" || (capability.effectClass === "communication" && recipientRelationship !== "known");
@@ -158,6 +169,10 @@ export async function issueCapabilityLease(input: { accountId: string; action: A
       if (!reserved.length) throw new RelayError("CAPABILITY_DENIED", "Parent lease authority was concurrently exhausted.", undefined, 409);
     }
     await transaction.insert(capabilityLeases).values({ id: leaseId, accountId: input.accountId, agentId: action.agentId, runtimeClientId: action.runtimeClientId, workloadId: input.workloadId, taskId: action.taskId, parentLeaseId: input.parentLeaseId, policyDecisionId: decision.id, approvalDecisionId, budgetReservationId: input.budgetReservationId, claims, claimsHash, signature, signingKeyId: signer.keyId, tokenHash: canonicalHash(token), maxCalls, revocationEpoch: epoch.epoch, issuedAt, notBefore: issuedAt, expiresAt: new Date(latestExpiry).toISOString() });
+    if (budgetReservation) {
+      const bound = await transaction.update(budgetReservations).set({ leaseId }).where(and(eq(budgetReservations.accountId, input.accountId), eq(budgetReservations.id, budgetReservation.id), eq(budgetReservations.status, "RESERVED"), isNull(budgetReservations.leaseId))).returning({ id: budgetReservations.id });
+      if (!bound.length) throw new RelayError("CAPABILITY_DENIED", "Budget reservation was concurrently bound.", undefined, 409);
+    }
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, agentId: action.agentId, runtimeClientId: action.runtimeClientId, taskId: action.taskId, actionIntentId: action.id, policyDecisionId: decision.id, approvalDecisionId, leaseId, eventType: "lease.issued", outcome: "SUCCESS", details: { claimsHash, audience: input.audience, workloadId: input.workloadId, maxCalls, onlineRequired, parentLeaseId: input.parentLeaseId } }, signer);
     return { leaseId, token, expiresAt: new Date(latestExpiry).toISOString(), maxCalls, onlineRequired };
   });
@@ -189,6 +204,13 @@ export async function authorizeLeaseCall(input: { token: string; expectedAccount
     if (!epoch || epoch.epoch !== claims.revocationEpoch) throw new RelayError("CAPABILITY_DENIED", "Lease revocation epoch is stale.", undefined, 403);
     const [workload] = await transaction.select({ id: workloads.id }).from(workloads).where(and(eq(workloads.accountId, input.expectedAccountId), eq(workloads.id, input.expectedWorkloadId), eq(workloads.status, "ACTIVE"), gt(workloads.expiresAt, timestamp))).limit(1);
     if (!workload) throw new RelayError("CAPABILITY_DENIED", "Workload identity is inactive.", undefined, 403);
+    if (lease.budgetReservationId) {
+      await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`budget:${input.expectedAccountId}`}, 0))`);
+      const [reservation] = await transaction.select().from(budgetReservations).where(and(eq(budgetReservations.accountId, input.expectedAccountId), eq(budgetReservations.id, lease.budgetReservationId), eq(budgetReservations.leaseId, lease.id), eq(budgetReservations.status, "RESERVED"), gt(budgetReservations.expiresAt, timestamp))).limit(1);
+      if (!reservation) throw new RelayError("CAPABILITY_DENIED", "Budget reservation is inactive or expired.", undefined, 403);
+      const appliedBudgets = await transaction.select().from(budgets).where(and(eq(budgets.accountId, input.expectedAccountId), inArray(budgets.id, reservation.appliedBudgetIds), eq(budgets.status, "ACTIVE")));
+      if (appliedBudgets.length !== reservation.appliedBudgetIds.length || (reservation.dimension === "PURCHASE_AMOUNT" && appliedBudgets.some((budget) => budget.balanceStatus !== "CURRENT" || Date.parse(budget.balanceAsOf) < Date.now() - 5 * 60_000))) throw new RelayError("CAPABILITY_DENIED", "Budget state is inactive, stale, or unknown.", undefined, 403);
+    }
     if (claims.parentLeaseId) {
       const [parent] = await transaction.select({ id: capabilityLeases.id }).from(capabilityLeases).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, claims.parentLeaseId), eq(capabilityLeases.status, "ACTIVE"), gt(capabilityLeases.expiresAt, timestamp), isNull(capabilityLeases.revokedAt))).limit(1);
       if (!parent) throw new RelayError("CAPABILITY_DENIED", "Parent lease is revoked or expired.", undefined, 403);
@@ -212,6 +234,12 @@ export async function introspectLease(accountId: string, leaseId: string) {
   if (!epoch || epoch.epoch !== lease.revocationEpoch) return { active: false, reason: "STALE_EPOCH" as const };
   const [workload] = await db().select({ id: workloads.id }).from(workloads).where(and(eq(workloads.accountId, accountId), eq(workloads.id, lease.workloadId), eq(workloads.status, "ACTIVE"), gt(workloads.expiresAt, now()))).limit(1);
   if (!workload) return { active: false, reason: "WORKLOAD_INACTIVE" as const };
+  if (lease.budgetReservationId) {
+    const [reservation] = await db().select().from(budgetReservations).where(and(eq(budgetReservations.accountId, accountId), eq(budgetReservations.id, lease.budgetReservationId), eq(budgetReservations.leaseId, lease.id), eq(budgetReservations.status, "RESERVED"), gt(budgetReservations.expiresAt, now()))).limit(1);
+    if (!reservation) return { active: false, reason: "BUDGET_INACTIVE" as const };
+    const appliedBudgets = await db().select().from(budgets).where(and(eq(budgets.accountId, accountId), inArray(budgets.id, reservation.appliedBudgetIds), eq(budgets.status, "ACTIVE")));
+    if (appliedBudgets.length !== reservation.appliedBudgetIds.length || (reservation.dimension === "PURCHASE_AMOUNT" && appliedBudgets.some((budget) => budget.balanceStatus !== "CURRENT" || Date.parse(budget.balanceAsOf) < Date.now() - 5 * 60_000))) return { active: false, reason: "BUDGET_UNAVAILABLE" as const };
+  }
   if (lease.parentLeaseId) {
     const [parent] = await db().select({ id: capabilityLeases.id }).from(capabilityLeases).where(and(eq(capabilityLeases.accountId, accountId), eq(capabilityLeases.id, lease.parentLeaseId), eq(capabilityLeases.status, "ACTIVE"), gt(capabilityLeases.expiresAt, now()), isNull(capabilityLeases.revokedAt))).limit(1);
     if (!parent) return { active: false, reason: "PARENT_INACTIVE" as const };

@@ -24,8 +24,8 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-05 | Build Agent Passport and runtime attribution | WO-03, WO-04 | QUALIFIED | `85412d1` | LOCAL PASS | Third-party issuer federation remains excluded |
 | WO-06 | Build capability registry and policy decision service | WO-02–WO-05 | QUALIFIED | `caaf8dd` | LOCAL PASS | External KMS signer binding remains deployment configuration |
 | WO-07 | Build centralized approval service | WO-03, WO-04, WO-06 | QUALIFIED | `aaeeb1b` | LOCAL PASS | Quorum and email-link authorization remain excluded |
-| WO-08 | Build capability leases and workload identity | WO-05–WO-07 | QUALIFIED | pending commit | LOCAL PASS | Production KMS/mTLS binding awaits provider WorkOrders |
-| WO-09 | Build multi-dimensional budget engine | WO-04, WO-06, WO-08 | NOT_STARTED | — | — | — |
+| WO-08 | Build capability leases and workload identity | WO-05–WO-07 | QUALIFIED | `897be3e` | LOCAL PASS | Production KMS/mTLS binding awaits provider WorkOrders |
+| WO-09 | Build multi-dimensional budget engine | WO-04, WO-06, WO-08 | QUALIFIED | pending commit | LOCAL PASS | Provider meter feeds and production SLOs await provider WorkOrders |
 | WO-10 | Build durable event router and task orchestrator | WO-03, WO-04 | NOT_STARTED | — | — | — |
 | WO-11 | Build execution provider SDK and scheduler | WO-06, WO-08–WO-10 | NOT_STARTED | — | — | — |
 | WO-12 | Qualify Relay-managed Playwright execution | WO-11 | NOT_STARTED | — | — | — |
@@ -131,3 +131,13 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Restricted offline authority to parentless low-risk reads with at most 60 seconds remaining and a durable local counter; financial and destructive permits always require online validation.
 - Added focused tenant-isolation and conformance coverage for workloads, bootstrap secrets, leases, epochs, parent relationships, call receipts, token bindings, introspection, and revocation.
 - Qualification passed: focused cryptographic/PEP suite (14/14), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (83/83); 3 live-provider tests remained intentionally skipped.
+
+### 2026-09-13 — WO-09 multi-dimensional budget engine
+
+- Added exact fixed-point account, Agent, task, and delegation budgets for tokens, model spend, connector calls, compute time, computer time, and purchases; monetary values require explicit currency and never use binary floating point.
+- Added hierarchical hard/soft limits with per-account transaction serialization, conditional database enforcement, durable warning events, and child ceilings constrained by current parent remainder.
+- Added action-scoped atomic reservations, account-local idempotency, usage ingestion, reconciliation, release, expiry, and truthful overage handling that records actual usage and marks uncertain balances `UNKNOWN`.
+- Bound metered capability leases one-to-one to live reservations and required online enforcement to reject released, expired, disabled, stale, unknown, or cross-account budget state before an execution call.
+- Required purchase-metered capabilities to use the financial effect class, preserving the non-overridable approval floor from WO-07/WO-08; stale or unknown purchase balances fail closed.
+- Added focused tenant-isolation coverage for budgets, hierarchy lookups, Agent ownership, reservations, status mutation, usage, warning events, and lease binding.
+- Qualification passed: 50-way concurrency fixture, focused budget/lease suite (15/15), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (91/91); 3 live-provider tests remained intentionally skipped.

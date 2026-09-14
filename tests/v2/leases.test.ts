@@ -1,6 +1,7 @@
 import { generateKeyPairSync, sign } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApprovalRequest, decideApproval } from "@/lib/v2/approvals";
+import { createBudget, releaseBudgetReservation, reserveBudget } from "@/lib/v2/budgets";
 import { canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
 import { createLocalEd25519Signer } from "@/lib/v2/evidence";
 import { authorizeLeaseCall, createWorkloadBootstrap, emergencyRevokeAgent, exchangeWorkloadBootstrap, introspectLease, issueCapabilityLease, revokeLease } from "@/lib/v2/leases";
@@ -14,13 +15,13 @@ function proposedAction(accountId: string, agentId: string, runtimeClientId: str
   return { schemaVersion: "relay.action-intent.v2", id: `act_${crypto.randomUUID().replaceAll("-", "")}`, accountId, agentId, runtimeClientId, taskId: "tsk_12345678", ...material, idempotencyKey: crypto.randomUUID(), createdAt: new Date().toISOString(), canonicalHash: canonicalHash(material) };
 }
 
-async function setup(effectClass: "read" | "financial" = "read", policyEffect: "ALLOW" | "REQUIRE_APPROVAL" = "ALLOW") {
+async function setup(effectClass: "read" | "financial" = "read", policyEffect: "ALLOW" | "REQUIRE_APPROVAL" = "ALLOW", meteringDimensions: Array<"TOKENS"> = []) {
   const { accountId, principalId } = await freshDatabase();
   const signer = createLocalEd25519Signer("lease-key");
   const resolver = { publicKeyForKeyId: async (keyId: string) => keyId === signer.keyId ? await signer.publicKeyPem() : undefined };
   const runtime = await registerRuntimeClient({ accountId, actorPrincipalId: principalId, displayName: "Runner client", selfDeclaredProduct: "custom" }, signer);
   const capabilityName = `${capabilityDomain(effectClass)}.lease.execute`;
-  await registerCapabilityDefinition({ name: capabilityName, version: "1.0", domain: effectClass, description: "Lease fixture", effectClass, riskClass: effectClass === "financial" ? "critical" : "low", resourceType: "target", inputSchema: {}, outputSchema: {} }, signer);
+  await registerCapabilityDefinition({ name: capabilityName, version: "1.0", domain: effectClass, description: "Lease fixture", effectClass, riskClass: effectClass === "financial" ? "critical" : "low", resourceType: "target", inputSchema: {}, outputSchema: {}, meteringDimensions }, signer);
   const rule: PolicyRule = { id: "lease-policy", effect: policyEffect, match: { capability: { name: capabilityName, version: "1.0" } }, reasonCode: policyEffect === "ALLOW" ? "ALLOWED_BY_POLICY" : "APPROVAL_REQUIRED", ...(policyEffect === "REQUIRE_APPROVAL" ? { approval: { class: effectClass === "financial" ? "financial" : "test", allowedScopes: ["once"] } } : {}) };
   await publishRelaySafetyPolicy({ name: "lease-safety", rules: [rule] }, signer);
   const agent = await createV2Agent({ accountId, ownerPrincipalId: principalId, name: "Lease Agent" }, signer);
@@ -44,6 +45,17 @@ describe("Relay V2 capability leases and workload identity", () => {
     await expect(exchangeWorkloadBootstrap({ accountId: fixture.accountId, secret: fixture.bootstrap.secret, proofSignature: "replayed" }, fixture.signer)).rejects.toMatchObject({ status: 401 });
     const otherAccountId = await secondAccount();
     await expect(exchangeWorkloadBootstrap({ accountId: otherAccountId, secret: fixture.bootstrap.secret, proofSignature: "replayed" }, fixture.signer)).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("requires and atomically binds an action-scoped reservation for metered capabilities", async () => {
+    const fixture = await setup("read", "ALLOW", ["TOKENS"]);
+    await expect(issueCapabilityLease({ accountId: fixture.accountId, action: fixture.action, workloadId: fixture.workload.workloadId, workloadIdentityToken: fixture.workload.token, audience: "relay-pep", maxCalls: 1 }, fixture.signer, fixture.resolver)).rejects.toMatchObject({ status: 403 });
+    const budget = await createBudget({ accountId: fixture.accountId, actorPrincipalId: fixture.principalId, scope: "TASK", scopeId: fixture.action.taskId, dimension: "TOKENS", unit: "token", hardLimit: "100" }, fixture.signer);
+    const reservation = await reserveBudget({ accountId: fixture.accountId, leafBudgetId: budget.budgetId, agentId: fixture.agentId, taskId: fixture.action.taskId, actionIntentId: fixture.action.id, amount: "10", idempotencyKey: "lease-meter", expiresAt: new Date(Date.now() + 60_000).toISOString() }, fixture.signer);
+    const lease = await issueCapabilityLease({ accountId: fixture.accountId, action: fixture.action, workloadId: fixture.workload.workloadId, workloadIdentityToken: fixture.workload.token, audience: "relay-pep", maxCalls: 1, budgetReservationId: reservation.reservationId }, fixture.signer, fixture.resolver);
+    await expect(issueCapabilityLease({ accountId: fixture.accountId, action: fixture.action, workloadId: fixture.workload.workloadId, workloadIdentityToken: fixture.workload.token, audience: "relay-pep", maxCalls: 1, budgetReservationId: reservation.reservationId }, fixture.signer, fixture.resolver)).rejects.toMatchObject({ status: 403 });
+    await releaseBudgetReservation({ accountId: fixture.accountId, reservationId: reservation.reservationId }, fixture.signer);
+    await expect(authorizeLeaseCall({ token: lease.token, expectedAccountId: fixture.accountId, expectedAudience: "relay-pep", expectedWorkloadId: fixture.workload.workloadId, action: fixture.action, callId: "after-budget-release", online: true }, fixture.resolver, fixture.signer)).rejects.toMatchObject({ status: 403 });
   });
 
   it("rejects wrong tenant, audience, workload, resource, replay, and exhaustion at the reference PEP", async () => {
