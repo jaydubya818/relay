@@ -32,7 +32,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-13 | Qualify Browserbase and E2B adapters | WO-11 | IMPLEMENTED | `5f47543` | LOCAL PASS | Live Browserbase/E2B qualification: BLOCKED_EXTERNAL_CONFIGURATION (API keys absent) |
 | WO-14 | Build customer runner and outbound private gateway | WO-08, WO-10, WO-11 | IMPLEMENTED | `dd0c2af` | LOCAL PASS | Live host/mTLS/attestation/network/provenance: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-15 | Build live observation and human control | WO-07, WO-08, WO-12, WO-13 | IMPLEMENTED | `656e0af` | LOCAL PASS | Live provider/video/accessibility/production latency evidence pending WO-21/WO-22 |
-| WO-16 | Qualify Slack and Telegram communications | WO-07, WO-10 | IMPLEMENTED | `PENDING` | LOCAL PASS | Live Slack/Telegram channel qualification: BLOCKED_EXTERNAL_CONFIGURATION |
+| WO-16 | Qualify Slack and Telegram communications | WO-07, WO-10 | IMPLEMENTED | `c7e545a` | LOCAL PASS | Live Slack/Telegram channel qualification: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-17 | Qualify Google Drive and Linear connectors | WO-06, WO-08, WO-10 | NOT_STARTED | — | — | — |
 | WO-18 | Build financial domain and controlled purchase intents | WO-07, WO-09, WO-15 | NOT_STARTED | — | — | — |
 | WO-19 | Build same-account Agent delegation | WO-04, WO-05, WO-08–WO-10 | NOT_STARTED | — | — | — |
