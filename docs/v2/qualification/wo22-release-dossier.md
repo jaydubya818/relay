@@ -18,17 +18,17 @@ WO-22 is the mandatory aggregate gate. Local implementation and tests can prove 
 
 | Gate | Current state | Required immutable evidence |
 |---|---|---|
-| WO-02 independent security-owner review | `PENDING_INDEPENDENT_REVIEW` | Named reviewer decision against security architecture and threat matrix |
-| Independent penetration test | `PENDING_INDEPENDENT_REVIEW` | Report with no open critical/high findings or signed exception with owner/expiry |
+| WO-02 independent security-owner review | `REQUIRES_HUMAN_REVIEW` | Named reviewer decision against security architecture and threat matrix |
+| Independent penetration test | `REQUIRES_HUMAN_REVIEW` | Report with no open critical/high findings or signed exception with owner/expiry |
 | Browserbase and E2B | `BLOCKED_EXTERNAL_CONFIGURATION` | Live versioned conformance, rate, timeout, outage, retention, and kill-switch report |
 | Customer runner/private gateway | `BLOCKED_EXTERNAL_CONFIGURATION` | Customer-host mTLS, outbound-only network capture, attestation, compromise and revoke-latency report |
 | Slack and Telegram | `BLOCKED_EXTERNAL_CONFIGURATION` | Live signed inbound, dedupe, exact approved send, rate-limit, outage, and receipt report |
 | Google Drive and Linear | `BLOCKED_EXTERNAL_CONFIGURATION` | Live least-scope OAuth, permission drift, reconciliation, revoke, and provider-version report |
 | Production KMS/vault/object store/build chain | `BLOCKED_EXTERNAL_CONFIGURATION` | Key rotation, canary, object retention, signed SBOM/provenance, image scan, patch evidence |
 | Production broker/Temporal/database/region | `BLOCKED_EXTERNAL_CONFIGURATION` | Load/soak, failover, restore RPO/RTO, partial outage, queue fairness and alert evidence |
-| Protected payment view / PCI / legal | `PENDING_INDEPENDENT_REVIEW` | Scope decision and production capture-suppression evidence; actual unattended payment remains disabled |
-| Accessibility and comprehension | `PENDING_INDEPENDENT_REVIEW` | Screen-reader/browser matrix and multi-participant actor/destination/consequence/scope results |
-| Product and operations launch choices | `PENDING_PRODUCT_OWNER` | Regions, retention, classifications, thresholds, beta cohort, provider set, signed beta decision |
+| Protected payment view / PCI / legal | `REQUIRES_HUMAN_REVIEW` | Scope decision and production capture-suppression evidence; actual unattended payment remains disabled |
+| Accessibility and comprehension | `REQUIRES_HUMAN_REVIEW` | Screen-reader/browser matrix and multi-participant actor/destination/consequence/scope results |
+| Product and operations launch choices | `REQUIRES_PRODUCT_OWNER_DECISION` | Regions, retention, classifications, thresholds, beta cohort, provider set, signed beta decision |
 
 ## Section 15 state
 
@@ -36,4 +36,67 @@ Local criteria 1, 2, 6, 8, 9, 10, 12, and 13 have deterministic passing evidence
 
 ## Release decision
 
-`assertV2ReleaseReady` intentionally throws with the current evidence set. Relay V2 must not be labeled limited-beta-ready or GA-ready yet. Remote branch/deployment protections remain `BLOCKED_EXTERNAL_CONFIGURATION`; independent security-owner review of WO-02 remains pending. These statuses do not invalidate locally completed WorkOrders, but they are mandatory WO-22 release blockers.
+`assertV2ReleaseReady` intentionally throws with the current evidence set. Relay V2 must not be labeled limited-beta-ready or GA-ready yet. Remote branch/deployment protections were subsequently inspected and found absent; their current state is `FAILED`. Independent security-owner review of WO-02 remains `REQUIRES_HUMAN_REVIEW`. These statuses do not invalidate locally completed WorkOrders, but they are mandatory WO-22 release blockers.
+
+## 2026-09-13 external qualification campaign
+
+The complete current matrix, execution ownership and exact closure evidence are in [`wo22-gate-matrix.md`](./wo22-gate-matrix.md).
+
+### Live execution and computer evidence
+
+- `PASSED_LIVE` — Relay-managed conservative execution profile. With Docker and Chromium enabled, `tests/v2/relay-managed-provider-live.test.ts` and `tests/v2/relay-managed-provider.test.ts` passed 6/6. The combined ephemeral browser/shell/file lifecycle completed in 2.156 seconds and exercised provisioning, execution, evidence, cleanup and tenant-bound contracts.
+- This pass applies only to the registered/internal/ephemeral Relay-managed profile. It does not qualify persistent profiles, restricted/high-assurance workloads or permanent desktop fleets.
+- `BLOCKED_EXTERNAL_CONFIGURATION` — Browserbase and E2B had no V2 provider credentials/bindings.
+- `BLOCKED_EXTERNAL_CONFIGURATION` — no customer runner host, mTLS enrollment, attestation service, outbound-only network capture or runner daemon was available. The deterministic runner contract remains `PASSED_AUTOMATED`, not live.
+
+### Live channels and connectors
+
+- Slack: `BLOCKED_EXTERNAL_CONFIGURATION`; no dedicated V2 app/workspace credentials or consent.
+- Telegram: `BLOCKED_EXTERNAL_CONFIGURATION`; no dedicated V2 bot/test-chat credentials.
+- Google Drive: `BLOCKED_EXTERNAL_CONFIGURATION`; no V2 credential-broker/OAuth binding. Frozen V1 Google credentials were not reused.
+- Linear: `BLOCKED_EXTERNAL_CONFIGURATION`; no V2 OAuth app/workspace credentials.
+
+The exact browser/Cowork setup actions are recorded in the matrix. No additional scopes were requested and no mock result was promoted to live.
+
+### Trusted-action, event, provenance and revocation evidence
+
+- `PASSED_AUTOMATED` — focused leases, orchestration, approvals, money and evidence qualification passed 33/33 across 5 files.
+- The trusted-action chain persists and relates the initiating V2 event/task, Agent and signed Passport, runtime client, capability/action hash, policy decision and bundle hashes, exact signed once approval, transactional purchase-budget reservation, workload and bounded control lease, provider placement and fenced computer session, protected human effect/result, redacted receipt/settlement and signed account audit chain.
+- Negative coverage rejects wrong tenant/audience/workload/resource, bootstrap replay, call exhaustion, expired and revoked authority, offline financial authority, approval mutation/staleness/wrong approver/expiry, budget contention, repeated ambiguous effects and merchant/currency/amount substitution.
+- `PASSED_AUTOMATED` — transactional outbox, duplicate/reordered ingress, single-winner task claims, stale fencing, poison/DLQ replay, publisher failure and post-possible-effect worker death converge without duplicate consequential retry.
+- `BLOCKED_EXTERNAL_CONFIGURATION` — no deployed Temporal topology existed; deterministic/local orchestration evidence is not represented as live Temporal evidence.
+
+### Topology and recovery truth
+
+The available topology was a single local host with Relay/Next, PostgreSQL 14.18, in-process policy evaluation, deterministic adapters and local Docker/Chromium. No Temporal service, separate workers, production object store, KMS/vault, distributed telemetry, customer runner or production provider adapter was present. Therefore production-topology qualification remains `BLOCKED_EXTERNAL_CONFIGURATION`.
+
+- `PASSED_LIVE` — a disposable PostgreSQL backup/restore drill restored `relay_e2e_wo22_restore` into an isolated database. Source and restored data-only dumps had identical SHA-256 `ed2f34b16c077cfc20e206040120eb0d6301ab22162ae59a6acc25814dace404`; restored counts were 1 account, 2 agents and 21 migrations. Both disposable databases were removed.
+- `PASSED_AUTOMATED` — worker pre/post-effect failure, provider failure, lease/runner/credential/approval revocation, budget recovery, event replay and evidence-tamper behavior.
+- `BLOCKED_EXTERNAL_CONFIGURATION` — production database failover/RPO/RTO, Temporal restart, encrypted object restore, production provider outage/recovery and regional recovery.
+
+### Accessibility finding and focused correction
+
+The fresh pre-fix axe run found one moderate `landmark-unique` violation on `/v2` and no current navigation marker on `/v2/settings`. The focused correction names the sidebar complementary landmark and adds Settings to the current-route navigation. Regression coverage was added to `tests/v2/dashboard.test.ts`.
+
+Post-fix evidence:
+
+- dashboard regression 2/2, typecheck and lint: `PASSED_AUTOMATED`;
+- axe-core 4.13 on all ten V2 routes: zero violations;
+- every route had exactly one `h1`, one `main`, one `nav`, one current-route marker and zero unnamed buttons;
+- first Tab on Approval focused “Skip to content”; final browser console had zero errors/warnings.
+
+Human screen-reader/platform and multi-participant actor/destination/consequence/scope studies remain `REQUIRES_HUMAN_REVIEW`. See [`wo22-accessibility-comprehension-protocol.md`](./wo22-accessibility-comprehension-protocol.md).
+
+### Security, penetration and governance
+
+- WO-02 independent security-owner review: `REQUIRES_HUMAN_REVIEW`. Review package: [`wo02-independent-security-review-package.md`](./wo02-independent-security-review-package.md).
+- Independent penetration test: `REQUIRES_HUMAN_REVIEW`. Checklist: [`wo22-penetration-test-checklist.md`](./wo22-penetration-test-checklist.md).
+- GitHub API inspection of `jaydubya818/relay`: `FAILED`. `main` returned “Branch not protected,” repository rulesets were empty, environments were empty, and no tag/release protection was found.
+- Historical transition: remote protections changed from `BLOCKED_EXTERNAL_CONFIGURATION` (not inspectable/qualified) to `FAILED` (authenticated inspection proved controls absent). No governance setting was changed.
+- Required authorized change: protect `main`; require pull-request review and named CI checks; block force push/deletion; add tag/release rules; create a protected deployment environment with V2-only secrets and required reviewers.
+
+### Release recommendation
+
+Engineering-controlled local and Relay-managed qualification is green after the focused accessibility correction, but the release is `NOT_READY_FOR_LIMITED_BETA`: remote governance controls are failed; independent security, penetration, accessibility/comprehension and payment-scope reviews are incomplete; and the intended live provider/channel/connector/runner and production topology are unqualified.
+
+The Product Owner decision remains `REQUIRES_PRODUCT_OWNER_DECISION`. GA remains `BLOCKED_EXTERNAL_QUALIFICATION`. No tag, merge, V1 change, V2.1 work or V3 work was performed.

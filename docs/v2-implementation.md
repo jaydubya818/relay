@@ -16,7 +16,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 
 | WorkOrder | Title | Dependencies | State | Commit | Qualification | Blockers / deviations |
 |---|---|---|---|---|---|---|
-| WO-00 | Establish V2 isolation and governance | — | QUALIFIED | `07b1427` | LOCAL PASS | Remote branch/deploy protection: BLOCKED_EXTERNAL_CONFIGURATION |
+| WO-00 | Establish V2 isolation and governance | — | QUALIFIED | `07b1427` | LOCAL PASS | Remote protection was initially BLOCKED_EXTERNAL_CONFIGURATION; authenticated WO-22 inspection now records FAILED |
 | WO-01 | Freeze vocabulary, schemas, and state machines | WO-00 | QUALIFIED | `b468a38` | LOCAL PASS | — |
 | WO-02 | Complete security architecture and abuse cases | WO-01 | IMPLEMENTED | `dbb48a0` | LOCAL PASS | Independent security-owner review pending |
 | WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | QUALIFIED | `b5400fd` | SCOPED PASS | Acceptance sequencing corrected by Product Owner; live OIDC/WebAuthn pending provider qualification |
@@ -38,7 +38,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-19 | Build same-account Agent delegation | WO-04, WO-05, WO-08–WO-10 | QUALIFIED | `eb00d61` | LOCAL PASS | Production-scale revocation/outbox/load evidence remains WO-22 |
 | WO-20 | Publish REST, events, MCP, and client SDKs | WO-05–WO-10, WO-19 | QUALIFIED | `352c8e1` | LOCAL PASS | Live vendor/client and hosted authorization-server conformance remain external |
 | WO-21 | Build operator and user dashboard | WO-04, WO-07, WO-10, WO-15–WO-18 | IMPLEMENTED | `8109a47` | LOCAL PASS | Formal screen-reader and multi-participant comprehension evidence pending WO-22 |
-| WO-22 | Qualify V2 for limited beta and GA | WO-12–WO-21 | BLOCKED_EXTERNAL_QUALIFICATION | `ec10c27` | LOCAL AGGREGATE PASS | Live providers/channels/topology, independent security/pentest, production drills/provenance, human study, and Product Owner release decision pending |
+| WO-22 | Qualify V2 for limited beta and GA | WO-12–WO-21 | BLOCKED_EXTERNAL_QUALIFICATION | `ec10c27` + qualification evidence commit | LOCAL + RELAY-MANAGED LIVE PARTIAL | External providers/channels/topology and human reviews remain blocked; remote governance controls are FAILED |
 
 ## Work log
 
@@ -284,3 +284,15 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Local aggregate qualification passed: frontier guard, Drizzle schema check, typecheck, lint, focused release suite (5/5), all runnable serial tests (170/170), performance tests (2/2, including the existing 10k policy-evaluation budget exercised in the main suite), and production build; 4 opt-in live-provider tests remained intentionally skipped.
 - WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`. Browserbase, E2B, customer runner/private gateway, Slack, Telegram, Google Drive, Linear, production KMS/vault/object storage/build provenance, broker/Temporal/database/region drills, production protected-view validation, independent security review/penetration test, formal accessibility/comprehension, and Product Owner limited-beta/GA decisions do not have qualified evidence in this environment.
 - Remote branch/deployment protections remain `BLOCKED_EXTERNAL_CONFIGURATION`; independent security-owner review of WO-02 remains pending. No V1 branch, tag, soak record, or implementation was modified, and no V2.1/V3 work was started.
+
+### 2026-09-13 — WO-22 external release qualification campaign
+
+- Reconciled the complete release-gate matrix in `docs/v2/qualification/wo22-gate-matrix.md`, with exact requirements, methods, evidence, environment ownership, automation/browser/human responsibilities, and Product Owner decisions.
+- Relay-managed live execution is `PASSED_LIVE` for the conservative registered/internal/ephemeral profile: Docker/Chromium provider suites passed 6/6 and the combined browser/shell/file lifecycle completed in 2.156 seconds. Persistent profiles and restricted/high-assurance execution are not qualified.
+- Browserbase, E2B, customer runner/private gateway, Slack, Telegram, V2 Google Drive, V2 Linear, live Temporal and production topology remain `BLOCKED_EXTERNAL_CONFIGURATION`; no mock or V1 credential was promoted to live evidence.
+- Focused trusted-action, event durability, revocation and evidence suites passed 33/33 across leases, orchestration, approvals, money and evidence. Exact action binding, policy hashes, once approval, budget contention, bounded leases, protected human checkout, receipt settlement, ambiguous-effect behavior and audit integrity are `PASSED_AUTOMATED`.
+- A disposable PostgreSQL 14.18 backup/restore drill is `PASSED_LIVE`: source/restored data hashes both equal `ed2f34b16c077cfc20e206040120eb0d6301ab22162ae59a6acc25814dace404`, with restored counts of 1 account, 2 agents and 21 migrations. Production failover/RPO/RTO and object/Temporal recovery remain blocked.
+- Fresh accessibility qualification found and preserved a moderate duplicate-landmark finding plus a missing Settings current-route marker. The focused fix names the sidebar complementary landmark, adds Settings to the navigation, and adds regression coverage. Post-fix dashboard tests passed 2/2; typecheck and lint passed; axe-core 4.13 reported zero violations across all ten V2 routes; semantic/current-route/accessible-name checks and skip-link focus passed; final console was clean.
+- Added the bounded WO-02 independent review package, independent penetration checklist, and human accessibility/approval-comprehension protocol. Those independent gates remain `REQUIRES_HUMAN_REVIEW`; the Product Owner release choice remains `REQUIRES_PRODUCT_OWNER_DECISION`.
+- Authenticated GitHub inspection transitioned remote main/tag/deployment protections from historical `BLOCKED_EXTERNAL_CONFIGURATION` to current `FAILED`: `main` is unprotected, repository rulesets and environments are empty, and no release/tag protection was found. No remote mutation was authorized or made.
+- WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION` and the recommendation is `NOT_READY_FOR_LIMITED_BETA`. No V2 RC tag, main merge, V1 modification, V2.1 work or V3 work occurred.
