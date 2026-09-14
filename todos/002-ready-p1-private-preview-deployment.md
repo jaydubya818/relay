@@ -39,7 +39,8 @@ Add a tested deployment-mode guard, environment validator, CI workflow, Vercel a
 - [x] Production configuration validation requires owner-only access, HTTPS, PostgreSQL TLS, and strong secrets.
 - [x] CI runs the V1/V2 frontier guard, schema validation, typecheck, lint, tests, performance tests, and build.
 - [x] Vercel and non-root worker deployment configurations exist without embedded secrets.
-- [ ] A dedicated managed PostgreSQL database is migrated, seeded once, backed up, and isolated from V1.
+- [x] Hosted bootstrap creates only one owner, is idempotent without resetting credentials, and fails closed on unexpected tenant state.
+- [ ] A dedicated managed PostgreSQL database is migrated, owner-bootstrapped once, backed up, and isolated from V1.
 - [ ] A Vercel preview is deployed and its health/readiness/login/disabled-action behavior is verified.
 - [ ] A maintenance worker is deployed and observed completing cycles.
 - [ ] GitHub protects `main` with the observed CI context and a protected deployment environment.
@@ -73,3 +74,17 @@ Add a tested deployment-mode guard, environment validator, CI workflow, Vercel a
 **Learnings:**
 - Parallel creation of the full 21-migration test schema requires elevated PostgreSQL lock capacity; CI uses the established serial qualification mode for deterministic results.
 - GitHub's Node 22.5 runner requires the Vitest configuration to use the `.mts` ESM marker because Vite is ESM-only.
+
+### 2026-09-14 — Hosted owner bootstrap
+
+**By:** Codex
+
+**Actions:**
+- Replaced the hosted runbook's demo seed step with a private-preview-only owner bootstrap.
+- Made bootstrap transactional and concurrency-fenced; it creates only the owner identity, returns exact existing state without changing the password, and refuses every ambiguous database state.
+- Added focused tests for empty-database creation, idempotency, credential preservation, unexpected-state refusal, and deployment-mode enforcement.
+- Passed 180 deterministic non-live tests, 2 performance tests, typecheck, lint, the V1/V2 frontier guard, schema validation, and the production build.
+
+**Learnings:**
+- The local demo seed is intentionally unsuitable for a hosted preview because it creates Agent credentials and demo resources.
+- The owner password remains outside Relay's logs and repository and is retained only in the operator's secret stores.

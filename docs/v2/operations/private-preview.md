@@ -32,7 +32,7 @@ OAuth and managed-execution settings stay unset. Never copy V1 credentials into 
 ## Deployment sequence
 
 1. Create a dedicated managed PostgreSQL project in the chosen region. Enable TLS, automated backups, and deletion protection.
-2. Save baseline database inventory, run `pnpm db:migrate`, and run `pnpm db:seed` once from a trusted administrative job. Capture the one-time generated Agent credentials in a password manager or revoke them if the preview does not need Agent access.
+2. Save baseline database inventory, run `pnpm db:migrate`, and run `pnpm db:bootstrap-owner` from a trusted administrative job. The bootstrap creates only the configured owner, is idempotent for an exact match, refuses ambiguous pre-existing state, and never prints the password. Never run `pnpm db:seed` in a hosted environment; that command is for local demo data.
 3. Create and connect the Vercel project, configure the required environment variables, and deploy this repository.
 4. Deploy `Dockerfile.worker` to a service that supports an always-running process. Use one instance for the preview and confirm its structured `maintenance_cycle` log.
 5. Verify `/api/health` and `/api/health/ready`, sign in as the configured owner, and confirm signup returns 403.
