@@ -25,7 +25,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-06 | Build capability registry and policy decision service | WO-02–WO-05 | QUALIFIED | `caaf8dd` | LOCAL PASS | External KMS signer binding remains deployment configuration |
 | WO-07 | Build centralized approval service | WO-03, WO-04, WO-06 | QUALIFIED | `aaeeb1b` | LOCAL PASS | Quorum and email-link authorization remain excluded |
 | WO-08 | Build capability leases and workload identity | WO-05–WO-07 | QUALIFIED | `897be3e` | LOCAL PASS | Production KMS/mTLS binding awaits provider WorkOrders |
-| WO-09 | Build multi-dimensional budget engine | WO-04, WO-06, WO-08 | QUALIFIED | pending commit | LOCAL PASS | Provider meter feeds and production SLOs await provider WorkOrders |
+| WO-09 | Build multi-dimensional budget engine | WO-04, WO-06, WO-08 | QUALIFIED | `a4cb446` | LOCAL PASS | Provider meter feeds and production SLOs await provider WorkOrders |
 | WO-10 | Build durable event router and task orchestrator | WO-03, WO-04 | NOT_STARTED | — | — | — |
 | WO-11 | Build execution provider SDK and scheduler | WO-06, WO-08–WO-10 | NOT_STARTED | — | — | — |
 | WO-12 | Qualify Relay-managed Playwright execution | WO-11 | NOT_STARTED | — | — | — |
