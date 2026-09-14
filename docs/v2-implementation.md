@@ -32,7 +32,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-13 | Qualify Browserbase and E2B adapters | WO-11 | IMPLEMENTED | `5f47543` | LOCAL PASS | Live Browserbase/E2B qualification: BLOCKED_EXTERNAL_CONFIGURATION (API keys absent) |
 | WO-14 | Build customer runner and outbound private gateway | WO-08, WO-10, WO-11 | IMPLEMENTED | `dd0c2af` | LOCAL PASS | Live host/mTLS/attestation/network/provenance: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-15 | Build live observation and human control | WO-07, WO-08, WO-12, WO-13 | IMPLEMENTED | `656e0af` | LOCAL PASS | Live provider/video/accessibility/production latency evidence pending WO-21/WO-22 |
-| WO-16 | Qualify Slack and Telegram communications | WO-07, WO-10 | NOT_STARTED | — | — | — |
+| WO-16 | Qualify Slack and Telegram communications | WO-07, WO-10 | IMPLEMENTED | `PENDING` | LOCAL PASS | Live Slack/Telegram channel qualification: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-17 | Qualify Google Drive and Linear connectors | WO-06, WO-08, WO-10 | NOT_STARTED | — | — | — |
 | WO-18 | Build financial domain and controlled purchase intents | WO-07, WO-09, WO-15 | NOT_STARTED | — | — | — |
 | WO-19 | Build same-account Agent delegation | WO-04, WO-05, WO-08–WO-10 | NOT_STARTED | — | — | — |
@@ -200,3 +200,13 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added explicit resume requiring fresh policy and integrity checks, with input-fence and viewer-epoch rotation plus prior viewer revocation.
 - Added focused tenant-isolation coverage for control sessions, viewer grants, observations, inputs, takeover, disconnect, and resume.
 - Qualification passed: focused migration/control suite (11/11), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (134/134); 4 opt-in local live tests remained intentionally skipped. Live provider, UI video, accessibility, and production latency evidence remain downstream WO-21/WO-22 gates; no such claim is recorded here.
+
+### 2026-09-13 — WO-16 Slack and Telegram communications
+
+- Added account-owned Slack and Telegram connections whose durable records contain opaque vault handles, provider identity mapping, and no credential values.
+- Added current Slack raw-body signing-secret verification with a five-minute replay window and Telegram webhook secret-token verification; deprecated Slack verification tokens are not accepted.
+- Added account-scoped provider conversation/thread mapping, bounded attachment metadata classification, provider-event deduplication, owned-bot echo suppression, and direct normalization into the durable WO-10 event router so one accepted retry creates one Agent task.
+- Added exact thread/text action-hash and active lease enforcement for replies, mandatory approval-linked authority for new recipients, stable send idempotency, provider message/final-state receipts, and reauthorization immediately before effect.
+- Added concrete Slack `chat.postMessage` and Telegram `sendMessage` adapters. Explicit 429 responses enter a single-winner delayed retry path; timeout and 5xx outcomes become `EFFECT_UNKNOWN` and cannot retry without reconciliation.
+- Added focused tenant-isolation coverage for communication connections, threads, inbound/outbound messages, routing, leases, approvals, queries, retries, and reconciliation. Cross-account send attempts fail before message persistence or provider effect.
+- Qualification passed: focused channel/control/provider suite (14/14), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (140/140); 4 opt-in local live tests remained intentionally skipped. Live Slack workspace and Telegram bot delivery/rate/latency evidence is `BLOCKED_EXTERNAL_CONFIGURATION` and remains a WO-22 gate.

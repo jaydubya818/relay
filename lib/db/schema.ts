@@ -65,6 +65,9 @@ export const executionAttemptStatus = pgEnum("execution_attempt_status", ["START
 export const runnerStatus = pgEnum("runner_status", ["PENDING", "ACTIVE", "QUARANTINED", "REVOKED"]);
 export const runnerAssignmentStatus = pgEnum("runner_assignment_status", ["OFFERED", "CLAIMED", "RUNNING", "PAUSED", "COMPLETED", "FAILED", "REVOKED"]);
 export const computerController = pgEnum("computer_controller", ["AGENT", "PAUSED", "HUMAN", "TERMINATED"]);
+export const communicationProvider = pgEnum("communication_provider", ["SLACK", "TELEGRAM"]);
+export const communicationDirection = pgEnum("communication_direction", ["INBOUND", "OUTBOUND"]);
+export const communicationMessageStatus = pgEnum("communication_message_status", ["RECEIVED", "ROUTED", "PENDING_APPROVAL", "SENDING", "SENT", "DELIVERED", "FAILED", "EFFECT_UNKNOWN", "SUPPRESSED"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -898,6 +901,18 @@ export const computerControlEvents = pgTable("computer_control_events", {
   details: jsonb("details").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [index("computer_control_event_account_idx").on(table.accountId, table.controlSessionId, table.createdAt)]);
+
+export const communicationConnections = pgTable("communication_connections", {
+  id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }), provider: communicationProvider("provider").notNull(), externalAccountId: text("external_account_id").notNull(), ownedIdentityId: text("owned_identity_id").notNull(), credentialHandle: text("credential_handle").notNull(), webhookSecretHandle: text("webhook_secret_handle").notNull(), status: connectionStatus("status").notNull().default("CONNECTED"), createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(), revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("communication_connection_external_idx").on(table.provider, table.externalAccountId), index("communication_connection_account_idx").on(table.accountId, table.provider, table.status)]);
+
+export const communicationThreads = pgTable("communication_threads", {
+  id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }), connectionId: text("connection_id").notNull().references(() => communicationConnections.id, { onDelete: "cascade" }), externalConversationId: text("external_conversation_id").notNull(), externalThreadId: text("external_thread_id").notNull().default(""), recipientId: text("recipient_id").notNull(), knownRecipient: boolean("known_recipient").notNull().default(false), createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("communication_thread_external_idx").on(table.connectionId, table.externalConversationId, table.externalThreadId), index("communication_thread_account_idx").on(table.accountId, table.connectionId)]);
+
+export const communicationMessages = pgTable("communication_messages", {
+  id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }), connectionId: text("connection_id").notNull().references(() => communicationConnections.id, { onDelete: "restrict" }), threadId: text("thread_id").notNull().references(() => communicationThreads.id, { onDelete: "restrict" }), direction: communicationDirection("direction").notNull(), providerMessageId: text("provider_message_id").notNull(), providerEventId: text("provider_event_id"), senderId: text("sender_id").notNull(), content: jsonb("content").notNull(), contentHash: text("content_hash").notNull(), classification: text("classification").notNull(), status: communicationMessageStatus("status").notNull(), taskId: text("task_id"), actionIntentId: text("action_intent_id"), leaseId: text("lease_id"), approvalDecisionId: text("approval_decision_id"), idempotencyKey: text("idempotency_key").notNull(), providerReceipt: jsonb("provider_receipt"), attemptCount: integer("attempt_count").notNull().default(0), retryAfter: timestamp("retry_after", { withTimezone: true, mode: "string" }), createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("communication_message_provider_idx").on(table.connectionId, table.threadId, table.providerMessageId, table.direction), uniqueIndex("communication_message_event_idx").on(table.connectionId, table.providerEventId), uniqueIndex("communication_message_idempotency_idx").on(table.accountId, table.idempotencyKey), index("communication_message_account_thread_idx").on(table.accountId, table.threadId, table.createdAt), index("communication_message_retry_idx").on(table.status, table.retryAfter)]);
 
 export const sandboxes = pgTable("sandboxes", {
   id: text("id").primaryKey(),
