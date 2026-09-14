@@ -318,3 +318,12 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Automated negative coverage passed for constraints, wrong account/session authority, secret handles, provider kill switches, termination, rate limits, ambiguous failures, manifest tampering, circuit breaking, concurrent dispatch and failover fencing.
 - Browserbase and E2B remain `BLOCKED_EXTERNAL_CONFIGURATION`; live provider-neutrality and third-party performance measurements are likewise blocked. No live success, isolation, TTL, cleanup, retention, SLO or latency claim was recorded.
 - No defect was proven, no V1 or unrelated WO-22 surface changed, and the limited-beta recommendation remains unchanged.
+
+### 2026-09-14 — pre-merge qualification hardening
+
+- Fresh aggregate qualification exposed two nondeterministic integrity defects before push: payment-number redaction could rewrite a Luhn-valid digit run embedded in a canonical hash or identifier, and policy evaluation could reject a fact observed while an authoritative resolver was running because the decision timestamp preceded fact collection.
+- Restricted payment-number matching to standalone values/text while retaining explicit payment-field and human-readable card-number redaction. Added deterministic coverage proving hashes and identifiers remain byte-for-byte stable.
+- Moved the policy decision timestamp to the end of authoritative fact collection while preserving the resolver-start timestamp supplied to resolvers. Added delayed-resolver coverage proving genuinely fresh facts are accepted without weakening stale, conflicting, or tenant-mismatch denials.
+- Fix commit: `bce7cc6` (`fix(v2): harden evidence and policy qualification`).
+- Qualification passed: V1/V2 frontier guard, Drizzle schema check, typecheck, lint, all runnable non-live tests (172/172), performance tests (2/2), production build, Relay-managed live provider suite (6/6), and dashboard Playwright E2E (3/3).
+- WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`. Required CI/deployment configuration, third-party provider and production-topology evidence, independent security/human review, and Product Owner release decisions remain unchanged; no V1 or V2.1/V3 surface was modified.

@@ -159,3 +159,9 @@ The repository contains the adapters and mock conformance clients, but no concre
 No Relay contract incompatibility was established without a live provider. Current upstream documentation still supports Browserbase API-key/session/project/region/timeout semantics; Browserbase project inference is permitted upstream but explicit project recording is required for Relay qualification. E2B documentation shows sandbox lifecycle, shell/files and beta pause, and exposes CPU/memory through template configuration. The repository document pins E2B SDK 2.6.2 while the current official reference also exposes 2.6.3; the live binding must select and record one reviewed version before qualification.
 
 WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; all unrelated blockers and the `NOT_READY_FOR_LIMITED_BETA` recommendation are unchanged.
+
+## 2026-09-14 pre-merge qualification
+
+Fresh pre-merge execution found and corrected two nondeterministic qualification defects in commit `bce7cc6`: evidence redaction could corrupt a canonical identifier containing a Luhn-valid digit run, and a fact observed during resolver execution could be incorrectly newer than a policy decision timestamp captured before resolution. Regression coverage now preserves canonical identifiers while still redacting standalone payment numbers and evaluates freshness against the completed fact set without weakening fail-closed policy outcomes.
+
+Post-fix evidence is green: frontier guard, schema check, typecheck, lint, 172/172 runnable non-live tests, 2/2 performance tests, production build, 6/6 Relay-managed live provider tests, and 3/3 dashboard Playwright E2E tests. These results strengthen local and Relay-managed evidence only. WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`, and every previously recorded external configuration, independent review, human study, production topology, and Product Owner gate retains its truthful status.
