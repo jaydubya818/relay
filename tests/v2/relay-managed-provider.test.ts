@@ -56,11 +56,11 @@ describe("Relay-managed execution provider", () => {
     expect(new TextDecoder().decode(await provider.fileRead({ ...authority, path: "output/result.txt" }))).toBe("result");
     await expect(provider.fileList({ ...authority, path: "output" })).resolves.toEqual([]);
     await provider.fileDelete({ ...authority, path: "output/result.txt" });
-    const evidence = await provider.collectEvidence({ providerSessionId: created.providerSessionId });
+    const evidence = await provider.collectEvidence({ accountId: baseSpec.accountId, providerSessionId: created.providerSessionId });
     expect(JSON.stringify(evidence)).not.toContain("do-not-record-me");
     expect(JSON.stringify(evidence)).not.toContain("vlt_12345678");
     expect(evidence).toEqual(expect.arrayContaining([expect.objectContaining({ imageDigest: `sha256:${"a".repeat(64)}`, sbomReference: "sbom:relay-managed:test" })]));
-    expect(await provider.collectMeters({ providerSessionId: created.providerSessionId })).toEqual(expect.arrayContaining([expect.objectContaining({ dimension: "COMPUTE_SECONDS", amount: "2" }), expect.objectContaining({ dimension: "COMPUTER_SECONDS" })]));
+    expect(await provider.collectMeters({ accountId: baseSpec.accountId, providerSessionId: created.providerSessionId })).toEqual(expect.arrayContaining([expect.objectContaining({ dimension: "COMPUTE_SECONDS", amount: "2" }), expect.objectContaining({ dimension: "COMPUTER_SECONDS" })]));
     expect(broker.bindHandles).toHaveBeenCalledWith(expect.objectContaining({ handles: ["vlt_12345678"], audience: created.providerSessionId }));
   });
 
@@ -81,9 +81,11 @@ describe("Relay-managed execution provider", () => {
     const created = await provider.prepareExecution({ ...baseSpec, credentialHandles: [] });
     const authority = { accountId: baseSpec.accountId, taskId: baseSpec.taskId, leaseId: baseSpec.leaseId, providerSessionId: created.providerSessionId };
     await expect(provider.shellExec({ ...authority, accountId: "acct_other123", command: "true" })).rejects.toMatchObject({ status: 404 });
-    await provider.control({ providerSessionId: created.providerSessionId, command: "pause" });
+    await expect(provider.collectEvidence({ accountId: "acct_other123", providerSessionId: created.providerSessionId })).rejects.toMatchObject({ status: 404 });
+    await expect(provider.terminate({ accountId: "acct_other123", providerSessionId: created.providerSessionId })).resolves.toEqual({ status: "NOT_FOUND" });
+    await provider.control({ ...authority, command: "pause" });
     await expect(provider.shellExec({ ...authority, command: "true" })).rejects.toMatchObject({ status: 409 });
-    await provider.control({ providerSessionId: created.providerSessionId, command: "resume" });
+    await provider.control({ ...authority, command: "resume" });
     active = false;
     await expect(provider.shellExec({ ...authority, command: "true" })).rejects.toMatchObject({ status: 403 });
     expect(authorizer.assertActive).toHaveBeenCalledWith(expect.objectContaining({ capability: "computer.shell.exec" }));
@@ -94,10 +96,10 @@ describe("Relay-managed execution provider", () => {
     const broker = { bindHandles: async () => ({ bindingId: "binding-1" }), revokeBinding: vi.fn(async () => undefined) };
     const provider = new RelayManagedExecutionAdapter({ assertActive: async () => undefined }, broker, provenance, browser, sandbox);
     const created = await provider.prepareExecution(baseSpec);
-    expect(await provider.terminate({ providerSessionId: created.providerSessionId })).toEqual({ status: "TERMINATED" });
-    expect(await provider.terminate({ providerSessionId: created.providerSessionId })).toEqual({ status: "TERMINATED" });
+    expect(await provider.terminate({ accountId: baseSpec.accountId, providerSessionId: created.providerSessionId })).toEqual({ status: "TERMINATED" });
+    expect(await provider.terminate({ accountId: baseSpec.accountId, providerSessionId: created.providerSessionId })).toEqual({ status: "TERMINATED" });
     expect(browser.sessions.size).toBe(0); expect(sandbox.sessions.size).toBe(0); expect(broker.revokeBinding).toHaveBeenCalledWith({ accountId: baseSpec.accountId, bindingId: "binding-1" });
     await expect(provider.shellExec({ accountId: baseSpec.accountId, taskId: baseSpec.taskId, leaseId: baseSpec.leaseId, providerSessionId: created.providerSessionId, command: "true" })).rejects.toMatchObject({ status: 404 });
-    expect(await provider.reconcile({ idempotencyKey: baseSpec.idempotencyKey, providerSessionId: created.providerSessionId })).toEqual({ status: "TERMINATED" });
+    expect(await provider.reconcile({ accountId: baseSpec.accountId, idempotencyKey: baseSpec.idempotencyKey, providerSessionId: created.providerSessionId })).toEqual({ status: "TERMINATED" });
   });
 });

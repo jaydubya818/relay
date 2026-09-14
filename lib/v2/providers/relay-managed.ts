@@ -46,7 +46,7 @@ export class RelayManagedExecutionAdapter implements ExecutionProviderAdapter {
   readonly providerKey = relayManagedManifest.providerKey;
   readonly version = relayManagedManifest.version;
   private readonly sessions = new Map<string, Session>();
-  private readonly tombstones = new Set<string>();
+  private readonly tombstones = new Map<string, string>();
 
   constructor(private readonly authorizer: ManagedSessionAuthorizer, private readonly credentialBroker: ManagedCredentialBroker, private readonly image: { digest: string; sbomReference: string }, private readonly browserProvider: BrowserProvider = new PlaywrightBrowserProvider(), private readonly sandboxProvider: SandboxProvider = new DockerSandboxProvider()) {
     if (!/^sha256:[a-f0-9]{64}$/.test(image.digest) || !image.sbomReference.trim()) throw new RelayError("INVALID_INPUT", "Managed execution requires immutable image provenance and an SBOM reference.");
@@ -123,26 +123,29 @@ export class RelayManagedExecutionAdapter implements ExecutionProviderAdapter {
   async fileList(input: { accountId: string; taskId: string; leaseId: string; providerSessionId: string; path?: string }) { const path = input.path ? safeWorkspacePath(input.path) : ""; const session = await this.active({ ...input, capability: "computer.files.read" }, "sandbox"); return await this.sandboxProvider.listFiles(session.sandbox!, path); }
   async fileDelete(input: { accountId: string; taskId: string; leaseId: string; providerSessionId: string; path: string }) { const path = safeWorkspacePath(input.path); const session = await this.active({ ...input, capability: "computer.files.delete" }, "sandbox"); if (!this.sandboxProvider.deleteFile) throw new RelayError("PROVIDER_ERROR", "Managed file deletion is unsupported.", undefined, 501); await this.sandboxProvider.deleteFile(session.sandbox!, path); session.evidence.push({ type: "file.delete", at: new Date().toISOString(), pathHash: digest(path) }); }
 
-  async control(input: { providerSessionId: string; command: "pause" | "resume" | "terminate" | "takeover" }) {
-    const session = this.session(input.providerSessionId);
+  async control(input: { accountId: string; taskId: string; leaseId: string; providerSessionId: string; command: "pause" | "resume" | "terminate" | "takeover" }) {
+    const session = this.session(input.providerSessionId, input.accountId);
     if (input.command === "terminate") return await this.terminate(input);
     if (input.command === "takeover") throw new RelayError("PROVIDER_ERROR", "Live takeover is introduced in WO-15.", undefined, 501);
+    if (session.taskId !== input.taskId || session.leaseId !== input.leaseId) throw new RelayError("CAPABILITY_DENIED", "Managed session authority binding is invalid.", undefined, 403);
+    await this.authorizer.assertActive({ ...input, capability: `computer.session.${input.command}` });
     session.paused = input.command === "pause";
     session.evidence.push({ type: `session.${input.command}`, at: new Date().toISOString() });
     return { status: session.paused ? "PAUSED" : "RUNNING" };
   }
-  async observe(input: { providerSessionId: string }) { const session = this.session(input.providerSessionId); return session.browser ? { screenshot: await this.browserProvider.screenshot(session.browser, browserPolicy) } : {}; }
-  async collectEvidence(input: { providerSessionId: string }) { return [...this.session(input.providerSessionId).evidence]; }
-  async collectMeters(input: { providerSessionId: string }) { const session = this.session(input.providerSessionId); return [{ dimension: "COMPUTER_SECONDS", amount: String(Math.max(0, Math.ceil((Date.now() - session.createdAtMs) / 1000))), sourceId: `${input.providerSessionId}:computer` }, { dimension: "COMPUTE_SECONDS", amount: String(Math.ceil(session.computeMs / 1000)), sourceId: `${input.providerSessionId}:compute` }]; }
-  async terminate(input: { providerSessionId: string }) {
+  async observe(input: { accountId: string; taskId: string; leaseId: string; providerSessionId: string }) { const session = await this.active({ ...input, capability: "computer.observe.live" }, "browser"); return { screenshot: await this.browserProvider.screenshot(session.browser!, browserPolicy) }; }
+  async collectEvidence(input: { accountId: string; providerSessionId: string }) { return [...this.session(input.providerSessionId, input.accountId).evidence]; }
+  async collectMeters(input: { accountId: string; providerSessionId: string }) { const session = this.session(input.providerSessionId, input.accountId); return [{ dimension: "COMPUTER_SECONDS", amount: String(Math.max(0, Math.ceil((Date.now() - session.createdAtMs) / 1000))), sourceId: `${input.providerSessionId}:computer` }, { dimension: "COMPUTE_SECONDS", amount: String(Math.ceil(session.computeMs / 1000)), sourceId: `${input.providerSessionId}:compute` }]; }
+  async terminate(input: { accountId: string; providerSessionId: string }) {
     const session = this.sessions.get(input.providerSessionId);
-    if (!session) return { status: this.tombstones.has(input.providerSessionId) ? "TERMINATED" : "NOT_FOUND" };
+    if (!session) return { status: this.tombstones.get(input.providerSessionId) === input.accountId ? "TERMINATED" : "NOT_FOUND" };
+    if (session.accountId !== input.accountId) return { status: "NOT_FOUND" };
     session.terminated = true;
     const results = await Promise.allSettled([...(session.browser ? [this.browserProvider.close(session.browser)] : []), ...(session.sandbox ? [this.sandboxProvider.destroy(session.sandbox)] : []), ...(session.brokerBindingId ? [this.credentialBroker.revokeBinding({ accountId: session.accountId, bindingId: session.brokerBindingId })] : [])]);
     if (results.some((result) => result.status === "rejected")) throw new RelayError("PROVIDER_ERROR", "Managed session termination requires cleanup reconciliation.", undefined, 502);
     this.sessions.delete(input.providerSessionId);
-    this.tombstones.add(input.providerSessionId);
+    this.tombstones.set(input.providerSessionId, input.accountId);
     return { status: "TERMINATED" };
   }
-  async reconcile(input: { idempotencyKey: string; providerSessionId?: string }) { if (!input.providerSessionId) return { status: "NOT_FOUND" as const }; const session = this.sessions.get(input.providerSessionId); if (session && !session.terminated) return { status: "ACCEPTED" as const }; if (this.tombstones.has(input.providerSessionId)) return { status: "TERMINATED" as const }; return { status: "UNKNOWN" as const }; }
+  async reconcile(input: { accountId: string; idempotencyKey: string; providerSessionId?: string }) { if (!input.providerSessionId) return { status: "NOT_FOUND" as const }; const session = this.sessions.get(input.providerSessionId); if (session && !session.terminated && session.accountId === input.accountId) return { status: "ACCEPTED" as const }; if (this.tombstones.get(input.providerSessionId) === input.accountId) return { status: "TERMINATED" as const }; return { status: "UNKNOWN" as const }; }
 }

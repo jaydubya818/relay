@@ -19,8 +19,8 @@ describe("Relay-managed execution provider live", () => {
       expect(new TextDecoder().decode(await provider.fileRead({ ...authority, path: "result.txt" }))).toBe("done");
       expect((await provider.browserScreenshot(authority)).bytes.byteLength).toBeGreaterThan(100);
     } finally {
-      await provider.terminate({ providerSessionId: created.providerSessionId });
+      await provider.terminate({ accountId: authority.accountId, providerSessionId: created.providerSessionId });
     }
-    expect(await provider.reconcile({ idempotencyKey: "relay-managed-live", providerSessionId: created.providerSessionId })).toEqual({ status: "TERMINATED" });
+    expect(await provider.reconcile({ accountId: authority.accountId, idempotencyKey: "relay-managed-live", providerSessionId: created.providerSessionId })).toEqual({ status: "TERMINATED" });
   }, 120_000);
 });

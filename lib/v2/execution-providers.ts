@@ -39,6 +39,7 @@ export type ProviderHealth = { available: boolean; warmCapacity: number; latency
 const providerQuoteSchema = z.object({ amount: decimalSchema, currency: z.string().regex(/^[A-Z]{3}$/), validUntil: z.string().datetime({ offset: true }) }).strict();
 const providerHealthSchema = z.object({ available: z.boolean(), warmCapacity: z.number().int().min(0), latencyMs: z.number().nonnegative(), reliabilityBps: z.number().int().min(0).max(10_000), observedAt: z.string().datetime({ offset: true }) }).strict();
 export type ExecutionSpec = { accountId: string; taskId: string; actionIntentId: string; leaseId: string; region: string; isolationMode: z.infer<typeof isolationSchema>; persistence: z.infer<typeof persistenceSchema>; classification: z.infer<typeof classificationSchema>; requiredFeatures: Array<z.infer<typeof featureSchema>>; maximumSessionSeconds: number; credentialHandles: string[] };
+export type ExecutionSessionAuthority = { accountId: string; taskId: string; leaseId: string; providerSessionId: string };
 
 export interface ExecutionProviderAdapter {
   readonly providerKey: string;
@@ -46,12 +47,12 @@ export interface ExecutionProviderAdapter {
   health(): Promise<ProviderHealth>;
   quote(requirements: ExecutionRequirements): Promise<ProviderQuote>;
   prepareExecution(input: ExecutionSpec & { idempotencyKey: string }): Promise<{ providerSessionId: string; receipt: Record<string, unknown> }>;
-  control(input: { providerSessionId: string; command: "pause" | "resume" | "terminate" | "takeover" }): Promise<Record<string, unknown>>;
-  observe(input: { providerSessionId: string }): Promise<{ liveUrl?: string; screenshot?: Uint8Array }>;
-  collectEvidence(input: { providerSessionId: string }): Promise<Array<Record<string, unknown>>>;
-  collectMeters(input: { providerSessionId: string }): Promise<Array<{ dimension: string; amount: string; sourceId: string }>>;
-  terminate(input: { providerSessionId: string }): Promise<Record<string, unknown>>;
-  reconcile(input: { idempotencyKey: string; providerSessionId?: string }): Promise<{ status: "NOT_FOUND" | "ACCEPTED" | "TERMINATED" | "UNKNOWN"; receipt?: Record<string, unknown> }>;
+  control(input: ExecutionSessionAuthority & { command: "pause" | "resume" | "terminate" | "takeover" }): Promise<Record<string, unknown>>;
+  observe(input: ExecutionSessionAuthority): Promise<{ liveUrl?: string; screenshot?: Uint8Array }>;
+  collectEvidence(input: { accountId: string; providerSessionId: string }): Promise<Array<Record<string, unknown>>>;
+  collectMeters(input: { accountId: string; providerSessionId: string }): Promise<Array<{ dimension: string; amount: string; sourceId: string }>>;
+  terminate(input: { accountId: string; providerSessionId: string }): Promise<Record<string, unknown>>;
+  reconcile(input: { accountId: string; idempotencyKey: string; providerSessionId?: string }): Promise<{ status: "NOT_FOUND" | "ACCEPTED" | "TERMINATED" | "UNKNOWN"; receipt?: Record<string, unknown> }>;
 }
 export interface ProviderManifestKeyResolver { publicKeyForKeyId(keyId: string): Promise<string | undefined>; }
 
