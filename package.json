@@ -33,6 +33,7 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:bootstrap-owner": "tsx scripts/bootstrap-owner.ts",
     "db:check": "drizzle-kit check",
     "db:seed": "tsx scripts/seed.ts",
     "qualify": "pnpm typecheck && pnpm lint && pnpm test:ci && pnpm test:performance && pnpm build"
