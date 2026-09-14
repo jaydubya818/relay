@@ -30,7 +30,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-11 | Build execution provider SDK and scheduler | WO-06, WO-08–WO-10 | QUALIFIED | `49a99c7` | LOCAL PASS | No real provider is qualified by this WorkOrder; live provider SLOs remain later gates |
 | WO-12 | Qualify Relay-managed Playwright execution | WO-11 | QUALIFIED | `b56dea7` | LOCAL + LIVE PASS | Profile intentionally capped at registered/internal/ephemeral; production image attestation remains WO-22 |
 | WO-13 | Qualify Browserbase and E2B adapters | WO-11 | IMPLEMENTED | `5f47543` | LOCAL PASS | Live Browserbase/E2B qualification: BLOCKED_EXTERNAL_CONFIGURATION (API keys absent) |
-| WO-14 | Build customer runner and outbound private gateway | WO-08, WO-10, WO-11 | NOT_STARTED | — | — | — |
+| WO-14 | Build customer runner and outbound private gateway | WO-08, WO-10, WO-11 | IMPLEMENTED | pending | LOCAL PASS | Live host/mTLS/attestation/network/provenance: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-15 | Build live observation and human control | WO-07, WO-08, WO-12, WO-13 | NOT_STARTED | — | — | — |
 | WO-16 | Qualify Slack and Telegram communications | WO-07, WO-10 | NOT_STARTED | — | — | — |
 | WO-17 | Qualify Google Drive and Linear connectors | WO-06, WO-08, WO-10 | NOT_STARTED | — | — | — |
@@ -182,3 +182,12 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added server-only API-key sources, hard rejection of execution credential handles where no qualified secret broker exists, operator kill switches, bounded read-only backoff, and create failure classification that permits failover only after explicit pre-effect rejection.
 - Added focused isolation coverage for Browserbase/E2B account-task-lease session bindings, plus provider substitution, capability, secret, rate-limit, timeout, 5xx, expired-link refresh, cleanup, and kill-switch tests.
 - Qualification passed: focused provider suite (27/27), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (126/126); 4 opt-in local live tests remained intentionally skipped. Live Browserbase and E2B qualification is `BLOCKED_EXTERNAL_CONFIGURATION` because neither provider API key is configured; no live provider assurance, retention, or SLO claim is recorded.
+
+### 2026-09-13 — WO-14 customer runner and private gateway
+
+- Added one-time account-bound runner enrollment with key proof of possession, signed expiring certificates, trust epochs, assurance downgrade for unverifiable attestation, operator revocation, and signed digest-pinned update manifests.
+- Added an outbound-only assignment stream binding runner/account/task/workload/lease/payload/expiry/fence, plus ordered runner-signed evidence that remains labeled `runner_reported`.
+- Added assignment-scoped credential-socket broker bindings; durable secret values and environment injection are outside the runner contract.
+- Added named HTTPS private resources with exact runner, assignment, method, and path-prefix enforcement. Arbitrary subnet, raw TCP/UDP, and independent runner policy storage remain excluded.
+- Added focused tenant-isolation coverage for enrollments, runner identity, assignment polling, evidence, gateway resources/receipts, credential bindings, and cascade revocation.
+- Local qualification passed. Live customer-host, mTLS, attestation, network-capture, revoke-latency, and release-provenance qualification is `BLOCKED_EXTERNAL_CONFIGURATION` and remains a WO-22 gate.

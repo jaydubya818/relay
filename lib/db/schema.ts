@@ -62,6 +62,8 @@ export const providerDefinitionStatus = pgEnum("provider_definition_status", ["A
 export const providerCircuitStatus = pgEnum("provider_circuit_status", ["CLOSED", "OPEN", "HALF_OPEN"]);
 export const executionPlacementStatus = pgEnum("execution_placement_status", ["SCHEDULED", "DISPATCHING", "RUNNING", "RECONCILIATION_REQUIRED", "FAILED", "TERMINATED"]);
 export const executionAttemptStatus = pgEnum("execution_attempt_status", ["STARTED", "ACCEPTED", "PRE_EFFECT_FAILED", "EFFECT_UNKNOWN", "TERMINATED"]);
+export const runnerStatus = pgEnum("runner_status", ["PENDING", "ACTIVE", "QUARANTINED", "REVOKED"]);
+export const runnerAssignmentStatus = pgEnum("runner_assignment_status", ["OFFERED", "CLAIMED", "RUNNING", "PAUSED", "COMPLETED", "FAILED", "REVOKED"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -539,6 +541,90 @@ export const leaseCallReceipts = pgTable("lease_call_receipts", {
   workloadId: text("workload_id").notNull(),
   consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("lease_call_idempotency_idx").on(table.leaseId, table.callId), index("lease_call_account_idx").on(table.accountId, table.leaseId)]);
+
+export const runnerEnrollments = pgTable("runner_enrollments", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  createdByPrincipalId: text("created_by_principal_id").notNull().references(() => principals.id, { onDelete: "restrict" }),
+  secretHash: text("secret_hash").notNull(),
+  runnerName: text("runner_name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("runner_enrollment_secret_idx").on(table.secretHash), index("runner_enrollment_account_idx").on(table.accountId, table.expiresAt)]);
+
+export const runners = pgTable("runners", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  publicKeyPem: text("public_key_pem").notNull(),
+  publicKeyThumbprint: text("public_key_thumbprint").notNull(),
+  softwareDigest: text("software_digest").notNull(),
+  configDigest: text("config_digest").notNull(),
+  assurance: text("assurance").notNull().default("registered"),
+  attestation: jsonb("attestation").notNull().default({}),
+  trustEpoch: integer("trust_epoch").notNull().default(1),
+  status: runnerStatus("status").notNull().default("PENDING"),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "string" }),
+  certificateExpiresAt: timestamp("certificate_expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("runner_account_thumbprint_idx").on(table.accountId, table.publicKeyThumbprint), index("runner_account_status_idx").on(table.accountId, table.status, table.certificateExpiresAt)]);
+
+export const runnerAssignments = pgTable("runner_assignments", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  runnerId: text("runner_id").notNull().references(() => runners.id, { onDelete: "cascade" }),
+  taskId: text("task_id").notNull(),
+  workloadId: text("workload_id").notNull().references(() => workloads.id, { onDelete: "cascade" }),
+  leaseId: text("lease_id").notNull().references(() => capabilityLeases.id, { onDelete: "restrict" }),
+  payload: jsonb("payload").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  fenceToken: bigint("fence_token", { mode: "number" }).notNull().default(1),
+  status: runnerAssignmentStatus("status").notNull().default("OFFERED"),
+  evidenceSequence: bigint("evidence_sequence", { mode: "number" }).notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  claimedAt: timestamp("claimed_at", { withTimezone: true, mode: "string" }),
+  completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+}, (table) => [index("runner_assignment_poll_idx").on(table.accountId, table.runnerId, table.status, table.createdAt), index("runner_assignment_task_idx").on(table.accountId, table.taskId)]);
+
+export const runnerEvidenceReceipts = pgTable("runner_evidence_receipts", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  runnerId: text("runner_id").notNull().references(() => runners.id, { onDelete: "cascade" }),
+  assignmentId: text("assignment_id").notNull().references(() => runnerAssignments.id, { onDelete: "cascade" }),
+  sequence: bigint("sequence", { mode: "number" }).notNull(),
+  evidenceHash: text("evidence_hash").notNull(),
+  signature: text("signature").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("runner_evidence_sequence_idx").on(table.assignmentId, table.sequence), index("runner_evidence_account_idx").on(table.accountId, table.assignmentId)]);
+
+export const privateGatewayResources = pgTable("private_gateway_resources", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  runnerId: text("runner_id").notNull().references(() => runners.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  host: text("host").notNull(),
+  port: integer("port").notNull(),
+  allowedMethods: text("allowed_methods").array().notNull(),
+  allowedPathPrefixes: text("allowed_path_prefixes").array().notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("private_gateway_resource_name_idx").on(table.accountId, table.name), index("private_gateway_runner_idx").on(table.accountId, table.runnerId, table.enabled)]);
+
+export const privateGatewayReceipts = pgTable("private_gateway_receipts", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  assignmentId: text("assignment_id").notNull().references(() => runnerAssignments.id, { onDelete: "cascade" }),
+  resourceId: text("resource_id").notNull().references(() => privateGatewayResources.id, { onDelete: "restrict" }),
+  method: text("method").notNull(),
+  pathHash: text("path_hash").notNull(),
+  outcome: text("outcome").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [index("private_gateway_receipt_account_idx").on(table.accountId, table.assignmentId, table.createdAt)]);
 
 export const budgets = pgTable("budgets", {
   id: text("id").primaryKey(),
