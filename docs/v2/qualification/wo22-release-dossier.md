@@ -85,6 +85,8 @@ Post-fix evidence:
 - every route had exactly one `h1`, one `main`, one `nav`, one current-route marker and zero unnamed buttons;
 - first Tab on Approval focused “Skip to content”; final browser console had zero errors/warnings.
 
+Focused defect commit: `a7ed00f`. Qualification evidence commit: `6b72301`.
+
 Human screen-reader/platform and multi-participant actor/destination/consequence/scope studies remain `REQUIRES_HUMAN_REVIEW`. See [`wo22-accessibility-comprehension-protocol.md`](./wo22-accessibility-comprehension-protocol.md).
 
 ### Security, penetration and governance
