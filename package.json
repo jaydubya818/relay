@@ -25,6 +25,7 @@
     "test:mcp": "vitest run tests/mcp",
     "test:oauth": "vitest run tests/oauth",
     "test:security": "vitest run tests/security",
+    "test:v2:release": "vitest run tests/v2/release-qualification.test.ts --fileParallelism=false",
     "test:sandbox": "vitest run tests/sandbox",
     "test:performance": "vitest run tests/performance",
     "test:e2e": "playwright test",
