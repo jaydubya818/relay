@@ -104,10 +104,12 @@ export async function consumeApprovalInTransaction(transaction: RelayDatabase, i
   if (!scopeMatches(scope, request, action, input.sessionId)) throw new RelayError("CAPABILITY_DENIED", "Action was modified or is outside approval scope.", undefined, 403);
   const [consumed] = await transaction.update(approvalRequests).set({ useCount: sql`${approvalRequests.useCount} + 1` }).where(and(eq(approvalRequests.accountId, input.accountId), eq(approvalRequests.id, request.id), sql`${approvalRequests.useCount} < ${approvalRequests.maxUses}`)).returning({ useCount: approvalRequests.useCount });
   if (!consumed) throw new RelayError("CAPABILITY_DENIED", "Approval scope is exhausted.", undefined, 409);
+  const [decision] = await transaction.select({ id: approvalDecisions.id }).from(approvalDecisions).where(and(eq(approvalDecisions.accountId, input.accountId), eq(approvalDecisions.approvalRequestId, request.id), eq(approvalDecisions.decision, "APPROVE"))).limit(1);
+  if (!decision) throw new RelayError("CAPABILITY_DENIED", "Signed approval decision is unavailable.", undefined, 403);
   const consumptionId = id("apc");
   await transaction.insert(approvalConsumptions).values({ id: consumptionId, accountId: input.accountId, approvalRequestId: request.id, actionIntentId: action.id, actionHash: action.canonicalHash, consumedAt: timestamp });
   await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, agentId: action.agentId, runtimeClientId: action.runtimeClientId, taskId: action.taskId, actionIntentId: action.id, policyDecisionId: policy.id, eventType: "approval.consumed", outcome: "SUCCESS", details: { requestId: request.id, consumptionId, useCount: consumed.useCount, maxUses: request.maxUses } }, signer);
-  return { consumptionId, remainingUses: request.maxUses - consumed.useCount };
+  return { consumptionId, approvalDecisionId: decision.id, remainingUses: request.maxUses - consumed.useCount };
 }
 
 export async function consumeApproval(input: Parameters<typeof consumeApprovalInTransaction>[1], signer: AuditSigner) {

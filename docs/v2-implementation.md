@@ -23,8 +23,8 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-04 | Build evidence and append-only audit substrate | WO-01, WO-02, WO-03 | QUALIFIED | `b37cdba` | LOCAL PASS | Production KMS/HSM and object-store bindings are deployment configuration |
 | WO-05 | Build Agent Passport and runtime attribution | WO-03, WO-04 | QUALIFIED | `85412d1` | LOCAL PASS | Third-party issuer federation remains excluded |
 | WO-06 | Build capability registry and policy decision service | WO-02–WO-05 | QUALIFIED | `caaf8dd` | LOCAL PASS | External KMS signer binding remains deployment configuration |
-| WO-07 | Build centralized approval service | WO-03, WO-04, WO-06 | QUALIFIED | pending commit | LOCAL PASS | Quorum and email-link authorization remain excluded |
-| WO-08 | Build capability leases and workload identity | WO-05–WO-07 | NOT_STARTED | — | — | — |
+| WO-07 | Build centralized approval service | WO-03, WO-04, WO-06 | QUALIFIED | `aaeeb1b` | LOCAL PASS | Quorum and email-link authorization remain excluded |
+| WO-08 | Build capability leases and workload identity | WO-05–WO-07 | QUALIFIED | pending commit | LOCAL PASS | Production KMS/mTLS binding awaits provider WorkOrders |
 | WO-09 | Build multi-dimensional budget engine | WO-04, WO-06, WO-08 | NOT_STARTED | — | — | — |
 | WO-10 | Build durable event router and task orchestrator | WO-03, WO-04 | NOT_STARTED | — | — | — |
 | WO-11 | Build execution provider SDK and scheduler | WO-06, WO-08–WO-10 | NOT_STARTED | — | — | — |
@@ -120,3 +120,14 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added focused tenant-isolation coverage for requests, decisions, consumptions, notifications, assignment, and policy linkage, plus an eight-way consumption race fixture.
 - A parallel focused run exposed a repository test-harness database teardown race although all assertions passed; the authoritative clean qualification reran database-backed tests serially.
 - Qualification passed: frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (76/76); 3 live-provider tests remained intentionally skipped.
+
+### 2026-09-13 — WO-08 capability leases and workload identity
+
+- Added one-time, tenant-bound workload bootstrap with Ed25519 proof of possession and a signed short-lived workload identity token; Relay never receives the workload private key.
+- Added signed capability leases bound to account, Agent, runtime, workload, task, audience, exact capability/resource/action, policy revision, approval, environment, call limit, parent, expiry, and revocation epoch.
+- Integrated approval consumption atomically with lease issuance and re-enforced financial, destructive, and new-recipient communication floors at the issuance boundary.
+- Added reference online/offline PEP enforcement, per-call replay receipts, atomic call counters, introspection, workload/lease revocation, and emergency Agent epoch revocation.
+- Added atomic parent-call reservation so concurrent child leases cannot amplify delegated authority; unused reservations remain conservatively unavailable until later completion reconciliation.
+- Restricted offline authority to parentless low-risk reads with at most 60 seconds remaining and a durable local counter; financial and destructive permits always require online validation.
+- Added focused tenant-isolation and conformance coverage for workloads, bootstrap secrets, leases, epochs, parent relationships, call receipts, token bindings, introspection, and revocation.
+- Qualification passed: focused cryptographic/PEP suite (14/14), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (83/83); 3 live-provider tests remained intentionally skipped.

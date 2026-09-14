@@ -45,6 +45,8 @@ export const policyOutcome = pgEnum("policy_outcome", ["ALLOW", "DENY", "REQUIRE
 export const approvalStatus = pgEnum("approval_status", ["PENDING", "APPROVED", "DENIED", "EXPIRED", "CANCELLED", "SUPERSEDED", "REVOKED"]);
 export const approvalDecisionValue = pgEnum("approval_decision_value", ["APPROVE", "DENY"]);
 export const notificationStatus = pgEnum("notification_status", ["PENDING", "SENT", "FAILED", "CANCELLED"]);
+export const workloadStatus = pgEnum("workload_status", ["BOOTSTRAPPING", "ACTIVE", "REVOKED", "EXPIRED"]);
+export const capabilityLeaseStatus = pgEnum("capability_lease_status", ["REQUESTED", "EVALUATED", "ISSUED", "ACTIVE", "EXHAUSTED", "EXPIRED", "REVOKED", "COMPLETED"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -447,6 +449,80 @@ export const approvalNotifications = pgTable("approval_notifications", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   sentAt: timestamp("sent_at", { withTimezone: true, mode: "string" }),
 }, (table) => [index("approval_notification_delivery_idx").on(table.accountId, table.status, table.createdAt), index("approval_notification_request_idx").on(table.accountId, table.approvalRequestId)]);
+
+export const workloads = pgTable("workloads", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  runtimeClientId: text("runtime_client_id").notNull().references(() => runtimeClients.id, { onDelete: "restrict" }),
+  taskId: text("task_id").notNull(),
+  runnerId: text("runner_id"),
+  providerId: text("provider_id").notNull(),
+  assurance: text("assurance").notNull(),
+  audience: text("audience").notNull(),
+  publicKeyPem: text("public_key_pem").notNull(),
+  publicKeyThumbprint: text("public_key_thumbprint").notNull(),
+  status: workloadStatus("status").notNull().default("BOOTSTRAPPING"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  activatedAt: timestamp("activated_at", { withTimezone: true, mode: "string" }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+}, (table) => [index("workload_account_status_idx").on(table.accountId, table.status, table.expiresAt), index("workload_task_idx").on(table.accountId, table.taskId), index("workload_runtime_idx").on(table.accountId, table.runtimeClientId)]);
+
+export const workloadBootstraps = pgTable("workload_bootstraps", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  workloadId: text("workload_id").notNull().references(() => workloads.id, { onDelete: "cascade" }),
+  secretHash: text("secret_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("workload_bootstrap_secret_idx").on(table.secretHash), index("workload_bootstrap_workload_idx").on(table.accountId, table.workloadId)]);
+
+export const agentRevocationEpochs = pgTable("agent_revocation_epochs", {
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  epoch: integer("epoch").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [primaryKey({ columns: [table.accountId, table.agentId] })]);
+
+export const capabilityLeases = pgTable("capability_leases", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  runtimeClientId: text("runtime_client_id").notNull().references(() => runtimeClients.id, { onDelete: "restrict" }),
+  workloadId: text("workload_id").notNull().references(() => workloads.id, { onDelete: "cascade" }),
+  taskId: text("task_id").notNull(),
+  parentLeaseId: text("parent_lease_id"),
+  policyDecisionId: text("policy_decision_id").notNull().references(() => policyDecisions.id, { onDelete: "restrict" }),
+  approvalDecisionId: text("approval_decision_id"),
+  budgetReservationId: text("budget_reservation_id"),
+  status: capabilityLeaseStatus("status").notNull().default("ACTIVE"),
+  claims: jsonb("claims").notNull(),
+  claimsHash: text("claims_hash").notNull(),
+  signature: text("signature").notNull(),
+  signingKeyId: text("signing_key_id").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  callCount: integer("call_count").notNull().default(0),
+  delegatedCallCount: integer("delegated_call_count").notNull().default(0),
+  maxCalls: integer("max_calls").notNull(),
+  revocationEpoch: integer("revocation_epoch").notNull(),
+  issuedAt: timestamp("issued_at", { withTimezone: true, mode: "string" }).notNull(),
+  notBefore: timestamp("not_before", { withTimezone: true, mode: "string" }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+  completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("capability_lease_token_idx").on(table.tokenHash), index("capability_lease_account_status_idx").on(table.accountId, table.status, table.expiresAt), index("capability_lease_task_idx").on(table.accountId, table.taskId), index("capability_lease_parent_idx").on(table.accountId, table.parentLeaseId)]);
+
+export const leaseCallReceipts = pgTable("lease_call_receipts", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  leaseId: text("lease_id").notNull().references(() => capabilityLeases.id, { onDelete: "cascade" }),
+  callId: text("call_id").notNull(),
+  actionHash: text("action_hash").notNull(),
+  workloadId: text("workload_id").notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("lease_call_idempotency_idx").on(table.leaseId, table.callId), index("lease_call_account_idx").on(table.accountId, table.leaseId)]);
 
 export const sandboxes = pgTable("sandboxes", {
   id: text("id").primaryKey(),

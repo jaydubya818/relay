@@ -44,6 +44,7 @@ export const capabilityLeaseClaimsSchema = z.object({
   actionHash: z.string().regex(/^sha256:[a-f0-9]{64}$/).optional(), maxCalls: z.number().int().positive(),
   budgetReservationId: relayId("res").optional(), policyDecisionId: relayId("dec"), policyRevision: z.string().min(1).max(255),
   approvalDecisionId: relayId("apd").optional(),
+  effectClass: effectClassSchema, riskClass: riskClassSchema, onlineRequired: z.boolean(),
   environment: z.object({ providerIds: z.array(z.string().min(1)).min(1), minimumAssurance: z.enum(["registered", "attested", "managed-equivalent"]), regions: z.array(z.string().min(1)).optional() }).strict(),
   parentLeaseId: relayId("lse").optional(), delegationChain: z.array(relayId("tsk")).max(16).default([]),
   revocationEpoch: z.number().int().nonnegative(),
@@ -74,7 +75,7 @@ export const signedAgentPassportSchema = z.object({ passport: agentPassportSchem
 export const schemas = {
   actionIntent: { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "relay://schemas/action-intent/v2", title: "Relay V2 Action Intent", type: "object", additionalProperties: false, required: ["schemaVersion", "id", "accountId", "agentId", "runtimeClientId", "taskId", "capability", "resource", "parameters", "idempotencyKey", "createdAt", "canonicalHash"] },
   event: { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "relay://schemas/event/v2", title: "Relay V2 Event Envelope", type: "object", additionalProperties: false, required: ["specversion", "id", "source", "type", "time", "accountid", "classification", "correlationid", "dedupekey", "schemaversion", "signaturestatus"] },
-  capabilityLeaseClaims: { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "relay://schemas/capability-lease-claims/v2", title: "Relay V2 Capability Lease Claims", type: "object", additionalProperties: false, required: ["iss", "sub", "aud", "jti", "iat", "nbf", "exp", "accountId", "taskId", "runtimeClientId", "workloadId", "capability", "resource", "maxCalls", "policyDecisionId", "policyRevision", "environment", "delegationChain", "revocationEpoch"] },
+  capabilityLeaseClaims: { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "relay://schemas/capability-lease-claims/v2", title: "Relay V2 Capability Lease Claims", type: "object", additionalProperties: false, required: ["iss", "sub", "aud", "jti", "iat", "nbf", "exp", "accountId", "taskId", "runtimeClientId", "workloadId", "capability", "resource", "maxCalls", "policyDecisionId", "policyRevision", "effectClass", "riskClass", "onlineRequired", "environment", "delegationChain", "revocationEpoch"] },
 } as const;
 
 export type ActionIntent = z.infer<typeof actionIntentSchema>;

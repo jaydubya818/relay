@@ -29,7 +29,7 @@ describe("Relay V2 contracts", () => {
     expect(() => relayEventSchema.parse({ ...event, accountId: event.accountid })).toThrow();
   });
   it("validates lease time, workload, policy, and environment bindings", () => {
-    const claims = { iss: "https://relay.example", sub: "agt_12345678", aud: "relay-runner", jti: "lse_12345678", iat: 100, nbf: 100, exp: 200, accountId: "acct_12345678", taskId: "tsk_12345678", runtimeClientId: "rtc_12345678", workloadId: "wkl_12345678", capability: { name: "computer.screen.capture", version: "1.0" }, resource: { type: "computer", ids: ["cmp_12345678"] }, maxCalls: 1, policyDecisionId: "dec_12345678", policyRevision: "policy-7", environment: { providerIds: ["browserbase"], minimumAssurance: "attested" }, delegationChain: [], revocationEpoch: 3 };
+    const claims = { iss: "https://relay.example", sub: "agt_12345678", aud: "relay-runner", jti: "lse_12345678", iat: 100, nbf: 100, exp: 200, accountId: "acct_12345678", taskId: "tsk_12345678", runtimeClientId: "rtc_12345678", workloadId: "wkl_12345678", capability: { name: "computer.screen.capture", version: "1.0" }, resource: { type: "computer", ids: ["cmp_12345678"] }, maxCalls: 1, policyDecisionId: "dec_12345678", policyRevision: "policy-7", effectClass: "read", riskClass: "medium", onlineRequired: false, environment: { providerIds: ["browserbase"], minimumAssurance: "attested" }, delegationChain: [], revocationEpoch: 3 };
     expect(capabilityLeaseClaimsSchema.parse(claims).exp).toBe(200);
     expect(() => capabilityLeaseClaimsSchema.parse({ ...claims, exp: 99 })).toThrow("exp must follow nbf");
   });
@@ -46,4 +46,3 @@ describe("Relay V2 contracts", () => {
     expect(new Set(Object.values(schemas).map((schema) => schema.$id)).size).toBe(3);
   });
 });
-
