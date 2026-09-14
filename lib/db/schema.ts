@@ -39,6 +39,9 @@ export const evidenceSource = pgEnum("evidence_source", ["RELAY_OBSERVED", "PROV
 export const trustTier = pgEnum("trust_tier", ["UNVERIFIED", "REGISTERED", "VERIFIED", "HIGH_ASSURANCE"]);
 export const passportStatus = pgEnum("passport_status", ["ACTIVE", "REVOKED", "SUPERSEDED"]);
 export const runtimeVerificationStatus = pgEnum("runtime_verification_status", ["SELF_DECLARED", "VERIFIED", "REVOKED"]);
+export const policyLayer = pgEnum("policy_layer", ["RELAY_SAFETY", "REGULATORY", "ACCOUNT", "PASSPORT", "RESOURCE", "TASK", "DYNAMIC_RISK"]);
+export const policyBundleStatus = pgEnum("policy_bundle_status", ["STAGED", "ACTIVE", "RETIRED", "REVOKED"]);
+export const policyOutcome = pgEnum("policy_outcome", ["ALLOW", "DENY", "REQUIRE_APPROVAL", "LIMIT", "ESCALATE"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -322,6 +325,57 @@ export const runtimeClients = pgTable("runtime_clients", {
   verifiedAt: timestamp("verified_at", { withTimezone: true, mode: "string" }),
   revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
 }, (table) => [uniqueIndex("runtime_clients_secret_idx").on(table.secretHash), index("runtime_clients_account_status_idx").on(table.accountId, table.verificationStatus)]);
+
+export const capabilityDefinitions = pgTable("capability_definitions", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  version: text("version").notNull(),
+  domain: text("domain").notNull(),
+  description: text("description").notNull(),
+  effectClass: text("effect_class").notNull(),
+  riskClass: text("risk_class").notNull(),
+  resourceType: text("resource_type").notNull(),
+  inputSchema: jsonb("input_schema").notNull(),
+  outputSchema: jsonb("output_schema").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  definitionHash: text("definition_hash").notNull(),
+  signature: text("signature").notNull(),
+  signingKeyId: text("signing_key_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("capability_definition_name_version_idx").on(table.name, table.version), uniqueIndex("capability_definition_hash_idx").on(table.definitionHash), index("capability_definition_domain_idx").on(table.domain, table.enabled)]);
+
+export const policyBundles = pgTable("policy_bundles", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").references(() => accounts.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  layer: policyLayer("layer").notNull(),
+  version: integer("version").notNull(),
+  status: policyBundleStatus("status").notNull().default("STAGED"),
+  rules: jsonb("rules").notNull(),
+  bundleHash: text("bundle_hash").notNull(),
+  signature: text("signature").notNull(),
+  signingKeyId: text("signing_key_id").notNull(),
+  createdByPrincipalId: text("created_by_principal_id"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  activatedAt: timestamp("activated_at", { withTimezone: true, mode: "string" }),
+  retiredAt: timestamp("retired_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("policy_bundle_hash_idx").on(table.bundleHash), index("policy_bundle_account_status_idx").on(table.accountId, table.status, table.layer), index("policy_bundle_name_version_idx").on(table.accountId, table.name, table.version)]);
+
+export const policyDecisions = pgTable("policy_decisions", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  actionIntentId: text("action_intent_id").notNull(),
+  agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  outcome: policyOutcome("outcome").notNull(),
+  reasonCodes: text("reason_codes").array().notNull(),
+  obligations: jsonb("obligations").notNull(),
+  capabilityDefinitionHash: text("capability_definition_hash").notNull(),
+  policyBundleHashes: text("policy_bundle_hashes").array().notNull(),
+  materialFacts: jsonb("material_facts").notNull(),
+  evaluationSnapshot: jsonb("evaluation_snapshot").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [index("policy_decision_account_created_idx").on(table.accountId, table.createdAt), index("policy_decision_action_idx").on(table.accountId, table.actionIntentId), index("policy_decision_agent_outcome_idx").on(table.accountId, table.agentId, table.outcome)]);
 
 export const sandboxes = pgTable("sandboxes", {
   id: text("id").primaryKey(),

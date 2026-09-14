@@ -21,8 +21,8 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-02 | Complete security architecture and abuse cases | WO-01 | IMPLEMENTED | `dbb48a0` | LOCAL PASS | Independent security-owner sign-off: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | QUALIFIED | `b5400fd` | SCOPED PASS | Acceptance sequencing corrected by Product Owner; live OIDC/WebAuthn pending provider qualification |
 | WO-04 | Build evidence and append-only audit substrate | WO-01, WO-02, WO-03 | QUALIFIED | `b37cdba` | LOCAL PASS | Production KMS/HSM and object-store bindings are deployment configuration |
-| WO-05 | Build Agent Passport and runtime attribution | WO-03, WO-04 | QUALIFIED | pending commit | LOCAL PASS | Third-party issuer federation remains excluded |
-| WO-06 | Build capability registry and policy decision service | WO-02–WO-05 | NOT_STARTED | — | — | — |
+| WO-05 | Build Agent Passport and runtime attribution | WO-03, WO-04 | QUALIFIED | `85412d1` | LOCAL PASS | Third-party issuer federation remains excluded |
+| WO-06 | Build capability registry and policy decision service | WO-02–WO-05 | QUALIFIED | pending commit | LOCAL PASS | External KMS signer binding remains deployment configuration |
 | WO-07 | Build centralized approval service | WO-03, WO-04, WO-06 | NOT_STARTED | — | — | — |
 | WO-08 | Build capability leases and workload identity | WO-05–WO-07 | NOT_STARTED | — | — | — |
 | WO-09 | Build multi-dimensional budget engine | WO-04, WO-06, WO-08 | NOT_STARTED | — | — | — |
@@ -99,3 +99,13 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added runtime-client identities and one-time credentials; product labels remain self-declared until a configured server-side attestation verifier supplies verified identity evidence.
 - Added focused isolation tests for Passport persistence/export, imported provenance, runtime-client verification, and runtime credentials.
 - Qualification passed: frontier guard, typecheck, lint, Drizzle schema check, focused V2 tests (22/22), and all runnable tests (65/65); 3 live-provider tests remained intentionally skipped.
+
+### 2026-09-13 — WO-06 capability registry and policy engine
+
+- Added immutable signed capability definitions with explicit versions, effect/risk classes, resource types, and typed input/output contracts.
+- Added signed, versioned structured policy bundles with Relay-safety and account layers, staged activation, exact-hash password step-up, deterministic precedence, limit/scope intersection, and retained history.
+- Added mandatory authoritative resource-ownership resolution; Agent-supplied tenant attributes are not accepted as ownership evidence.
+- Added fresh authoritative fact resolvers and fail-closed handling for missing, stale, future-dated, non-authoritative, and conflicting facts.
+- Added durable decision records containing capability/bundle hashes, redacted material facts, obligations, expiry, and a self-contained evaluation snapshot that reproduces historic outcomes.
+- Added focused tenant-isolation coverage for policy activation, resource ownership, and decision queries; added golden outcomes for all five policy results and a 10,000-evaluation local latency gate.
+- Qualification passed: frontier guard, typecheck, lint, Drizzle schema check, and all runnable tests (70/70); 3 live-provider tests remained intentionally skipped.
