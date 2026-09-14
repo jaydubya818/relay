@@ -58,6 +58,10 @@ export const taskCommandStatus = pgEnum("task_command_status", ["PENDING", "PROC
 export const executionEffectState = pgEnum("execution_effect_state", ["PRE_EFFECT", "IDEMPOTENT_SAFE", "POSSIBLY_COMMITTED"]);
 export const eventSignatureStatus = pgEnum("event_signature_status", ["VERIFIED", "UNVERIFIED", "INVALID"]);
 export const routeStatus = pgEnum("route_status", ["ACTIVE", "DISABLED"]);
+export const providerDefinitionStatus = pgEnum("provider_definition_status", ["ACTIVE", "DISABLED"]);
+export const providerCircuitStatus = pgEnum("provider_circuit_status", ["CLOSED", "OPEN", "HALF_OPEN"]);
+export const executionPlacementStatus = pgEnum("execution_placement_status", ["SCHEDULED", "DISPATCHING", "RUNNING", "RECONCILIATION_REQUIRED", "FAILED", "TERMINATED"]);
+export const executionAttemptStatus = pgEnum("execution_attempt_status", ["STARTED", "ACCEPTED", "PRE_EFFECT_FAILED", "EFFECT_UNKNOWN", "TERMINATED"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -714,6 +718,57 @@ export const deadLetterEntries = pgTable("dead_letter_entries", {
   replayedByTaskId: text("replayed_by_task_id"),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("dead_letter_command_idx").on(table.accountId, table.commandId), index("dead_letter_account_idx").on(table.accountId, table.createdAt)]);
+
+export const executionProviderDefinitions = pgTable("execution_provider_definitions", {
+  id: text("id").primaryKey(),
+  providerKey: text("provider_key").notNull(),
+  version: text("version").notNull(),
+  status: providerDefinitionStatus("status").notNull().default("ACTIVE"),
+  manifest: jsonb("manifest").notNull(),
+  manifestHash: text("manifest_hash").notNull(),
+  signature: text("signature").notNull(),
+  signingKeyId: text("signing_key_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("execution_provider_key_version_idx").on(table.providerKey, table.version), uniqueIndex("execution_provider_manifest_hash_idx").on(table.manifestHash), index("execution_provider_active_idx").on(table.status, table.providerKey)]);
+
+export const providerCircuitStates = pgTable("provider_circuit_states", {
+  providerDefinitionId: text("provider_definition_id").primaryKey().references(() => executionProviderDefinitions.id, { onDelete: "cascade" }),
+  status: providerCircuitStatus("status").notNull().default("CLOSED"),
+  consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+  openedUntil: timestamp("opened_until", { withTimezone: true, mode: "string" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+});
+
+export const executionPlacements = pgTable("execution_placements", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  taskId: text("task_id").notNull().references(() => v2Tasks.id, { onDelete: "restrict" }),
+  actionIntentId: text("action_intent_id").notNull(),
+  leaseId: text("lease_id").notNull().references(() => capabilityLeases.id, { onDelete: "restrict" }),
+  providerDefinitionId: text("provider_definition_id").notNull().references(() => executionProviderDefinitions.id, { onDelete: "restrict" }),
+  status: executionPlacementStatus("status").notNull().default("SCHEDULED"),
+  requirements: jsonb("requirements").notNull(),
+  decision: jsonb("decision").notNull(),
+  quote: jsonb("quote").notNull(),
+  providerSessionId: text("provider_session_id"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("execution_placement_action_idx").on(table.accountId, table.taskId, table.actionIntentId), index("execution_placement_account_status_idx").on(table.accountId, table.status, table.createdAt), index("execution_placement_provider_idx").on(table.providerDefinitionId, table.status)]);
+
+export const executionAttempts = pgTable("execution_attempts", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  placementId: text("placement_id").notNull().references(() => executionPlacements.id, { onDelete: "cascade" }),
+  providerDefinitionId: text("provider_definition_id").notNull().references(() => executionProviderDefinitions.id, { onDelete: "restrict" }),
+  attempt: integer("attempt").notNull(),
+  status: executionAttemptStatus("status").notNull().default("STARTED"),
+  effectState: executionEffectState("effect_state").notNull().default("PRE_EFFECT"),
+  idempotencyKey: text("idempotency_key").notNull(),
+  providerReceipt: jsonb("provider_receipt"),
+  errorClass: text("error_class"),
+  startedAt: timestamp("started_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("execution_attempt_number_idx").on(table.accountId, table.placementId, table.attempt), uniqueIndex("execution_attempt_idempotency_idx").on(table.accountId, table.idempotencyKey), index("execution_attempt_account_idx").on(table.accountId, table.startedAt)]);
 
 export const sandboxes = pgTable("sandboxes", {
   id: text("id").primaryKey(),

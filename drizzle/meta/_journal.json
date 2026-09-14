@@ -99,6 +99,13 @@
       "when": 1789353677939,
       "tag": "0013_cuddly_dragon_lord",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1789354420155,
+      "tag": "0014_thankful_paibok",
+      "breakpoints": true
     }
   ]
 }

@@ -27,7 +27,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-08 | Build capability leases and workload identity | WO-05–WO-07 | QUALIFIED | `897be3e` | LOCAL PASS | Production KMS/mTLS binding awaits provider WorkOrders |
 | WO-09 | Build multi-dimensional budget engine | WO-04, WO-06, WO-08 | QUALIFIED | `a4cb446` | LOCAL PASS | Provider meter feeds and production SLOs await provider WorkOrders |
 | WO-10 | Build durable event router and task orchestrator | WO-03, WO-04 | QUALIFIED | `34ac699` | LOCAL PASS | Live Temporal/broker failover and production SLOs remain deployment qualification |
-| WO-11 | Build execution provider SDK and scheduler | WO-06, WO-08–WO-10 | NOT_STARTED | — | — | — |
+| WO-11 | Build execution provider SDK and scheduler | WO-06, WO-08–WO-10 | QUALIFIED | pending commit | LOCAL PASS | No real provider is qualified by this WorkOrder; live provider SLOs remain later gates |
 | WO-12 | Qualify Relay-managed Playwright execution | WO-11 | NOT_STARTED | — | — | — |
 | WO-13 | Qualify Browserbase and E2B adapters | WO-11 | NOT_STARTED | — | — | — |
 | WO-14 | Build customer runner and outbound private gateway | WO-08, WO-10, WO-11 | NOT_STARTED | — | — | — |
@@ -152,3 +152,14 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added the deterministic `relay.task.v1` Temporal workflow contract/reducer. PostgreSQL remains the authority and Relay's command ledger owns retries; Temporal's adapter uses stable workflow IDs and cannot override fences.
 - Added focused tenant-isolation coverage for routes, normalized events, sequence cursors, tasks/jobs, state history, commands/queue, outbox, and dead letters.
 - Qualification passed: focused state/fault/isolation suite (15/15), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (99/99); 3 live-provider tests remained intentionally skipped.
+
+### 2026-09-13 — WO-11 execution provider SDK and scheduler
+
+- Added a strict provider-neutral adapter SDK for health, quotes, idempotent preparation, control, observation, evidence, meters, termination, and reconciliation.
+- Added immutable signed provider manifests, runtime conformance checks, signature/integrity verification at scheduling and dispatch, and shared database-backed circuit state.
+- Added deterministic hard-filter-first placement across feature, Passport provider eligibility, assurance, region, isolation, persistence, classification, private networking, duration, health, circuit, adapter availability, and exact quote constraints.
+- Resolved a design seam exposed by the failover fixture: the WO-08 lease authorizes the scheduler workload and does not pretend its current-workload provider binding is a candidate set. Candidate providers come from active Passport ∩ policy requirements; provider-specific workload identity/leases are minted only after placement in WO-12–WO-14.
+- Added idempotent placement decisions with auditable exclusions, requirements hashes, manifest hashes, and deterministic scoring; hard-filtered providers cannot be restored by better speed, capacity, or price.
+- Added dispatch-time authority/health/quote revalidation, opaque vault-handle-only credential references, atomic dispatch claims, pre-effect-only failover, redacted receipts, and mandatory reconciliation without failover for ambiguous effects.
+- Added focused tenant-isolation coverage for placements and attempts, plus concurrency, failover, ambiguity, circuit-breaker, manifest tamper, and compatibility vectors.
+- Qualification passed: focused provider conformance/chaos/isolation suite (7/7), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (106/106); 3 live-provider tests remained intentionally skipped.
