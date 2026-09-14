@@ -88,3 +88,20 @@ Add a tested deployment-mode guard, environment validator, CI workflow, Vercel a
 **Learnings:**
 - The local demo seed is intentionally unsuitable for a hosted preview because it creates Agent credentials and demo resources.
 - The owner password remains outside Relay's logs and repository and is retained only in the operator's secret stores.
+
+### 2026-09-14 — Hosted private-preview evidence
+
+**By:** Codex
+
+**Actions:**
+- Merged PR #3 after its required `quality` check passed; post-merge main qualification run `34883664670` also passed.
+- Migrated the dedicated Neon database from zero public tables and bootstrapped exactly one owner with zero Agents.
+- Deployed main to Vercel deployment `dpl_2UoFkvPznuz5cVy6vq6iCSkQrGeM`; the canonical URL is protected by Vercel Authentication and the Relay application remains in `private-preview` mode.
+- Ran one successful maintenance cycle against Neon and stopped the local smoke-test worker cleanly.
+- Recorded resource identifiers, inventory, qualification results, and remaining blockers in `docs/v2/qualification/private-preview-2026-09-14.md`.
+
+**Remaining:**
+- Verify managed-database backup/deletion protection and rehearse an isolated restore.
+- Complete the owner-authenticated live browser checks without weakening Vercel deployment protection.
+- Authenticate and configure a persistent worker host; Railway is installed locally but not logged in.
+- Preserve `BLOCKED_EXTERNAL_CONFIGURATION` and pending independent-security-review statuses for the external WO-22 gates.
