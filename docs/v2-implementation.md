@@ -19,8 +19,8 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-00 | Establish V2 isolation and governance | — | QUALIFIED | `07b1427` | LOCAL PASS | Remote branch/deploy protection: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-01 | Freeze vocabulary, schemas, and state machines | WO-00 | QUALIFIED | `b468a38` | LOCAL PASS | — |
 | WO-02 | Complete security architecture and abuse cases | WO-01 | IMPLEMENTED | `dbb48a0` | LOCAL PASS | Independent security-owner sign-off: BLOCKED_EXTERNAL_CONFIGURATION |
-| WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | QUALIFIED | pending commit | SCOPED PASS | Acceptance sequencing corrected by Product Owner; live OIDC/WebAuthn pending provider qualification |
-| WO-04 | Build evidence and append-only audit substrate | WO-01, WO-02, WO-03 | NOT_STARTED | — | — | — |
+| WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | QUALIFIED | `b5400fd` | SCOPED PASS | Acceptance sequencing corrected by Product Owner; live OIDC/WebAuthn pending provider qualification |
+| WO-04 | Build evidence and append-only audit substrate | WO-01, WO-02, WO-03 | QUALIFIED | pending commit | LOCAL PASS | Production KMS/HSM and object-store bindings are deployment configuration |
 | WO-05 | Build Agent Passport and runtime attribution | WO-03, WO-04 | NOT_STARTED | — | — | — |
 | WO-06 | Build capability registry and policy decision service | WO-02–WO-05 | NOT_STARTED | — | — | — |
 | WO-07 | Build centralized approval service | WO-03, WO-04, WO-06 | NOT_STARTED | — | — | — |
@@ -81,3 +81,12 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Corrected a pre-commit design flaw that would have trusted a caller-declared step-up method; only server-verified password completion is currently implemented.
 - Scoped qualification passed: frontier and Drizzle checks, typecheck, lint, auth 3/3, database 3/3, existing security 5/5, V2 identity 5/5.
 - OIDC/WebAuthn provider adapters remain unqualified and are not represented as implemented authentication evidence.
+
+### 2026-09-13 — WO-04 evidence and append-only audit
+
+- Added account-scoped append-only audit records with canonical hashing, per-account transactional sequencing, Ed25519 signatures, and signed export manifests that detect record tampering, truncation, deletion, reordering, and tenant substitution.
+- Added an offline verifier with public-key rotation support and no database or Relay service dependency.
+- Added envelope-encrypted evidence artifacts, account-bound key wrapping, structured-evidence redaction, integrity verification, retention enforcement, and tombstoned deletion hooks.
+- Local cryptographic and object-store adapters refuse production use where applicable; production KMS/HSM and private object-store bindings remain deployment configuration, not embedded durable credentials.
+- Added focused tenant-isolation coverage for the new audit, artifact metadata, object storage, and key-unwrapping boundaries.
+- Qualification passed: V2 frontier guard, typecheck, lint, Drizzle schema check, and all runnable tests (60/60); 3 live-provider tests remained intentionally skipped.

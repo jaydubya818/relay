@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -33,6 +34,8 @@ export const principalStatus = pgEnum("principal_status", ["ACTIVE", "SUSPENDED"
 export const membershipRole = pgEnum("membership_role", ["OWNER", "ADMIN", "OPERATOR", "APPROVER", "MEMBER", "AUDITOR"]);
 export const membershipStatus = pgEnum("membership_status", ["ACTIVE", "SUSPENDED", "REMOVED"]);
 export const stepUpStatus = pgEnum("step_up_status", ["PENDING", "CONSUMED", "EXPIRED", "REVOKED"]);
+export const dataClassification = pgEnum("data_classification", ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"]);
+export const evidenceSource = pgEnum("evidence_source", ["RELAY_OBSERVED", "PROVIDER_SIGNED", "RUNNER_REPORTED"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -222,6 +225,55 @@ export const activities = pgTable("activities", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   metadata: jsonb("metadata").notNull().default({}),
 }, (table) => [index("activities_account_created_idx").on(table.accountId, table.createdAt), index("activities_agent_created_idx").on(table.accountId, table.agentId, table.createdAt)]);
+
+export const auditChainHeads = pgTable("audit_chain_heads", {
+  accountId: text("account_id").primaryKey().references(() => accounts.id, { onDelete: "cascade" }),
+  sequence: bigint("sequence", { mode: "number" }).notNull().default(0),
+  lastHash: text("last_hash"),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+});
+
+export const auditRecords = pgTable("audit_records", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  sequence: bigint("sequence", { mode: "number" }).notNull(),
+  eventType: text("event_type").notNull(),
+  actorPrincipalId: text("actor_principal_id"),
+  agentId: text("agent_id"),
+  runtimeClientId: text("runtime_client_id"),
+  taskId: text("task_id"),
+  actionIntentId: text("action_intent_id"),
+  policyDecisionId: text("policy_decision_id"),
+  approvalDecisionId: text("approval_decision_id"),
+  leaseId: text("lease_id"),
+  provider: text("provider"),
+  outcome: text("outcome").notNull(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "string" }).notNull(),
+  details: jsonb("details").notNull().default({}),
+  previousHash: text("previous_hash"),
+  recordHash: text("record_hash").notNull(),
+  signature: text("signature").notNull(),
+  signingKeyId: text("signing_key_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("audit_account_sequence_idx").on(table.accountId, table.sequence), uniqueIndex("audit_account_hash_idx").on(table.accountId, table.recordHash), index("audit_account_occurred_idx").on(table.accountId, table.occurredAt), index("audit_task_idx").on(table.accountId, table.taskId)]);
+
+export const evidenceArtifacts = pgTable("evidence_artifacts", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  taskId: text("task_id"),
+  actionIntentId: text("action_intent_id"),
+  classification: dataClassification("classification").notNull(),
+  source: evidenceSource("source").notNull(),
+  mediaType: text("media_type").notNull(),
+  objectReference: text("object_reference").notNull(),
+  contentHash: text("content_hash").notNull(),
+  byteLength: bigint("byte_length", { mode: "number" }).notNull(),
+  wrappedKey: text("wrapped_key").notNull(),
+  encryptionMetadata: jsonb("encryption_metadata").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  retentionUntil: timestamp("retention_until", { withTimezone: true, mode: "string" }),
+  deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("evidence_account_object_idx").on(table.accountId, table.objectReference), index("evidence_account_created_idx").on(table.accountId, table.createdAt), index("evidence_task_idx").on(table.accountId, table.taskId)]);
 
 export const sandboxes = pgTable("sandboxes", {
   id: text("id").primaryKey(),
