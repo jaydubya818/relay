@@ -117,3 +117,45 @@ Historical transition: branch/tag/deployment governance was `FAILED` before hard
 Engineering-controlled local and Relay-managed qualification is green after the focused accessibility correction, but the release is `NOT_READY_FOR_LIMITED_BETA`: required CI checks and deployment-environment enforcement are not available; independent security, penetration, accessibility/comprehension and payment-scope reviews are incomplete; and the intended live provider/channel/connector/runner and production topology are unqualified.
 
 The Product Owner decision remains `REQUIRES_PRODUCT_OWNER_DECISION`. GA remains `BLOCKED_EXTERNAL_QUALIFICATION`. No tag, merge, V1 change, V2.1 work or V3 work was performed.
+
+## 2026-09-13 Browserbase and E2B qualification campaign
+
+Scope was limited to the existing Browserbase/E2B provider-neutral architecture and the Relay-managed comparator. No other WO-22 gate was changed.
+
+### Contract reconciliation
+
+Both adapters implement the common `ExecutionProviderAdapter` lifecycle: health, quote, prepare, control, observe, evidence, meters, terminate and reconcile. The scheduler requires an active same-account task, Agent Passport, policy-bound unexpired capability lease, signed provider manifest, allowed provider/region/isolation/persistence/classification, and a healthy closed circuit before placement. Provider dispatch is account/task/action/lease bound and recorded in the audit chain.
+
+Browserbase `browserbase@1.0` claims only registered-assurance ephemeral process isolation for public/internal visual-browser and live-observation work. It supports navigation, bounded input, extraction through browser operations, screenshots, live/replay metadata, six-hour maximum TTL, explicit termination, tombstoned cleanup and computer-second metering. It does not claim persistence, pause/resume, shell/files, private network, human takeover, secret injection, idempotent upstream create or provider-signed evidence.
+
+E2B `e2b@1.0` claims only registered-assurance ephemeral microVM isolation for public/internal shell/files and beta pause/resume. It enforces workspace-rooted paths, 1 MiB file bounds, 10,000-character commands, 30-second command timeout, 24-hour maximum TTL, explicit kill, tombstoned cleanup and compute-second metering. It does not claim a visual browser, persistent computer, private/network-policy enforcement, human takeover, secret injection, idempotent upstream create or provider-signed evidence. CPU/memory selection is a template concern and is not projected by the current Relay adapter contract.
+
+Policy/approval/budget remain authoritative control-plane inputs. Neither provider adapter can widen them. Credential handles are rejected because no qualified secret-broker path exists for these providers, and provider API keys are supplied only by the server-side credential source.
+
+### Configuration inspection
+
+Only configuration presence was inspected; no secret value was printed.
+
+| Provider setting | State |
+|---|---|
+| `BROWSERBASE_API_KEY` | MISSING |
+| Browserbase project binding | MISSING |
+| Browserbase account/session-limit evidence | MISSING |
+| `E2B_API_KEY` | MISSING |
+| E2B team/workspace binding | MISSING |
+| E2B approved template binding | MISSING |
+
+The repository contains the adapters and mock conformance clients, but no concrete live Browserbase/E2B HTTP/SDK client binding or opt-in live qualification test. Adding such a binding was not attempted because this mission prohibited features and credentials are absent.
+
+### Executed evidence and status
+
+- `PASSED_AUTOMATED` — 28/28 tests across `execution-providers.test.ts`, `third-party-providers.test.ts`, `relay-managed-provider.test.ts` and the Relay-managed live comparator.
+- `PASSED_LIVE` — Relay-managed comparator completed a real combined browser/shell/file lifecycle in 3.414 seconds and cleaned up.
+- `PASSED_AUTOMATED` — Browserbase/E2B common manifest substitution, account/session binding, unsupported-capability denial, secret-handle rejection, kill switch, termination, evidence redaction, 429 pre-effect classification, 5xx/timeout ambiguous classification, scheduler hard filtering, signed-manifest integrity, circuit opening, no failover after possible effect, account isolation and concurrent-dispatch fencing.
+- Browserbase: `BLOCKED_EXTERNAL_CONFIGURATION`. No live session, navigation, screenshot, cookie/storage isolation, TTL, close, cleanup, evidence or latency claim was made.
+- E2B: `BLOCKED_EXTERNAL_CONFIGURATION`. No live sandbox, shell/file, resource, timeout, network, TTL, destruction, cleanup, evidence or latency claim was made.
+- Live provider-neutrality across Relay-managed and either third-party provider remains `BLOCKED_EXTERNAL_CONFIGURATION`; only the shared semantics are `PASSED_AUTOMATED`.
+
+No Relay contract incompatibility was established without a live provider. Current upstream documentation still supports Browserbase API-key/session/project/region/timeout semantics; Browserbase project inference is permitted upstream but explicit project recording is required for Relay qualification. E2B documentation shows sandbox lifecycle, shell/files and beta pause, and exposes CPU/memory through template configuration. The repository document pins E2B SDK 2.6.2 while the current official reference also exposes 2.6.3; the live binding must select and record one reviewed version before qualification.
+
+WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; all unrelated blockers and the `NOT_READY_FOR_LIMITED_BETA` recommendation are unchanged.

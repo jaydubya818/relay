@@ -29,7 +29,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-10 | Build durable event router and task orchestrator | WO-03, WO-04 | QUALIFIED | `34ac699` | LOCAL PASS | Live Temporal/broker failover and production SLOs remain deployment qualification |
 | WO-11 | Build execution provider SDK and scheduler | WO-06, WO-08–WO-10 | QUALIFIED | `49a99c7` | LOCAL PASS | No real provider is qualified by this WorkOrder; live provider SLOs remain later gates |
 | WO-12 | Qualify Relay-managed Playwright execution | WO-11 | QUALIFIED | `b56dea7` | LOCAL + LIVE PASS | Profile intentionally capped at registered/internal/ephemeral; production image attestation remains WO-22 |
-| WO-13 | Qualify Browserbase and E2B adapters | WO-11 | IMPLEMENTED | `5f47543` | LOCAL PASS | Live Browserbase/E2B qualification: BLOCKED_EXTERNAL_CONFIGURATION (API keys absent) |
+| WO-13 | Qualify Browserbase and E2B adapters | WO-11 | IMPLEMENTED | `5f47543` + WO-22 evidence | LOCAL PASS | Live Browserbase/E2B: BLOCKED_EXTERNAL_CONFIGURATION; credentials, account bindings and concrete live clients/harness absent |
 | WO-14 | Build customer runner and outbound private gateway | WO-08, WO-10, WO-11 | IMPLEMENTED | `dd0c2af` | LOCAL PASS | Live host/mTLS/attestation/network/provenance: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-15 | Build live observation and human control | WO-07, WO-08, WO-12, WO-13 | IMPLEMENTED | `656e0af` | LOCAL PASS | Live provider/video/accessibility/production latency evidence pending WO-21/WO-22 |
 | WO-16 | Qualify Slack and Telegram communications | WO-07, WO-10 | IMPLEMENTED | `c7e545a` | LOCAL PASS | Live Slack/Telegram channel qualification: BLOCKED_EXTERNAL_CONFIGURATION |
@@ -308,3 +308,13 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Required status checks remain `BLOCKED_EXTERNAL_CONFIGURATION`: no workflow, check run or status context exists, so no check name or up-to-date rule was invented.
 - Deployment-environment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`: no deployment pipeline or GitHub environment exists, so no placeholder infrastructure or secrets were created.
 - Unrelated WO-22 provider, topology, independent-review and human-study blockers are unchanged. The release recommendation remains `NOT_READY_FOR_LIMITED_BETA`.
+
+### 2026-09-13 — WO-22 Browserbase/E2B qualification
+
+- Reconciled the implemented common provider, Browserbase and E2B manifests/adapters without changing product contracts.
+- Configuration inspection reported only presence: Browserbase API key/project/account limits MISSING; E2B API key/team/template MISSING. No secret value was read into evidence.
+- Confirmed the repository has adapter interfaces and mock conformance clients but no concrete live Browserbase/E2B client binding or opt-in live harness. No feature or speculative binding was added.
+- Qualification passed 28/28 across the provider-neutral scheduler, Browserbase/E2B adapter pack, Relay-managed contract and a fresh Relay-managed live comparator. The live comparator completed in 3.414 seconds.
+- Automated negative coverage passed for constraints, wrong account/session authority, secret handles, provider kill switches, termination, rate limits, ambiguous failures, manifest tampering, circuit breaking, concurrent dispatch and failover fencing.
+- Browserbase and E2B remain `BLOCKED_EXTERNAL_CONFIGURATION`; live provider-neutrality and third-party performance measurements are likewise blocked. No live success, isolation, TTL, cleanup, retention, SLO or latency claim was recorded.
+- No defect was proven, no V1 or unrelated WO-22 surface changed, and the limited-beta recommendation remains unchanged.
