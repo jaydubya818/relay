@@ -118,10 +118,11 @@ export async function evaluatePolicy(input: { accountId: string; action: ActionI
   const action = actionIntentSchema.parse(input.action);
   if (action.accountId !== input.accountId || canonicalHash(actionMaterial(action)) !== action.canonicalHash) throw new RelayError("INVALID_INPUT", "Action intent account or canonical hash is invalid.");
   const loaded = await loadEvaluationInputs(input.accountId, action);
-  const evaluatedAt = now();
-  const resolved = await resolveFacts(requiredFactNames(loaded.bundles), input.factResolvers ?? [], { accountId: input.accountId, action, evaluatedAt });
+  const factResolutionStartedAt = now();
+  const resolved = await resolveFacts(requiredFactNames(loaded.bundles), input.factResolvers ?? [], { accountId: input.accountId, action, evaluatedAt: factResolutionStartedAt });
   const ownership = await input.resourceResolver.resolveOwnership({ accountId: input.accountId, resource: action.resource });
   const parsedOwnership = ownership ? resolvedFactSchema.parse(ownership) : undefined;
+  const evaluatedAt = now();
   const ownershipFailure = !parsedOwnership || parsedOwnership.name !== "resource.account_id" || !parsedOwnership.authoritative || Date.parse(parsedOwnership.observedAt) > Date.parse(evaluatedAt) || Date.parse(parsedOwnership.expiresAt) <= Date.parse(evaluatedAt) ? "MISSING_AUTHORITATIVE_FACT" as const : undefined;
   const facts = redactForEvidence([...(parsedOwnership ? [parsedOwnership] : []), ...resolved.facts]) as ResolvedFact[];
   const failure = ownershipFailure ?? resolved.failure;

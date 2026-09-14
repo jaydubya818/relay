@@ -46,6 +46,21 @@ describe("Relay V2 capability registry and policy engine", () => {
     await expect(reproducePolicyDecision(otherAccountId, decision.decisionId)).rejects.toMatchObject({ status: 404 });
   });
 
+  it("accepts an authoritative fact observed while the resolver is running", async () => {
+    const { accountId, agentId, signer } = await setup([baseRule("ALLOW")]);
+    const decision = await evaluatePolicy({
+      accountId,
+      action: action(accountId, agentId),
+      resourceResolver: {
+        resolveOwnership: async () => {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return { name: "resource.account_id", value: accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60_000).toISOString(), sourceRevision: "resource:delayed" };
+        },
+      },
+    }, signer);
+    expect(decision).toMatchObject({ outcome: "ALLOW" });
+  });
+
   it("fails closed for missing, stale, and conflicting authoritative facts", async () => {
     const factRule: PolicyRule = { ...baseRule("ALLOW"), id: "known-recipient", match: { capability: { name: definition.name, version: definition.version }, facts: { "recipient.relationship": "known" } } };
     const { accountId, agentId, signer } = await setup([factRule]);

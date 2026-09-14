@@ -2,7 +2,7 @@ import type { CanonicalValue } from "@/lib/v2/contracts";
 
 const SECRET_KEY = /(authorization|bearer|cookie|password|passwd|secret|token|api[-_]?key|cvv|cvc|card[-_]?number|pan|routing[-_]?number|bank[-_]?account|account[-_]?number|iban)/i;
 const SECRET_VALUE = /(?:rly_|rsvc_|Bearer\s+)[A-Za-z0-9._~-]{12,}/g;
-const PAYMENT_NUMBER = /(?:\d[ -]?){12,18}\d/g;
+const PAYMENT_NUMBER = /(?<![A-Za-z0-9])(?:\d[ -]?){12,18}\d(?![A-Za-z0-9])/g;
 
 function isLuhn(value: string) {
   const digits = value.replace(/\D/g, "");

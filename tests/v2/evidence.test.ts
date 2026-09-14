@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { appendAuditRecord, createLocalEd25519Signer, createLocalRsaKeyWrapper, deleteEvidenceArtifact, exportAuditBundle, InMemoryEvidenceObjectClient, listAuditRecords, readEvidenceArtifact, storeEvidenceJson, verifyAuditBundle, verifyAuditRecords } from "@/lib/v2/evidence";
+import { redactForEvidence } from "@/lib/v2/evidence/redaction";
 import { cleanupDatabase, freshDatabase, secondAccount } from "../helpers";
 
 describe("Relay V2 evidence and audit", () => {
@@ -24,6 +25,16 @@ describe("Relay V2 evidence and audit", () => {
     expect(JSON.stringify(bundle)).not.toContain("restricted-canary-value");
     expect(bundle.records[0]?.details).toEqual({ authorization: "[REDACTED]", nested: { apiKey: "[REDACTED]", safe: "visible" } });
     expect(verifyAuditBundle(JSON.parse(JSON.stringify(bundle)))).toBe(true);
+  });
+
+  it("does not corrupt hashes or identifiers that contain Luhn-valid digit runs", () => {
+    const hash = `a${"4111111111111111"}b${"0".repeat(46)}`;
+    const identifier = `act_a${"4111111111111111"}b`;
+    expect(redactForEvidence({ hash, identifier, note: "card 4111 1111 1111 1111" })).toEqual({
+      hash,
+      identifier,
+      note: "card [REDACTED_PAYMENT_NUMBER]",
+    });
   });
 
   it("rejects tampering, deletion, reordering, tenant substitution, and wrong keys", async () => {
