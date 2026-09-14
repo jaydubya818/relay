@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://relay.example/schemas/runtime-action-result.v1.json",
+  "title": "Relay Runtime Action Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "commandId", "taskId", "actionIntentId", "state", "durable", "idempotentReplay"],
+  "properties": {
+    "schemaVersion": { "const": "relay.runtime-action-result.v1" },
+    "commandId": { "type": "string", "pattern": "^cmd_" },
+    "taskId": { "type": "string", "pattern": "^tsk_" },
+    "actionIntentId": { "type": "string", "pattern": "^act_" },
+    "state": { "enum": ["QUEUED", "PROCESSING", "COMPLETED", "CANCELLED", "DEAD_LETTERED"] },
+    "durable": { "const": true },
+    "idempotentReplay": { "type": "boolean" }
+  }
+}

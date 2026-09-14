@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://relay.example/schemas/relay-event.v2.json",
+  "title": "Relay Event V2",
+  "type": "object",
+  "required": ["specversion", "id", "source", "type", "time", "accountid", "classification", "correlationid", "dedupekey", "schemaversion", "signaturestatus"],
+  "properties": {
+    "specversion": { "const": "1.0" },
+    "id": { "type": "string" },
+    "source": { "type": "string", "format": "uri" },
+    "type": { "type": "string" },
+    "time": { "type": "string", "format": "date-time" },
+    "accountid": { "type": "string", "pattern": "^acct_" },
+    "classification": { "enum": ["public", "internal", "confidential", "restricted"] },
+    "correlationid": { "type": "string" },
+    "dedupekey": { "type": "string" },
+    "schemaversion": { "const": "relay.event.v2" },
+    "signaturestatus": { "enum": ["unverified", "verified", "invalid"] },
+    "data": {}
+  }
+}
