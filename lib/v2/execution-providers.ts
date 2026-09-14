@@ -38,7 +38,7 @@ export type ProviderQuote = { amount: string; currency: string; validUntil: stri
 export type ProviderHealth = { available: boolean; warmCapacity: number; latencyMs: number; reliabilityBps: number; observedAt: string };
 const providerQuoteSchema = z.object({ amount: decimalSchema, currency: z.string().regex(/^[A-Z]{3}$/), validUntil: z.string().datetime({ offset: true }) }).strict();
 const providerHealthSchema = z.object({ available: z.boolean(), warmCapacity: z.number().int().min(0), latencyMs: z.number().nonnegative(), reliabilityBps: z.number().int().min(0).max(10_000), observedAt: z.string().datetime({ offset: true }) }).strict();
-export type ExecutionSpec = { accountId: string; taskId: string; actionIntentId: string; leaseId: string; region: string; isolationMode: z.infer<typeof isolationSchema>; persistence: z.infer<typeof persistenceSchema>; maximumSessionSeconds: number; credentialHandles: string[] };
+export type ExecutionSpec = { accountId: string; taskId: string; actionIntentId: string; leaseId: string; region: string; isolationMode: z.infer<typeof isolationSchema>; persistence: z.infer<typeof persistenceSchema>; classification: z.infer<typeof classificationSchema>; requiredFeatures: Array<z.infer<typeof featureSchema>>; maximumSessionSeconds: number; credentialHandles: string[] };
 
 export interface ExecutionProviderAdapter {
   readonly providerKey: string;
@@ -228,7 +228,7 @@ export async function startScheduledExecution(input: { accountId: string; placem
       let quote: ProviderQuote;
       try { health = providerHealthSchema.parse(rawHealth); quote = providerQuoteSchema.parse(rawQuote); } catch { throw new ProviderDispatchError("Provider returned invalid health or quote data.", "PRE_EFFECT", "ProviderContractViolation"); }
       if (!health.available || Date.parse(health.observedAt) < Date.now() - 60_000 || quote.currency !== requirements.quoteCurrency || Date.parse(quote.validUntil) <= Date.now() || (requirements.maximumQuotedAmount && decimalUnits(quote.amount) > decimalUnits(requirements.maximumQuotedAmount))) throw new ProviderDispatchError("Provider health or quote no longer satisfies placement constraints.", "PRE_EFFECT", "PlacementRevalidationFailed");
-      const result = await adapter.prepareExecution({ accountId: input.accountId, taskId: placement.taskId, actionIntentId: placement.actionIntentId, leaseId: placement.leaseId, region, isolationMode: requirements.isolationMode, persistence: requirements.persistence, maximumSessionSeconds: requirements.maximumSessionSeconds, credentialHandles: handles, idempotencyKey });
+      const result = await adapter.prepareExecution({ accountId: input.accountId, taskId: placement.taskId, actionIntentId: placement.actionIntentId, leaseId: placement.leaseId, region, isolationMode: requirements.isolationMode, persistence: requirements.persistence, classification: requirements.classification, requiredFeatures: requirements.requiredFeatures, maximumSessionSeconds: requirements.maximumSessionSeconds, credentialHandles: handles, idempotencyKey });
       const safeReceipt = redactForEvidence(result.receipt) as Record<string, unknown>;
       await withTransaction(async (transaction) => {
         await transaction.update(executionAttempts).set({ status: "ACCEPTED", effectState: "IDEMPOTENT_SAFE", providerReceipt: safeReceipt, completedAt: now() }).where(and(eq(executionAttempts.accountId, input.accountId), eq(executionAttempts.id, attemptId)));

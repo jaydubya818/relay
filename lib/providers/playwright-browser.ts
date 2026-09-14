@@ -16,7 +16,7 @@ function privateIp(address: string) {
   return normalized === "::" || normalized === "::1" || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb") || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("::ffff:127.") || normalized.startsWith("::ffff:10.") || normalized.startsWith("::ffff:192.168.");
 }
 
-async function assertPublicRequest(value: string) {
+export async function assertPublicRequest(value: string) {
   const url = new URL(value);
   if (["data:", "blob:", "about:"].includes(url.protocol)) return;
   if (url.protocol !== "http:" && url.protocol !== "https:") throw new RelayError("INVALID_INPUT", "Browser navigation supports HTTP and HTTPS only.", "browser.navigate");
@@ -70,6 +70,14 @@ export class PlaywrightBrowserProvider implements BrowserProvider {
 
   async type(resource: BrowserProviderRef, selector: string, text: string, policy: BrowserResourcePolicy) {
     await this.session(resource).page.locator(selector).fill(text, { timeout: policy.operationTimeoutMs });
+  }
+
+  async key(resource: BrowserProviderRef, key: string, policy: BrowserResourcePolicy) {
+    await this.session(resource).page.keyboard.press(key, { delay: Math.min(policy.operationTimeoutMs, 100) });
+  }
+
+  async scroll(resource: BrowserProviderRef, deltaX: number, deltaY: number) {
+    await this.session(resource).page.mouse.wheel(deltaX, deltaY);
   }
 
   async extract(resource: BrowserProviderRef, selector: string | undefined, policy: BrowserResourcePolicy) {

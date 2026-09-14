@@ -1,0 +1,28 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-09-14T03:06:00.000Z",
+    "component": {
+      "type": "application",
+      "name": "relay-managed-execution-substrate",
+      "version": "1.0",
+      "properties": [
+        { "name": "relay:qualification", "value": "local-reference" },
+        { "name": "relay:pnpm-lock-sha256", "value": "f71dacb4954660f181d1e3b2e288aaecd1ae9d5409855d12d148416260dd48f9" }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "container",
+      "name": "alpine",
+      "version": "3.20",
+      "purl": "pkg:oci/alpine@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc",
+      "hashes": [{ "alg": "SHA-256", "content": "d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc" }]
+    },
+    { "type": "library", "name": "playwright", "version": "1.55.0", "purl": "pkg:npm/playwright@1.55.0" },
+    { "type": "application", "name": "chromium", "version": "140.0.7339.16", "properties": [{ "name": "playwright:revision", "value": "1187" }] }
+  ]
+}

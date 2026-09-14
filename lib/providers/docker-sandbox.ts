@@ -122,6 +122,10 @@ export class DockerSandboxProvider implements SandboxProvider {
     });
   }
 
+  async deleteFile(resource: SandboxProviderRef, path: string) {
+    await docker(["exec", resource.resourceId, "rm", "-rf", "--", workspacePath(path)]);
+  }
+
   async destroy(resource: SandboxProviderRef) {
     await docker(["rm", "-f", resource.resourceId]);
   }

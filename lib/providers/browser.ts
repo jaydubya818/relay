@@ -8,6 +8,8 @@ export interface BrowserProvider {
   navigate(resource: BrowserProviderRef, url: string, policy: BrowserResourcePolicy): Promise<{ url: string; title: string }>;
   click(resource: BrowserProviderRef, selector: string, policy: BrowserResourcePolicy): Promise<void>;
   type(resource: BrowserProviderRef, selector: string, text: string, policy: BrowserResourcePolicy): Promise<void>;
+  key?(resource: BrowserProviderRef, key: string, policy: BrowserResourcePolicy): Promise<void>;
+  scroll?(resource: BrowserProviderRef, deltaX: number, deltaY: number, policy: BrowserResourcePolicy): Promise<void>;
   extract(resource: BrowserProviderRef, selector: string | undefined, policy: BrowserResourcePolicy): Promise<{ url: string; text: string; truncated: boolean }>;
   screenshot(resource: BrowserProviderRef, policy: BrowserResourcePolicy): Promise<Uint8Array>;
   close(resource: BrowserProviderRef): Promise<void>;

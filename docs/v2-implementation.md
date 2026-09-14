@@ -28,7 +28,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-09 | Build multi-dimensional budget engine | WO-04, WO-06, WO-08 | QUALIFIED | `a4cb446` | LOCAL PASS | Provider meter feeds and production SLOs await provider WorkOrders |
 | WO-10 | Build durable event router and task orchestrator | WO-03, WO-04 | QUALIFIED | `34ac699` | LOCAL PASS | Live Temporal/broker failover and production SLOs remain deployment qualification |
 | WO-11 | Build execution provider SDK and scheduler | WO-06, WO-08–WO-10 | QUALIFIED | `49a99c7` | LOCAL PASS | No real provider is qualified by this WorkOrder; live provider SLOs remain later gates |
-| WO-12 | Qualify Relay-managed Playwright execution | WO-11 | NOT_STARTED | — | — | — |
+| WO-12 | Qualify Relay-managed Playwright execution | WO-11 | QUALIFIED | pending commit | LOCAL + LIVE PASS | Profile intentionally capped at registered/internal/ephemeral; production image attestation remains WO-22 |
 | WO-13 | Qualify Browserbase and E2B adapters | WO-11 | NOT_STARTED | — | — | — |
 | WO-14 | Build customer runner and outbound private gateway | WO-08, WO-10, WO-11 | NOT_STARTED | — | — | — |
 | WO-15 | Build live observation and human control | WO-07, WO-08, WO-12, WO-13 | NOT_STARTED | — | — | — |
@@ -163,3 +163,13 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added dispatch-time authority/health/quote revalidation, opaque vault-handle-only credential references, atomic dispatch claims, pre-effect-only failover, redacted receipts, and mandatory reconciliation without failover for ambiguous effects.
 - Added focused tenant-isolation coverage for placements and attempts, plus concurrency, failover, ambiguity, circuit-breaker, manifest tamper, and compatibility vectors.
 - Qualification passed: focused provider conformance/chaos/isolation suite (7/7), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (106/106); 3 live-provider tests remained intentionally skipped.
+
+### 2026-09-13 — WO-12 Relay-managed execution provider
+
+- Added a provider-SDK-compatible Relay-managed adapter for one ephemeral visual-browser plus Docker shell/file session with click, type, key, scroll, screenshot, bounded shell, and bounded file read/write/list/delete operations.
+- Kept the qualified claim intentionally conservative: `registered` assurance, process-level common isolation, internal-or-lower data, public-only browser networking, no shell network, and no persistence/private networking/live takeover/high-assurance hostile code.
+- Added per-action account/task/lease reauthorization, pause/resume, short expiry, opaque vault-handle broker binding, credential revocation, idempotent termination, cleanup reconciliation, hashed action evidence, stable meters, and no typed text/handle retention.
+- Added SSRF/DNS/private-address blocking, path traversal/absolute/NUL rejection, no Docker mounts, dropped capabilities, no-new-privileges, PID/CPU/memory/time/output limits, and bounded command/input payloads.
+- Added immutable image-provenance enforcement plus a CycloneDX execution-substrate SBOM recording Alpine OCI digest, Playwright/Chromium versions, and lockfile hash. Production must replace local provenance with signed build attestation at WO-22.
+- Added focused tenant-isolation coverage for managed sessions and post-task leaked authority, plus termination tests proving browser/container/credential access removal.
+- Qualification passed: focused managed + SDK conformance suite (12/12), live component/combined lifecycle suite (4/4), frontier guard, typecheck, lint, Drizzle schema check, and all default runnable serial tests (111/111); 4 opt-in live-provider tests were intentionally skipped in the default run and passed separately.

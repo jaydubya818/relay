@@ -21,6 +21,7 @@ export interface SandboxProvider {
   readFile(resource: SandboxProviderRef, path: string, maxBytes: number): Promise<Uint8Array>;
   writeFile(resource: SandboxProviderRef, path: string, content: Uint8Array): Promise<void>;
   listFiles(resource: SandboxProviderRef, path: string): Promise<SandboxFile[]>;
+  deleteFile?(resource: SandboxProviderRef, path: string): Promise<void>;
   destroy(resource: SandboxProviderRef): Promise<void>;
   health(): Promise<ProviderHealth>;
 }
