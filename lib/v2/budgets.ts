@@ -177,6 +177,21 @@ export async function reconcileBudgetReservation(input: { accountId: string; res
   });
 }
 
+export async function markBudgetReservationUnknown(input: { accountId: string; reservationId: string; reason: string }, signer: AuditSigner) {
+  return await withTransaction(async (transaction) => {
+    await lockAccount(transaction, input.accountId);
+    const [reservation] = await transaction.select().from(budgetReservations).where(and(eq(budgetReservations.accountId, input.accountId), eq(budgetReservations.id, input.reservationId))).limit(1);
+    if (!reservation) throw new RelayError("INVALID_INPUT", "Budget reservation not found.", undefined, 404);
+    if (reservation.status === "UNKNOWN") return { status: "UNKNOWN" as const, idempotentReplay: true };
+    if (reservation.status !== "RESERVED") throw new RelayError("INVALID_INPUT", "Only an active reservation can become unknown.", undefined, 409);
+    await transaction.update(budgetReservations).set({ status: "UNKNOWN", reconciledAt: now() }).where(and(eq(budgetReservations.accountId, input.accountId), eq(budgetReservations.id, reservation.id), eq(budgetReservations.status, "RESERVED")));
+    await transaction.update(budgets).set({ balanceStatus: "UNKNOWN", updatedAt: now() }).where(and(eq(budgets.accountId, input.accountId), inArray(budgets.id, reservation.appliedBudgetIds)));
+    for (const budgetId of reservation.appliedBudgetIds) await transaction.insert(budgetEvents).values({ id: id("bev"), accountId: input.accountId, budgetId, type: "EFFECT_UNKNOWN", payload: { reservationId: reservation.id, reason: input.reason } });
+    await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, agentId: reservation.agentId, taskId: reservation.taskId, actionIntentId: reservation.actionIntentId, eventType: "budget.effect_unknown", outcome: "UNKNOWN", details: { reservationId: reservation.id, reason: input.reason } }, signer);
+    return { status: "UNKNOWN" as const, idempotentReplay: false };
+  });
+}
+
 export async function setBudgetBalanceStatus(input: { accountId: string; actorPrincipalId: string; budgetId: string; status: "CURRENT" | "STALE" | "UNKNOWN"; balanceAsOf: string }, signer: AuditSigner) {
   await requireMembership({ accountId: input.accountId, principalId: input.actorPrincipalId, allowedRoles: ["OWNER", "ADMIN"] });
   const balanceAsOf = z.string().datetime({ offset: true }).parse(input.balanceAsOf);
