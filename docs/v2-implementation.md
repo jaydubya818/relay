@@ -247,3 +247,15 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added focused tenant-isolation coverage for delegation records, task relationships, contexts, authority promises/claims, child leases, budgets, results, evidence references, queries, and provenance exports.
 - Qualification passed: focused delegation suite (6/6), affected lease/budget/delegation suites (21/21), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (158/158); 4 opt-in live-provider tests remained intentionally skipped.
 - Production-scale depth/fan-out load, recursive revocation latency, outbox recovery, and worker-loss claim reconciliation remain WO-22 qualification work.
+
+### 2026-09-13 — WO-20 developer platform, REST, MCP, and SDKs
+
+- Added dated REST endpoints for durable runtime action submission/status plus a protected-resource metadata endpoint and deployment-owned signer, key-resolver, and OAuth-verifier bindings.
+- Added exact account/runtime/resource/audience/workload/action/lease authorization. OAuth tokens are accepted only for an active same-account runtime registration and the exact requested resource; downstream connector-token passthrough is not part of the contract.
+- Added serialized runtime-scoped idempotency so concurrent retries create one command, one transactional outbox wake-up, and one lease-call receipt. Reuse with a different valid canonical action fails with `409`.
+- Added stateless MCP `2026-07-28` discovery/routing and compatibility initialization for `2025-11-25` and `2025-06-18`, with authenticated tool listing and structured action results.
+- Published OpenAPI and JSON schemas, TypeScript and dependency-free Python reference clients, Codex/Claude examples, versioning guidance, and an explicit runtime compatibility matrix. Product labels remain attribution rather than authority; named-client certification is deferred.
+- Added focused tenant-isolation coverage for REST/MCP access, OAuth resources, runtime registrations, command status, commands, and outbox wake-ups. These boundaries remain inputs to the mandatory WO-22 cross-boundary suite.
+- Implementation commit: `352c8e1` (`feat(v2): add developer REST MCP and SDK contracts`).
+- Qualification passed: typecheck, lint, Python syntax validation, focused interoperability/isolation suite (5/5), isolated approval regression rerun (6/6), and all runnable serial tests (163/163); 4 opt-in live-provider tests remained intentionally skipped.
+- Published-package signing, live vendor/client certification, hosted authorization-server conformance, and independent security qualification remain external or WO-22 evidence. Remote branch/deployment protections remain `BLOCKED_EXTERNAL_CONFIGURATION`; independent security-owner review of WO-02 remains pending.
