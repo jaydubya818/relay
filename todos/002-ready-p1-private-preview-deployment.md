@@ -72,3 +72,4 @@ Add a tested deployment-mode guard, environment validator, CI workflow, Vercel a
 
 **Learnings:**
 - Parallel creation of the full 21-migration test schema requires elevated PostgreSQL lock capacity; CI uses the established serial qualification mode for deterministic results.
+- GitHub's Node 22.5 runner requires the Vitest configuration to use the `.mts` ESM marker because Vite is ESM-only.
