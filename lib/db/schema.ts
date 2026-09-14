@@ -17,7 +17,7 @@ const timestamps = {
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 };
 
-export const agentStatus = pgEnum("agent_status", ["ACTIVE", "DISABLED"]);
+export const agentStatus = pgEnum("agent_status", ["DRAFT", "ACTIVE", "DISABLED"]);
 export const grantEffect = pgEnum("grant_effect", ["ALLOW", "DENY"]);
 export const riskLevel = pgEnum("risk_level", ["LOW", "MEDIUM", "HIGH"]);
 export const memoryScope = pgEnum("memory_scope", ["SHARED", "AGENT_PRIVATE"]);
@@ -36,6 +36,9 @@ export const membershipStatus = pgEnum("membership_status", ["ACTIVE", "SUSPENDE
 export const stepUpStatus = pgEnum("step_up_status", ["PENDING", "CONSUMED", "EXPIRED", "REVOKED"]);
 export const dataClassification = pgEnum("data_classification", ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"]);
 export const evidenceSource = pgEnum("evidence_source", ["RELAY_OBSERVED", "PROVIDER_SIGNED", "RUNNER_REPORTED"]);
+export const trustTier = pgEnum("trust_tier", ["UNVERIFIED", "REGISTERED", "VERIFIED", "HIGH_ASSURANCE"]);
+export const passportStatus = pgEnum("passport_status", ["ACTIVE", "REVOKED", "SUPERSEDED"]);
+export const runtimeVerificationStatus = pgEnum("runtime_verification_status", ["SELF_DECLARED", "VERIFIED", "REVOKED"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -274,6 +277,51 @@ export const evidenceArtifacts = pgTable("evidence_artifacts", {
   retentionUntil: timestamp("retention_until", { withTimezone: true, mode: "string" }),
   deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "string" }),
 }, (table) => [uniqueIndex("evidence_account_object_idx").on(table.accountId, table.objectReference), index("evidence_account_created_idx").on(table.accountId, table.createdAt), index("evidence_task_idx").on(table.accountId, table.taskId)]);
+
+export const agentPassports = pgTable("agent_passports", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  trustTier: trustTier("trust_tier").notNull(),
+  revocationEpoch: integer("revocation_epoch").notNull().default(0),
+  status: passportStatus("status").notNull().default("ACTIVE"),
+  payload: jsonb("payload").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  signature: text("signature").notNull(),
+  signingKeyId: text("signing_key_id").notNull(),
+  validFrom: timestamp("valid_from", { withTimezone: true, mode: "string" }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("passports_account_agent_version_idx").on(table.accountId, table.agentId, table.version), index("passports_account_status_idx").on(table.accountId, table.status, table.expiresAt)]);
+
+export const passportImports = pgTable("passport_imports", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  draftAgentId: text("draft_agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  sourceIssuer: text("source_issuer").notNull(),
+  sourcePassportId: text("source_passport_id").notNull(),
+  sourcePayloadHash: text("source_payload_hash").notNull(),
+  sourceBundle: jsonb("source_bundle").notNull(),
+  signatureVerified: boolean("signature_verified").notNull(),
+  importedAt: timestamp("imported_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("passport_import_account_source_idx").on(table.accountId, table.sourceIssuer, table.sourcePassportId), index("passport_import_agent_idx").on(table.accountId, table.draftAgentId)]);
+
+export const runtimeClients = pgTable("runtime_clients", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  displayName: text("display_name").notNull(),
+  selfDeclaredProduct: text("self_declared_product").notNull(),
+  verifiedProduct: text("verified_product"),
+  verificationStatus: runtimeVerificationStatus("verification_status").notNull().default("SELF_DECLARED"),
+  verificationEvidence: jsonb("verification_evidence"),
+  secretHash: text("secret_hash").notNull(),
+  prefix: text("prefix").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  verifiedAt: timestamp("verified_at", { withTimezone: true, mode: "string" }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("runtime_clients_secret_idx").on(table.secretHash), index("runtime_clients_account_status_idx").on(table.accountId, table.verificationStatus)]);
 
 export const sandboxes = pgTable("sandboxes", {
   id: text("id").primaryKey(),

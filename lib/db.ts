@@ -3,7 +3,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 import * as schema from "@/lib/db/schema";
 
-type RelayDatabase = NodePgDatabase<typeof schema>;
+export type RelayDatabase = NodePgDatabase<typeof schema>;
 
 let pool: Pool | undefined;
 let database: RelayDatabase | undefined;

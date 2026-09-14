@@ -1,5 +1,5 @@
 import { and, asc, eq, sql } from "drizzle-orm";
-import { db, withTransaction } from "@/lib/db";
+import { db, withTransaction, type RelayDatabase } from "@/lib/db";
 import { auditChainHeads, auditRecords } from "@/lib/db/schema";
 import { id, now } from "@/lib/ids";
 import { canonicalHash, type CanonicalValue } from "@/lib/v2/contracts";
@@ -28,8 +28,11 @@ function recordMaterial(record: Pick<AuditRecord, "id" | "accountId" | "sequence
 }
 
 export async function appendAuditRecord(input: AuditRecordInput, signer: AuditSigner) {
-  const occurredAt = input.occurredAt ?? now();
-  return await withTransaction(async (transaction) => {
+  return await withTransaction((transaction) => appendAuditRecordInTransaction(transaction, input, signer));
+}
+
+export async function appendAuditRecordInTransaction(transaction: RelayDatabase, input: AuditRecordInput, signer: AuditSigner) {
+    const occurredAt = input.occurredAt ?? now();
     await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${input.accountId}, 0))`);
     await transaction.insert(auditChainHeads).values({ accountId: input.accountId, sequence: 0, updatedAt: occurredAt }).onConflictDoNothing();
     const [head] = await transaction.select({ sequence: auditChainHeads.sequence, lastHash: auditChainHeads.lastHash }).from(auditChainHeads).where(eq(auditChainHeads.accountId, input.accountId)).limit(1);
@@ -43,7 +46,6 @@ export async function appendAuditRecord(input: AuditRecordInput, signer: AuditSi
     await transaction.insert(auditRecords).values({ id: recordId, accountId: input.accountId, sequence, eventType: input.eventType, outcome: input.outcome, occurredAt, actorPrincipalId: input.actorPrincipalId, agentId: input.agentId, runtimeClientId: input.runtimeClientId, taskId: input.taskId, actionIntentId: input.actionIntentId, policyDecisionId: input.policyDecisionId, approvalDecisionId: input.approvalDecisionId, leaseId: input.leaseId, provider: input.provider, details, previousHash: head.lastHash, recordHash, signature, signingKeyId: signer.keyId, createdAt: occurredAt });
     await transaction.update(auditChainHeads).set({ sequence, lastHash: recordHash, updatedAt: occurredAt }).where(eq(auditChainHeads.accountId, input.accountId));
     return { ...material as Record<string, unknown>, recordHash, signature, signingKeyId: signer.keyId };
-  });
 }
 
 export async function listAuditRecords(accountId: string) {

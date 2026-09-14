@@ -20,8 +20,8 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-01 | Freeze vocabulary, schemas, and state machines | WO-00 | QUALIFIED | `b468a38` | LOCAL PASS | — |
 | WO-02 | Complete security architecture and abuse cases | WO-01 | IMPLEMENTED | `dbb48a0` | LOCAL PASS | Independent security-owner sign-off: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | QUALIFIED | `b5400fd` | SCOPED PASS | Acceptance sequencing corrected by Product Owner; live OIDC/WebAuthn pending provider qualification |
-| WO-04 | Build evidence and append-only audit substrate | WO-01, WO-02, WO-03 | QUALIFIED | pending commit | LOCAL PASS | Production KMS/HSM and object-store bindings are deployment configuration |
-| WO-05 | Build Agent Passport and runtime attribution | WO-03, WO-04 | NOT_STARTED | — | — | — |
+| WO-04 | Build evidence and append-only audit substrate | WO-01, WO-02, WO-03 | QUALIFIED | `b37cdba` | LOCAL PASS | Production KMS/HSM and object-store bindings are deployment configuration |
+| WO-05 | Build Agent Passport and runtime attribution | WO-03, WO-04 | QUALIFIED | pending commit | LOCAL PASS | Third-party issuer federation remains excluded |
 | WO-06 | Build capability registry and policy decision service | WO-02–WO-05 | NOT_STARTED | — | — | — |
 | WO-07 | Build centralized approval service | WO-03, WO-04, WO-06 | NOT_STARTED | — | — | — |
 | WO-08 | Build capability leases and workload identity | WO-05–WO-07 | NOT_STARTED | — | — | — |
@@ -90,3 +90,12 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Local cryptographic and object-store adapters refuse production use where applicable; production KMS/HSM and private object-store bindings remain deployment configuration, not embedded durable credentials.
 - Added focused tenant-isolation coverage for the new audit, artifact metadata, object storage, and key-unwrapping boundaries.
 - Qualification passed: V2 frontier guard, typecheck, lint, Drizzle schema check, and all runnable tests (60/60); 3 live-provider tests remained intentionally skipped.
+
+### 2026-09-13 — WO-05 Agent Passport and runtime attribution
+
+- Added draft-first V2 Agent lifecycle and signed, versioned Passport v1 documents containing owner, trust, eligibility, policy, budget, environment, data-access, validity, and revocation claims.
+- Added a trusted issuer-registry boundary and quarantine-style import: verified source provenance is retained, while no local Passport or capability grant is created by import.
+- Added explicit trust downgrade behavior that increments the revocation epoch, returns the Agent to draft, records evidence, and invokes the future incompatible-work revocation boundary.
+- Added runtime-client identities and one-time credentials; product labels remain self-declared until a configured server-side attestation verifier supplies verified identity evidence.
+- Added focused isolation tests for Passport persistence/export, imported provenance, runtime-client verification, and runtime credentials.
+- Qualification passed: frontier guard, typecheck, lint, Drizzle schema check, focused V2 tests (22/22), and all runnable tests (65/65); 3 live-provider tests remained intentionally skipped.

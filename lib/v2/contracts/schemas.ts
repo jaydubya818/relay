@@ -58,6 +58,19 @@ export const approvalScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("session"), sessionId: relayId("ses"), capability: capabilityReferenceSchema, resource: resourceConstraintSchema, maxUses: z.number().int().positive() }).strict(),
 ]);
 
+export const agentPassportSchema = z.object({
+  schemaVersion: z.literal("relay.agent-passport.v1"), issuer: z.string().url(), passportId: relayId("psp"),
+  agentId: relayId("agt"), owner: z.object({ accountId: relayId("acct"), principalId: relayId("prn") }).strict(),
+  version: z.number().int().positive(), trustTier: z.enum(["UNVERIFIED", "REGISTERED", "VERIFIED", "HIGH_ASSURANCE"]),
+  capabilityEligibility: z.array(capabilityReferenceSchema).max(1_000), policyReferences: z.array(z.string().min(1).max(255)).max(100),
+  budgetReferences: z.array(z.string().min(1).max(255)).max(100),
+  allowedEnvironments: z.object({ providerIds: z.array(z.string().min(1).max(255)).max(100), minimumAssurance: z.enum(["registered", "attested", "managed-equivalent"]), regions: z.array(z.string().min(1).max(64)).max(100).optional() }).strict(),
+  dataAccess: z.array(z.object({ classification: z.enum(["public", "internal", "confidential", "restricted"]), resourceTypes: z.array(z.string().min(1).max(128)).max(100) }).strict()).max(100),
+  validFrom: isoTimestamp, expiresAt: isoTimestamp, revocationEpoch: z.number().int().nonnegative(),
+}).strict().refine((passport) => Date.parse(passport.expiresAt) > Date.parse(passport.validFrom), { path: ["expiresAt"], message: "expiresAt must follow validFrom" });
+
+export const signedAgentPassportSchema = z.object({ passport: agentPassportSchema, payloadHash: z.string().regex(/^sha256:[a-f0-9]{64}$/), signature: z.string().min(1), signingKeyId: z.string().min(1).max(255) }).strict();
+
 export const schemas = {
   actionIntent: { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "relay://schemas/action-intent/v2", title: "Relay V2 Action Intent", type: "object", additionalProperties: false, required: ["schemaVersion", "id", "accountId", "agentId", "runtimeClientId", "taskId", "capability", "resource", "parameters", "idempotencyKey", "createdAt", "canonicalHash"] },
   event: { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "relay://schemas/event/v2", title: "Relay V2 Event Envelope", type: "object", additionalProperties: false, required: ["specversion", "id", "source", "type", "time", "accountid", "classification", "correlationid", "dedupekey", "schemaversion", "signaturestatus"] },
@@ -68,4 +81,5 @@ export type ActionIntent = z.infer<typeof actionIntentSchema>;
 export type RelayEvent = z.infer<typeof relayEventSchema>;
 export type CapabilityLeaseClaims = z.infer<typeof capabilityLeaseClaimsSchema>;
 export type ApprovalScope = z.infer<typeof approvalScopeSchema>;
-
+export type AgentPassport = z.infer<typeof agentPassportSchema>;
+export type SignedAgentPassport = z.infer<typeof signedAgentPassportSchema>;
