@@ -31,7 +31,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-12 | Qualify Relay-managed Playwright execution | WO-11 | QUALIFIED | `b56dea7` | LOCAL + LIVE PASS | Profile intentionally capped at registered/internal/ephemeral; production image attestation remains WO-22 |
 | WO-13 | Qualify Browserbase and E2B adapters | WO-11 | IMPLEMENTED | `5f47543` | LOCAL PASS | Live Browserbase/E2B qualification: BLOCKED_EXTERNAL_CONFIGURATION (API keys absent) |
 | WO-14 | Build customer runner and outbound private gateway | WO-08, WO-10, WO-11 | IMPLEMENTED | `dd0c2af` | LOCAL PASS | Live host/mTLS/attestation/network/provenance: BLOCKED_EXTERNAL_CONFIGURATION |
-| WO-15 | Build live observation and human control | WO-07, WO-08, WO-12, WO-13 | NOT_STARTED | — | — | — |
+| WO-15 | Build live observation and human control | WO-07, WO-08, WO-12, WO-13 | IMPLEMENTED | pending | LOCAL PASS | Live provider/video/accessibility/production latency evidence pending WO-21/WO-22 |
 | WO-16 | Qualify Slack and Telegram communications | WO-07, WO-10 | NOT_STARTED | — | — | — |
 | WO-17 | Qualify Google Drive and Linear connectors | WO-06, WO-08, WO-10 | NOT_STARTED | — | — | — |
 | WO-18 | Build financial domain and controlled purchase intents | WO-07, WO-09, WO-15 | NOT_STARTED | — | — | — |
@@ -191,3 +191,12 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added named HTTPS private resources with exact runner, assignment, method, and path-prefix enforcement. Arbitrary subnet, raw TCP/UDP, and independent runner policy storage remain excluded.
 - Added focused tenant-isolation coverage for enrollments, runner identity, assignment polling, evidence, gateway resources/receipts, credential bindings, and cascade revocation.
 - Qualification passed: focused migration/runner suite (8/8), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (131/131); 4 opt-in local live tests remained intentionally skipped. Live customer-host, mTLS, attestation, network-capture, revoke-latency, and release-provenance qualification is `BLOCKED_EXTERNAL_CONFIGURATION` and remains a WO-22 gate.
+
+### 2026-09-13 — WO-15 live observation and human control
+
+- Added account-scoped computer-control sessions, opaque short-lived viewer grants, durable control events, provider-URL containment behind an observation relay, and explicit disconnect behavior.
+- Added atomic input permits, in-flight counters, takeover locks, and monotonic fences so Agent input and human control cannot coexist under races.
+- Added protected credential-entry mode that suppresses observation before the provider relay and records no frame, key, or credential contents.
+- Added explicit resume requiring fresh policy and integrity checks, with input-fence and viewer-epoch rotation plus prior viewer revocation.
+- Added focused tenant-isolation coverage for control sessions, viewer grants, observations, inputs, takeover, disconnect, and resume.
+- Local focused qualification passed. Live provider, UI video, accessibility, and production latency evidence remain downstream WO-21/WO-22 gates; no such claim is recorded here.

@@ -64,6 +64,7 @@ export const executionPlacementStatus = pgEnum("execution_placement_status", ["S
 export const executionAttemptStatus = pgEnum("execution_attempt_status", ["STARTED", "ACCEPTED", "PRE_EFFECT_FAILED", "EFFECT_UNKNOWN", "TERMINATED"]);
 export const runnerStatus = pgEnum("runner_status", ["PENDING", "ACTIVE", "QUARANTINED", "REVOKED"]);
 export const runnerAssignmentStatus = pgEnum("runner_assignment_status", ["OFFERED", "CLAIMED", "RUNNING", "PAUSED", "COMPLETED", "FAILED", "REVOKED"]);
+export const computerController = pgEnum("computer_controller", ["AGENT", "PAUSED", "HUMAN", "TERMINATED"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -855,6 +856,48 @@ export const executionAttempts = pgTable("execution_attempts", {
   startedAt: timestamp("started_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
 }, (table) => [uniqueIndex("execution_attempt_number_idx").on(table.accountId, table.placementId, table.attempt), uniqueIndex("execution_attempt_idempotency_idx").on(table.accountId, table.idempotencyKey), index("execution_attempt_account_idx").on(table.accountId, table.startedAt)]);
+
+export const computerControlSessions = pgTable("computer_control_sessions", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  placementId: text("placement_id").notNull().references(() => executionPlacements.id, { onDelete: "cascade" }),
+  taskId: text("task_id").notNull().references(() => v2Tasks.id, { onDelete: "restrict" }),
+  leaseId: text("lease_id").notNull().references(() => capabilityLeases.id, { onDelete: "restrict" }),
+  providerSessionId: text("provider_session_id").notNull(),
+  controller: computerController("controller").notNull().default("AGENT"),
+  fenceToken: bigint("fence_token", { mode: "number" }).notNull().default(1),
+  activeInputCount: integer("active_input_count").notNull().default(0),
+  humanPrincipalId: text("human_principal_id").references(() => principals.id, { onDelete: "restrict" }),
+  credentialEntryMode: boolean("credential_entry_mode").notNull().default(false),
+  viewerEpoch: integer("viewer_epoch").notNull().default(1),
+  lastIntegrityHash: text("last_integrity_hash"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+}, (table) => [uniqueIndex("computer_control_placement_idx").on(table.accountId, table.placementId), index("computer_control_account_state_idx").on(table.accountId, table.controller, table.expiresAt)]);
+
+export const computerViewerGrants = pgTable("computer_viewer_grants", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  controlSessionId: text("control_session_id").notNull().references(() => computerControlSessions.id, { onDelete: "cascade" }),
+  principalId: text("principal_id").notNull().references(() => principals.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(),
+  viewerEpoch: integer("viewer_epoch").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("computer_viewer_token_idx").on(table.tokenHash), index("computer_viewer_account_session_idx").on(table.accountId, table.controlSessionId, table.expiresAt)]);
+
+export const computerControlEvents = pgTable("computer_control_events", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  controlSessionId: text("control_session_id").notNull().references(() => computerControlSessions.id, { onDelete: "cascade" }),
+  principalId: text("principal_id").references(() => principals.id, { onDelete: "restrict" }),
+  eventType: text("event_type").notNull(),
+  fenceToken: bigint("fence_token", { mode: "number" }).notNull(),
+  details: jsonb("details").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [index("computer_control_event_account_idx").on(table.accountId, table.controlSessionId, table.createdAt)]);
 
 export const sandboxes = pgTable("sandboxes", {
   id: text("id").primaryKey(),
