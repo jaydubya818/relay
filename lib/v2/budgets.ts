@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type RelayDatabase, withTransaction } from "@/lib/db";
-import { agents, budgetEvents, budgetReservations, budgets, budgetUsageRecords } from "@/lib/db/schema";
+import { agentDelegations, agents, budgetEvents, budgetReservations, budgets, budgetUsageRecords } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { appendAuditRecordInTransaction } from "@/lib/v2/evidence/audit";
@@ -51,9 +51,9 @@ function validateChain(chain: Array<typeof budgets.$inferSelect>) {
   }
 }
 
-function validateScope(budget: typeof budgets.$inferSelect, context: { agentId: string; taskId: string; delegationId?: string }) {
-  const expected = budget.scope === "ACCOUNT" ? null : budget.scope === "AGENT" ? context.agentId : budget.scope === "TASK" ? context.taskId : context.delegationId;
-  if (!sameOptional(budget.scopeId, expected)) throw new RelayError("CAPABILITY_DENIED", "Budget scope does not authorize this action.", undefined, 403);
+function validateScope(budget: typeof budgets.$inferSelect, context: { agentIds: Set<string>; taskIds: Set<string>; delegationId?: string }) {
+  const matches = budget.scope === "ACCOUNT" ? budget.scopeId === null : budget.scope === "AGENT" ? Boolean(budget.scopeId && context.agentIds.has(budget.scopeId)) : budget.scope === "TASK" ? Boolean(budget.scopeId && context.taskIds.has(budget.scopeId)) : sameOptional(budget.scopeId, context.delegationId);
+  if (!matches) throw new RelayError("CAPABILITY_DENIED", "Budget scope does not authorize this action.", undefined, 403);
 }
 
 async function emitWarningIfNeeded(transaction: RelayDatabase, budget: typeof budgets.$inferSelect, requested: string) {
@@ -99,8 +99,13 @@ export async function reserveBudget(input: { accountId: string; leafBudgetId: st
     validateChain(chain);
     const [agent] = await transaction.select({ id: agents.id }).from(agents).where(and(eq(agents.accountId, input.accountId), eq(agents.id, input.agentId))).limit(1);
     if (!agent) throw new RelayError("CAPABILITY_DENIED", "Agent is unavailable in this account.", undefined, 403);
+    const scopeContext = { agentIds: new Set([input.agentId]), taskIds: new Set([input.taskId]), delegationId: input.delegationId };
+    if (input.delegationId) {
+      if (chain[0]!.scope !== "DELEGATION" || chain[0]!.scopeId !== input.delegationId) throw new RelayError("CAPABILITY_DENIED", "Delegated reservations must use that delegation's leaf budget.", undefined, 403);
+      const delegations = await transaction.select().from(agentDelegations).where(eq(agentDelegations.accountId, input.accountId)); let current = delegations.find((entry) => entry.id === input.delegationId && entry.childTaskId === input.taskId && entry.childAgentId === input.agentId && entry.status === "ACTIVE"); if (!current) throw new RelayError("CAPABILITY_DENIED", "Active delegation lineage is unavailable.", undefined, 403); const seen = new Set<string>(); while (current) { if (seen.has(current.id)) throw new RelayError("CAPABILITY_DENIED", "Delegation lineage contains a cycle.", undefined, 403); seen.add(current.id); scopeContext.taskIds.add(current.parentTaskId); scopeContext.agentIds.add(current.parentAgentId); current = current.parentDelegationId ? delegations.find((entry) => entry.id === current!.parentDelegationId && entry.status === "ACTIVE") : undefined; }
+    }
     for (const budget of chain) {
-      validateScope(budget, input);
+      validateScope(budget, scopeContext);
       if (budget.status !== "ACTIVE") throw new RelayError("CAPABILITY_DENIED", "Budget is not active.", undefined, 403);
       if (budget.dimension === "PURCHASE_AMOUNT" && (budget.balanceStatus !== "CURRENT" || Date.parse(budget.balanceAsOf) < Date.now() - 5 * 60_000)) throw new RelayError("CAPABILITY_DENIED", "Purchase budget balance is stale or unknown.", undefined, 403);
       await emitWarningIfNeeded(transaction, budget, amount);

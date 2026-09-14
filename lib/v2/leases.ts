@@ -249,9 +249,12 @@ export async function introspectLease(accountId: string, leaseId: string) {
 
 export async function revokeLease(input: { accountId: string; leaseId: string; reason: string }, signer: AuditSigner) {
   return await withTransaction(async (transaction) => {
-    const [lease] = await transaction.update(capabilityLeases).set({ status: "REVOKED", revokedAt: now() }).where(and(eq(capabilityLeases.accountId, input.accountId), eq(capabilityLeases.id, input.leaseId), eq(capabilityLeases.status, "ACTIVE"))).returning();
-    if (!lease) return false;
-    await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, agentId: lease.agentId, runtimeClientId: lease.runtimeClientId, taskId: lease.taskId, policyDecisionId: lease.policyDecisionId, approvalDecisionId: lease.approvalDecisionId ?? undefined, leaseId: lease.id, eventType: "lease.revoked", outcome: "REVOKED", details: { reason: input.reason } }, signer);
+    const active = await transaction.select().from(capabilityLeases).where(and(eq(capabilityLeases.accountId, input.accountId), eq(capabilityLeases.status, "ACTIVE")));
+    const lease = active.find((entry) => entry.id === input.leaseId); if (!lease) return false;
+    const revokedIds = new Set([lease.id]); let changed = true;
+    while (changed) { changed = false; for (const candidate of active) if (candidate.parentLeaseId && revokedIds.has(candidate.parentLeaseId) && !revokedIds.has(candidate.id)) { revokedIds.add(candidate.id); changed = true; } }
+    await transaction.update(capabilityLeases).set({ status: "REVOKED", revokedAt: now() }).where(and(eq(capabilityLeases.accountId, input.accountId), inArray(capabilityLeases.id, [...revokedIds]), eq(capabilityLeases.status, "ACTIVE")));
+    await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, agentId: lease.agentId, runtimeClientId: lease.runtimeClientId, taskId: lease.taskId, policyDecisionId: lease.policyDecisionId, approvalDecisionId: lease.approvalDecisionId ?? undefined, leaseId: lease.id, eventType: "lease.revoked", outcome: "REVOKED", details: { reason: input.reason, cascadeLeaseIds: [...revokedIds].sort() } }, signer);
     return true;
   });
 }
