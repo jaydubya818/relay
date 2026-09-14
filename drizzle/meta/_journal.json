@@ -71,6 +71,13 @@
       "when": 1789345280449,
       "tag": "0009_eminent_kylun",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789351274382,
+      "tag": "0010_public_madame_masque",
+      "breakpoints": true
     }
   ]
 }

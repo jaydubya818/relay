@@ -42,6 +42,9 @@ export const runtimeVerificationStatus = pgEnum("runtime_verification_status", [
 export const policyLayer = pgEnum("policy_layer", ["RELAY_SAFETY", "REGULATORY", "ACCOUNT", "PASSPORT", "RESOURCE", "TASK", "DYNAMIC_RISK"]);
 export const policyBundleStatus = pgEnum("policy_bundle_status", ["STAGED", "ACTIVE", "RETIRED", "REVOKED"]);
 export const policyOutcome = pgEnum("policy_outcome", ["ALLOW", "DENY", "REQUIRE_APPROVAL", "LIMIT", "ESCALATE"]);
+export const approvalStatus = pgEnum("approval_status", ["PENDING", "APPROVED", "DENIED", "EXPIRED", "CANCELLED", "SUPERSEDED", "REVOKED"]);
+export const approvalDecisionValue = pgEnum("approval_decision_value", ["APPROVE", "DENY"]);
+export const notificationStatus = pgEnum("notification_status", ["PENDING", "SENT", "FAILED", "CANCELLED"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -376,6 +379,74 @@ export const policyDecisions = pgTable("policy_decisions", {
   expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [index("policy_decision_account_created_idx").on(table.accountId, table.createdAt), index("policy_decision_action_idx").on(table.accountId, table.actionIntentId), index("policy_decision_agent_outcome_idx").on(table.accountId, table.agentId, table.outcome)]);
+
+export const approvalRequests = pgTable("approval_requests", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  actionIntentId: text("action_intent_id").notNull(),
+  actionHash: text("action_hash").notNull(),
+  actionSnapshot: jsonb("action_snapshot").notNull(),
+  agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  runtimeClientId: text("runtime_client_id").notNull(),
+  taskId: text("task_id").notNull(),
+  sessionId: text("session_id"),
+  policyDecisionId: text("policy_decision_id").notNull().references(() => policyDecisions.id, { onDelete: "restrict" }),
+  approvalClass: text("approval_class").notNull(),
+  riskClass: text("risk_class").notNull(),
+  effectClass: text("effect_class").notNull(),
+  summary: text("summary").notNull(),
+  consequence: text("consequence").notNull(),
+  displayEvidence: jsonb("display_evidence").notNull(),
+  allowedScopes: text("allowed_scopes").array().notNull(),
+  assignedPrincipalIds: text("assigned_principal_ids").array().notNull(),
+  status: approvalStatus("status").notNull().default("PENDING"),
+  approvedScope: jsonb("approved_scope"),
+  maxUses: integer("max_uses").notNull().default(1),
+  useCount: integer("use_count").notNull().default(0),
+  version: integer("version").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  decidedAt: timestamp("decided_at", { withTimezone: true, mode: "string" }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+  supersededById: text("superseded_by_id"),
+}, (table) => [index("approval_account_status_idx").on(table.accountId, table.status, table.expiresAt), index("approval_task_idx").on(table.accountId, table.taskId, table.status), index("approval_action_idx").on(table.accountId, table.actionIntentId)]);
+
+export const approvalDecisions = pgTable("approval_decisions", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  approvalRequestId: text("approval_request_id").notNull().references(() => approvalRequests.id, { onDelete: "cascade" }),
+  principalId: text("principal_id").notNull().references(() => principals.id, { onDelete: "restrict" }),
+  decision: approvalDecisionValue("decision").notNull(),
+  scope: jsonb("scope"),
+  reason: text("reason"),
+  decisionHash: text("decision_hash").notNull(),
+  signature: text("signature").notNull(),
+  signingKeyId: text("signing_key_id").notNull(),
+  authenticationEvidence: jsonb("authentication_evidence").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [index("approval_decision_request_idx").on(table.accountId, table.approvalRequestId, table.createdAt), index("approval_decision_principal_idx").on(table.accountId, table.principalId, table.createdAt)]);
+
+export const approvalConsumptions = pgTable("approval_consumptions", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  approvalRequestId: text("approval_request_id").notNull().references(() => approvalRequests.id, { onDelete: "cascade" }),
+  actionIntentId: text("action_intent_id").notNull(),
+  actionHash: text("action_hash").notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("approval_consumption_request_action_idx").on(table.approvalRequestId, table.actionIntentId), index("approval_consumption_account_idx").on(table.accountId, table.approvalRequestId)]);
+
+export const approvalNotifications = pgTable("approval_notifications", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  approvalRequestId: text("approval_request_id").notNull().references(() => approvalRequests.id, { onDelete: "cascade" }),
+  principalId: text("principal_id").notNull().references(() => principals.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(),
+  payload: jsonb("payload").notNull(),
+  status: notificationStatus("status").notNull().default("PENDING"),
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  sentAt: timestamp("sent_at", { withTimezone: true, mode: "string" }),
+}, (table) => [index("approval_notification_delivery_idx").on(table.accountId, table.status, table.createdAt), index("approval_notification_request_idx").on(table.accountId, table.approvalRequestId)]);
 
 export const sandboxes = pgTable("sandboxes", {
   id: text("id").primaryKey(),

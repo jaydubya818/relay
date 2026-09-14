@@ -22,8 +22,8 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | QUALIFIED | `b5400fd` | SCOPED PASS | Acceptance sequencing corrected by Product Owner; live OIDC/WebAuthn pending provider qualification |
 | WO-04 | Build evidence and append-only audit substrate | WO-01, WO-02, WO-03 | QUALIFIED | `b37cdba` | LOCAL PASS | Production KMS/HSM and object-store bindings are deployment configuration |
 | WO-05 | Build Agent Passport and runtime attribution | WO-03, WO-04 | QUALIFIED | `85412d1` | LOCAL PASS | Third-party issuer federation remains excluded |
-| WO-06 | Build capability registry and policy decision service | WO-02–WO-05 | QUALIFIED | pending commit | LOCAL PASS | External KMS signer binding remains deployment configuration |
-| WO-07 | Build centralized approval service | WO-03, WO-04, WO-06 | NOT_STARTED | — | — | — |
+| WO-06 | Build capability registry and policy decision service | WO-02–WO-05 | QUALIFIED | `caaf8dd` | LOCAL PASS | External KMS signer binding remains deployment configuration |
+| WO-07 | Build centralized approval service | WO-03, WO-04, WO-06 | QUALIFIED | pending commit | LOCAL PASS | Quorum and email-link authorization remain excluded |
 | WO-08 | Build capability leases and workload identity | WO-05–WO-07 | NOT_STARTED | — | — | — |
 | WO-09 | Build multi-dimensional budget engine | WO-04, WO-06, WO-08 | NOT_STARTED | — | — | — |
 | WO-10 | Build durable event router and task orchestrator | WO-03, WO-04 | NOT_STARTED | — | — | — |
@@ -109,3 +109,14 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added durable decision records containing capability/bundle hashes, redacted material facts, obligations, expiry, and a self-contained evaluation snapshot that reproduces historic outcomes.
 - Added focused tenant-isolation coverage for policy activation, resource ownership, and decision queries; added golden outcomes for all five policy results and a 10,000-evaluation local latency gate.
 - Qualification passed: frontier guard, typecheck, lint, Drizzle schema check, and all runnable tests (70/70); 3 live-provider tests remained intentionally skipped.
+
+### 2026-09-13 — WO-07 centralized approvals
+
+- Added account-scoped approval requests, separately signed human decisions, atomic consumption records/counters, and durable assignment notification records.
+- Bound requests to immutable action hashes, active policy decisions, exact Agent/runtime/task context, risk/effect class, displayed evidence, assigned approvers, and expiry.
+- Added once/task/session scope intersection; V2 broader scopes conservatively authorize only repeated instances of the identical approved action template.
+- Enforced hard once-only floors for financial and destructive actions and for external communications without an authoritative known-recipient fact.
+- Added revoke, supersede, and expiry hooks; exposed transaction-aware consumption for atomic integration with WO-08 permit issuance and WO-09 reservations.
+- Added focused tenant-isolation coverage for requests, decisions, consumptions, notifications, assignment, and policy linkage, plus an eight-way consumption race fixture.
+- A parallel focused run exposed a repository test-harness database teardown race although all assertions passed; the authoritative clean qualification reran database-backed tests serially.
+- Qualification passed: frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (76/76); 3 live-provider tests remained intentionally skipped.
