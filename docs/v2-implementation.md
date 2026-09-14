@@ -18,7 +18,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 |---|---|---|---|---|---|---|
 | WO-00 | Establish V2 isolation and governance | — | QUALIFIED | `07b1427` | LOCAL PASS | Remote branch/deploy protection: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-01 | Freeze vocabulary, schemas, and state machines | WO-00 | QUALIFIED | `b468a38` | LOCAL PASS | — |
-| WO-02 | Complete security architecture and abuse cases | WO-01 | IMPLEMENTED | `dbb48a0` | LOCAL PASS | Independent security-owner sign-off: BLOCKED_EXTERNAL_CONFIGURATION |
+| WO-02 | Complete security architecture and abuse cases | WO-01 | IMPLEMENTED | `dbb48a0` | LOCAL PASS | Independent security-owner review pending |
 | WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | QUALIFIED | `b5400fd` | SCOPED PASS | Acceptance sequencing corrected by Product Owner; live OIDC/WebAuthn pending provider qualification |
 | WO-04 | Build evidence and append-only audit substrate | WO-01, WO-02, WO-03 | QUALIFIED | `b37cdba` | LOCAL PASS | Production KMS/HSM and object-store bindings are deployment configuration |
 | WO-05 | Build Agent Passport and runtime attribution | WO-03, WO-04 | QUALIFIED | `85412d1` | LOCAL PASS | Third-party issuer federation remains excluded |
@@ -36,9 +36,9 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-17 | Qualify Google Drive and Linear connectors | WO-06, WO-08, WO-10 | IMPLEMENTED | `67faf40` | LOCAL PASS | Live Google Drive/Linear qualification: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-18 | Build financial domain and controlled purchase intents | WO-07, WO-09, WO-15 | IMPLEMENTED | `e8eaa88` | LOCAL PASS | Aggregator disabled; independent PCI review and production protected-view qualification pending WO-22 |
 | WO-19 | Build same-account Agent delegation | WO-04, WO-05, WO-08–WO-10 | QUALIFIED | `eb00d61` | LOCAL PASS | Production-scale revocation/outbox/load evidence remains WO-22 |
-| WO-20 | Publish REST, events, MCP, and client SDKs | WO-05–WO-10, WO-19 | NOT_STARTED | — | — | — |
-| WO-21 | Build operator and user dashboard | WO-04, WO-07, WO-10, WO-15–WO-18 | NOT_STARTED | — | — | — |
-| WO-22 | Qualify V2 for limited beta and GA | WO-12–WO-21 | NOT_STARTED | — | — | — |
+| WO-20 | Publish REST, events, MCP, and client SDKs | WO-05–WO-10, WO-19 | QUALIFIED | `352c8e1` | LOCAL PASS | Live vendor/client and hosted authorization-server conformance remain external |
+| WO-21 | Build operator and user dashboard | WO-04, WO-07, WO-10, WO-15–WO-18 | IMPLEMENTED | `8109a47` | LOCAL PASS | Formal screen-reader and multi-participant comprehension evidence pending WO-22 |
+| WO-22 | Qualify V2 for limited beta and GA | WO-12–WO-21 | BLOCKED_EXTERNAL_QUALIFICATION | `ec10c27` | LOCAL AGGREGATE PASS | Live providers/channels/topology, independent security/pentest, production drills/provenance, human study, and Product Owner release decision pending |
 
 ## Work log
 
@@ -271,3 +271,16 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Qualification passed: focused dashboard suite (2/2), typecheck, lint, production build, frontier guard, all runnable serial tests (165/165), keyboard/semantic inspection, zero console errors/warnings, and local axe-core WCAG A/AA checks with zero violations across all ten V2 routes; 4 opt-in live-provider tests remained intentionally skipped.
 - Preserved desktop and mobile screenshots in `output/playwright/`. Automated accessibility results do not establish complete WCAG conformance; formal screen-reader/platform testing and the Product Owner's multi-participant actor/destination/consequence/scope comprehension study remain WO-22 launch evidence.
 - Remote branch/deployment protections remain `BLOCKED_EXTERNAL_CONFIGURATION`; independent security-owner review of WO-02 remains pending. Neither external qualification blocked this dependency-ready implementation.
+
+### 2026-09-13 — WO-22 aggregate release qualification
+
+- Added a fail-closed release evaluator covering all 15 specification acceptance criteria plus tenant isolation, credential non-exposure, independent security review, penetration testing, provider/channel currency, operational drills, accessibility/comprehension, signed build provenance, and explicit Product Owner decision. The evaluator cannot report ready while any gate is pending.
+- Added the mandatory cross-boundary tenant-isolation registry for identity, API, database, jobs/workflows, caches, search/indexes, object storage, events/outbox, Temporal workflows, runners, artifacts, computers, browsers, sandboxes, communications, connectors, approvals, and budgets.
+- Added an aggregate test that requires exact boundary coverage, resolves every cited evidence phrase from the focused suites, introspects the migrated schema for tenant-owned tables missing `account_id`, tenant-binds Temporal workflow IDs, and guards the deliberate absence of V2 cache and external-search implementations.
+- Recorded the only schema exceptions explicitly: global registries and identity roots, plus the inherited V1 `connection_credentials` child table. V2 connector credentials use opaque broker handles and do not use that inherited table.
+- Added the release operations contract for SLO/alert signals, provider/channel kill switches, restore/regional recovery, revocation/DLQ/unknown-effect/retention drills, staged rollout/rollback, privacy deletion, and incident ownership.
+- Added a release dossier separating deterministic local evidence from evidence that requires live credentials, production-like infrastructure, independent reviewers, human participants, and Product Owner authority.
+- Implementation commit: `ec10c27` (`feat(v2): add fail-closed release qualification gate`).
+- Local aggregate qualification passed: frontier guard, Drizzle schema check, typecheck, lint, focused release suite (5/5), all runnable serial tests (170/170), performance tests (2/2, including the existing 10k policy-evaluation budget exercised in the main suite), and production build; 4 opt-in live-provider tests remained intentionally skipped.
+- WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`. Browserbase, E2B, customer runner/private gateway, Slack, Telegram, Google Drive, Linear, production KMS/vault/object storage/build provenance, broker/Temporal/database/region drills, production protected-view validation, independent security review/penetration test, formal accessibility/comprehension, and Product Owner limited-beta/GA decisions do not have qualified evidence in this environment.
+- Remote branch/deployment protections remain `BLOCKED_EXTERNAL_CONFIGURATION`; independent security-owner review of WO-02 remains pending. No V1 branch, tag, soak record, or implementation was modified, and no V2.1/V3 work was started.
