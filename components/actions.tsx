@@ -38,6 +38,32 @@ export function LoginForm({ defaultEmail }: { defaultEmail: string }) {
   );
 }
 
+export function RegisterForm() {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); setError("");
+    const data = new FormData(event.currentTarget);
+    try {
+      await requestJson("/api/auth/signup", { method: "POST", body: JSON.stringify({
+        accountName: data.get("accountName"), name: data.get("name"), email: data.get("email"), password: data.get("password"),
+      }) });
+      router.push("/"); router.refresh();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Account creation failed."); } finally { setBusy(false); }
+  }
+  return (
+    <form onSubmit={submit}>
+      <div className="field"><label htmlFor="account-name">Account name</label><input id="account-name" name="accountName" minLength={2} maxLength={100} autoComplete="organization" required /></div>
+      <div className="field"><label htmlFor="signup-name">Your name</label><input id="signup-name" name="name" minLength={2} maxLength={100} autoComplete="name" required /></div>
+      <div className="field"><label htmlFor="signup-email">Email</label><input id="signup-email" name="email" type="email" autoComplete="email" required /></div>
+      <div className="field"><label htmlFor="signup-password">Password</label><input id="signup-password" name="password" type="password" minLength={12} maxLength={200} autoComplete="new-password" required /><span className="subtle">At least 12 characters.</span></div>
+      {error && <div className="notice error">{error}</div>}
+      <button className="button" disabled={busy}>{busy ? "Creating account…" : "Create Relay account"}</button>
+    </form>
+  );
+}
+
 export function AgentCreateForm() {
   const router = useRouter();
   const [secret, setSecret] = useState("");
@@ -129,7 +155,7 @@ export function ForgetMemoryButton({ id }: { id: string }) {
   }}>{busy ? "Forgetting…" : "Forget"}</button>;
 }
 
-export function GitHubConnectionManager({ connected }: { connected: boolean }) {
+export function GitHubConnectionManager({ connected, oauthConfigured }: { connected: boolean; oauthConfigured: boolean }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -152,14 +178,58 @@ export function GitHubConnectionManager({ connected }: { connected: boolean }) {
   }
   return (
     <div className="stack">
+      {oauthConfigured
+        ? <a className="button" href="/api/connections/github/oauth/start">{connected ? "Reconnect with GitHub" : "Connect with GitHub"}</a>
+        : <div className="notice">GitHub OAuth is not configured for this deployment.</div>}
+      <div className="divider" />
+      <p className="subtle"><strong>Advanced development option</strong></p>
       <form className="form-grid" onSubmit={connect}>
-        <div className="field full"><label htmlFor="github-token">GitHub personal access token</label><input id="github-token" name="token" type="password" minLength={20} placeholder={connected ? "Enter a new token to reconnect" : "github_pat_…"} required /></div>
+        <div className="field full"><label htmlFor="github-token">Fine-grained personal access token</label><input id="github-token" name="token" type="password" minLength={20} placeholder={connected ? "Enter a new token to replace the connection" : "github_pat_…"} required /></div>
         <div className="field full"><div className="inline"><button className="button" disabled={busy}>{connected ? "Reconnect" : "Connect GitHub"}</button>{connected && <><button type="button" className="button secondary" onClick={() => action("POST")}>Test connection</button><button type="button" className="button danger" onClick={() => action("DELETE")}>Disconnect</button></>}</div></div>
       </form>
       {message && <div className={`notice ${message.includes("failed") ? "error" : ""}`}>{message}</div>}
       <p className="subtle">Relay validates this token with GitHub, encrypts it at rest, and never returns it through the dashboard API.</p>
     </div>
   );
+}
+
+export function GoogleConnectionManager({ connected, oauthConfigured }: { connected: boolean; oauthConfigured: boolean }) {
+  const router = useRouter();
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function action(method: "POST" | "DELETE") {
+    setBusy(true); setMessage("");
+    try { const result = await requestJson("/api/connections/google", { method }); setMessage(method === "POST" ? (result.ok ? "Google Workspace connection is healthy." : result.message) : "Google Workspace disconnected."); router.refresh(); }
+    catch (reason) { setMessage(reason instanceof Error ? reason.message : "Request failed."); }
+    finally { setBusy(false); }
+  }
+  return <div className="stack">
+    {oauthConfigured ? <a className="button" href="/api/connections/google/oauth/start">{connected ? "Reconnect Google Workspace" : "Connect Google Workspace"}</a> : <div className="notice">Google OAuth is not configured for this deployment.</div>}
+    {connected && <div className="inline"><button className="button secondary" disabled={busy} onClick={() => action("POST")}>Test connection</button><button className="button danger" disabled={busy} onClick={() => action("DELETE")}>Disconnect</button></div>}
+    {message && <div className="notice">{message}</div>}
+  </div>;
+}
+
+export function SandboxActions({ agents, sandboxId, ownerAgentId }: { agents: Array<{ id: string; name: string }>; sandboxId?: string; ownerAgentId?: string }) {
+  const router = useRouter(); const [busy, setBusy] = useState(false); const [message, setMessage] = useState("");
+  if (sandboxId && ownerAgentId) return <button className="button danger small" disabled={busy} onClick={async () => { setBusy(true); try { await requestJson("/api/sandboxes", { method: "DELETE", body: JSON.stringify({ sandboxId, agentId: ownerAgentId }) }); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Destroy failed."); } finally { setBusy(false); } }}>{message || (busy ? "Destroying…" : "Destroy")}</button>;
+  return <form className="inline" onSubmit={async (event) => { event.preventDefault(); setBusy(true); setMessage(""); const agentId = new FormData(event.currentTarget).get("agentId"); try { await requestJson("/api/sandboxes", { method: "POST", body: JSON.stringify({ agentId }) }); setMessage("Sandbox created."); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Create failed."); } finally { setBusy(false); } }}><select name="agentId" aria-label="Owner Agent" required>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select><button className="button" disabled={busy || !agents.length}>{busy ? "Creating…" : "Create sandbox"}</button>{message && <span className="subtle">{message}</span>}</form>;
+}
+
+export function SandboxShareForm({ sandboxId, agents }: { sandboxId: string; agents: Array<{ id: string; name: string }> }) {
+  const router = useRouter(); const [busy, setBusy] = useState(false); const [message, setMessage] = useState("");
+  if (!agents.length) return <span className="subtle">Private</span>;
+  return <form className="inline" onSubmit={async (event) => { event.preventDefault(); setBusy(true); setMessage(""); const agentId = new FormData(event.currentTarget).get("agentId"); try { await requestJson("/api/sandboxes", { method: "PATCH", body: JSON.stringify({ sandboxId, agentId }) }); setMessage("Shared"); router.refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "Share failed."); } finally { setBusy(false); } }}><select name="agentId" aria-label="Share sandbox with Agent" required>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select><button className="button secondary small" disabled={busy}>{busy ? "Sharing…" : "Share"}</button>{message && <span className="subtle">{message}</span>}</form>;
+}
+
+export function BrowserCloseButton({ browserSessionId, agentId }: { browserSessionId: string; agentId: string }) {
+  const router = useRouter(); const [busy, setBusy] = useState(false);
+  return <button className="button danger small" disabled={busy} onClick={async () => { setBusy(true); try { await requestJson("/api/browsers", { method: "DELETE", body: JSON.stringify({ browserSessionId, agentId }) }); router.refresh(); } finally { setBusy(false); } }}>{busy ? "Closing…" : "Close"}</button>;
+}
+
+export function InboxAcknowledgeButton({ inboxItemId, agentId }: { inboxItemId: string; agentId: string }) {
+  const router = useRouter(); const [busy, setBusy] = useState(false);
+  return <button className="button secondary small" disabled={busy} onClick={async () => { setBusy(true); try { await requestJson("/api/events/inbox/ack", { method: "POST", body: JSON.stringify({ inboxItemId, agentId }) }); router.refresh(); } finally { setBusy(false); } }}>{busy ? "Saving…" : "Acknowledge"}</button>;
 }
 
 export function CopyButton({ value }: { value: string }) {

@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth";
 
 export default async function DeveloperPage() {
   const user = await requireUser();
-  const agent = listAgents(user.accountId).find((item) => item.status === "ACTIVE");
+  const agent = (await listAgents(user.accountId)).find((item) => item.status === "ACTIVE");
   const baseUrl = process.env.NEXT_PUBLIC_RELAY_URL ?? "http://localhost:3000";
   const endpoint = `${baseUrl}/mcp`;
   const config = JSON.stringify({ mcpServers: { relay: { type: "http", url: endpoint, headers: { Authorization: "Bearer rly_YOUR_AGENT_CREDENTIAL" } } } }, null, 2);

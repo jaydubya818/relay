@@ -1,0 +1,63 @@
+openapi: 3.1.0
+info:
+  title: Relay V2 Runtime API
+  version: 2026-09-13
+servers:
+  - url: https://api.relay.example
+paths:
+  /api/v2/runtime/actions:
+    post:
+      summary: Durably submit a canonical ActionIntent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: X-Relay-Account-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Relay-Lease, in: header, required: true, schema: { type: string } }
+        - { name: X-Relay-Workload-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Relay-Audience, in: header, required: true, schema: { type: string } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, maxLength: 255 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties: { action: { type: object } }
+      responses:
+        "202": { description: Durable command accepted, content: { application/json: { schema: { $ref: "#/components/schemas/RuntimeActionResult" } } } }
+        "200": { description: Idempotent replay, content: { application/json: { schema: { $ref: "#/components/schemas/RuntimeActionResult" } } } }
+        "401": { description: Invalid runtime or OAuth credential }
+        "403": { description: Tenant, workload, audience, action, or lease binding denied }
+        "409": { description: Idempotency conflict or exhausted authority }
+  /api/v2/runtime/actions/{commandId}:
+    get:
+      summary: Read durable action state for the submitting runtime
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: commandId, in: path, required: true, schema: { type: string } }
+        - { name: taskId, in: query, required: true, schema: { type: string } }
+        - { name: X-Relay-Account-Id, in: header, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Structured action state, content: { application/json: { schema: { $ref: "#/components/schemas/RuntimeActionResult" } } } }
+        "404": { description: Not visible to this tenant/runtime }
+  /api/v2/mcp:
+    post:
+      summary: Stateless MCP JSON-RPC endpoint
+      responses:
+        "200": { description: JSON-RPC response }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  schemas:
+    RuntimeActionResult:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, commandId, taskId, actionIntentId, state, durable, idempotentReplay]
+      properties:
+        schemaVersion: { const: relay.runtime-action-result.v1 }
+        commandId: { type: string, pattern: "^cmd_" }
+        taskId: { type: string, pattern: "^tsk_" }
+        actionIntentId: { type: string, pattern: "^act_" }
+        state: { enum: [QUEUED, PROCESSING, COMPLETED, CANCELLED, DEAD_LETTERED] }
+        durable: { const: true }
+        idempotentReplay: { type: boolean }

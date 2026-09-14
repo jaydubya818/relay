@@ -10,7 +10,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const body = z.object({ effect: z.enum(["ALLOW", "DENY"]) }).parse(await request.json());
     const params = await context.params;
     const capability = z.enum(CAPABILITIES).parse(decodeURIComponent(params.capability));
-    setCapabilityGrant(user.accountId, params.id, capability, body.effect);
+    await setCapabilityGrant(user.accountId, params.id, capability, body.effect);
     return Response.json({ ok: true });
   } catch (error) { return errorResponse(error); }
 }

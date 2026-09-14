@@ -12,7 +12,7 @@ const schema = z.object({
 export async function GET() {
   try {
     const user = await requireApiUser();
-    return Response.json({ agents: listAgents(user.accountId) });
+    return Response.json({ agents: await listAgents(user.accountId) });
   } catch (error) { return errorResponse(error); }
 }
 
@@ -21,6 +21,6 @@ export async function POST(request: Request) {
     if (!verifySameOrigin(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
     const user = await requireApiUser();
     const input = schema.parse(await request.json());
-    return Response.json(createAgent(user.accountId, input), { status: 201 });
+    return Response.json(await createAgent(user.accountId, input), { status: 201 });
   } catch (error) { return errorResponse(error); }
 }

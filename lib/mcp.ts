@@ -7,6 +7,7 @@ import { RelayError } from "@/lib/errors";
 import { executeCapability } from "@/lib/executor";
 import { checkAgentRateLimit } from "@/lib/rate-limit";
 import type { CapabilityName } from "@/lib/types";
+import { touchAgentSession } from "@/lib/agent-sessions";
 
 type McpRequest = { jsonrpc?: string; id?: string | number | null; method?: string; params?: any };
 
@@ -49,6 +50,111 @@ const toolDefinitions = {
     description: "Read a repository through the account-level GitHub connection.",
     inputSchema: { type: "object", required: ["owner", "repo"], properties: { owner: { type: "string" }, repo: { type: "string" } } },
   },
+  relay_sandbox_create: {
+    capability: "sandbox.create", action: "sandbox.create", provider: "SANDBOX",
+    description: "Create an isolated Relay sandbox owned by this Agent.",
+    inputSchema: { type: "object", properties: { ttlSeconds: { type: "number" }, timeoutMs: { type: "number" }, cpuLimit: { type: "number" }, memoryMb: { type: "number" }, maxOutputBytes: { type: "number" }, network: { type: "string", enum: ["NONE", "OPEN"] } } },
+  },
+  relay_sandbox_exec: {
+    capability: "sandbox.exec", action: "sandbox.exec", provider: "SANDBOX",
+    description: "Execute a bounded command in an authorized Relay sandbox.",
+    inputSchema: { type: "object", required: ["sandboxId", "command"], properties: { sandboxId: { type: "string" }, command: { type: "string" } } },
+  },
+  relay_sandbox_file_read: {
+    capability: "sandbox.file.read", action: "sandbox.file.read", provider: "SANDBOX",
+    description: "Read a file from an authorized Relay sandbox.",
+    inputSchema: { type: "object", required: ["sandboxId", "path"], properties: { sandboxId: { type: "string" }, path: { type: "string" } } },
+  },
+  relay_sandbox_file_write: {
+    capability: "sandbox.file.write", action: "sandbox.file.write", provider: "SANDBOX",
+    description: "Write a file in an authorized Relay sandbox.",
+    inputSchema: { type: "object", required: ["sandboxId", "path", "content"], properties: { sandboxId: { type: "string" }, path: { type: "string" }, content: { type: "string" } } },
+  },
+  relay_sandbox_file_list: {
+    capability: "sandbox.file.list", action: "sandbox.file.list", provider: "SANDBOX",
+    description: "List files in an authorized Relay sandbox.",
+    inputSchema: { type: "object", required: ["sandboxId"], properties: { sandboxId: { type: "string" }, path: { type: "string" } } },
+  },
+  relay_sandbox_destroy: {
+    capability: "sandbox.destroy", action: "sandbox.destroy", provider: "SANDBOX",
+    description: "Destroy an authorized Relay sandbox.",
+    inputSchema: { type: "object", required: ["sandboxId"], properties: { sandboxId: { type: "string" } } },
+  },
+  relay_browser_create: {
+    capability: "browser.create", action: "browser.create", provider: "BROWSER",
+    description: "Create an isolated Relay browser session owned by this Agent.",
+    inputSchema: { type: "object", properties: { ttlSeconds: { type: "number" }, operationTimeoutMs: { type: "number" }, maxExtractChars: { type: "number" }, network: { type: "string", enum: ["PUBLIC_ONLY", "OPEN"] } } },
+  },
+  relay_browser_navigate: {
+    capability: "browser.navigate", action: "browser.navigate", provider: "BROWSER",
+    description: "Navigate an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId", "url"], properties: { browserSessionId: { type: "string" }, url: { type: "string" } } },
+  },
+  relay_browser_click: {
+    capability: "browser.click", action: "browser.click", provider: "BROWSER",
+    description: "Click an element in an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId", "selector"], properties: { browserSessionId: { type: "string" }, selector: { type: "string" } } },
+  },
+  relay_browser_type: {
+    capability: "browser.type", action: "browser.type", provider: "BROWSER",
+    description: "Type into an element in an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId", "selector", "text"], properties: { browserSessionId: { type: "string" }, selector: { type: "string" }, text: { type: "string" } } },
+  },
+  relay_browser_extract: {
+    capability: "browser.extract", action: "browser.extract", provider: "BROWSER",
+    description: "Extract bounded text from an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId"], properties: { browserSessionId: { type: "string" }, selector: { type: "string" } } },
+  },
+  relay_browser_screenshot: {
+    capability: "browser.screenshot", action: "browser.screenshot", provider: "BROWSER",
+    description: "Capture a PNG screenshot of an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId"], properties: { browserSessionId: { type: "string" } } },
+  },
+  relay_browser_close: {
+    capability: "browser.close", action: "browser.close", provider: "BROWSER",
+    description: "Close an authorized Relay browser session.",
+    inputSchema: { type: "object", required: ["browserSessionId"], properties: { browserSessionId: { type: "string" } } },
+  },
+  relay_agent_inbox_list: {
+    capability: "agent.inbox.list", action: "agent.inbox.list", provider: "EVENTS",
+    description: "List durable inbox items routed to this Agent.",
+    inputSchema: { type: "object", properties: { status: { type: "string", enum: ["UNREAD", "CLAIMED", "PROCESSED", "FAILED"] }, limit: { type: "number" } } },
+  },
+  relay_agent_inbox_get: {
+    capability: "agent.inbox.get", action: "agent.inbox.get", provider: "EVENTS",
+    description: "Read one durable inbox item routed to this Agent.",
+    inputSchema: { type: "object", required: ["inboxItemId"], properties: { inboxItemId: { type: "string" } } },
+  },
+  relay_agent_inbox_ack: {
+    capability: "agent.inbox.ack", action: "agent.inbox.ack", provider: "EVENTS",
+    description: "Acknowledge an Agent inbox item as processed or failed.",
+    inputSchema: { type: "object", required: ["inboxItemId"], properties: { inboxItemId: { type: "string" }, outcome: { type: "string", enum: ["PROCESSED", "FAILED"] } } },
+  },
+  relay_capabilities_search: {
+    capability: "capabilities.search", action: "capabilities.search",
+    description: "Search active Relay capabilities by name, description, or domain.",
+    inputSchema: { type: "object", properties: { query: { type: "string" }, domain: { type: "string" }, limit: { type: "number" } } },
+  },
+  relay_email_search: {
+    capability: "email.search", action: "email.search", provider: "GOOGLE", description: "Search email through the account-owned Google Workspace connection.",
+    inputSchema: { type: "object", required: ["query"], properties: { query: { type: "string" }, limit: { type: "number" } } },
+  },
+  relay_email_read: {
+    capability: "email.read", action: "email.read", provider: "GOOGLE", description: "Read one email through the account-owned Google Workspace connection.",
+    inputSchema: { type: "object", required: ["messageId"], properties: { messageId: { type: "string" } } },
+  },
+  relay_calendar_event_list: {
+    capability: "calendar.event.list", action: "calendar.event.list", provider: "GOOGLE", description: "List read-only calendar events.",
+    inputSchema: { type: "object", properties: { calendarId: { type: "string" }, timeMin: { type: "string" }, timeMax: { type: "string" }, query: { type: "string" }, limit: { type: "number" } } },
+  },
+  relay_calendar_event_read: {
+    capability: "calendar.event.read", action: "calendar.event.read", provider: "GOOGLE", description: "Read one calendar event.",
+    inputSchema: { type: "object", required: ["eventId"], properties: { calendarId: { type: "string" }, eventId: { type: "string" } } },
+  },
+  relay_calendar_availability_read: {
+    capability: "calendar.availability.read", action: "calendar.availability.read", provider: "GOOGLE", description: "Read calendar free/busy availability.",
+    inputSchema: { type: "object", required: ["timeMin", "timeMax"], properties: { calendarId: { type: "string" }, timeMin: { type: "string" }, timeMax: { type: "string" }, timeZone: { type: "string" } } },
+  },
 } as const;
 
 export type RelayToolName = keyof typeof toolDefinitions;
@@ -73,13 +179,39 @@ const toolInputSchemas: Record<RelayToolName, z.ZodTypeAny> = {
   }),
   relay_github_repo_list: z.object({}),
   relay_github_repo_get: z.object({ owner: z.string().trim().min(1).max(100), repo: z.string().trim().min(1).max(100) }),
+  relay_sandbox_create: z.object({
+    ttlSeconds: z.number().int().min(60).max(86_400).optional(), timeoutMs: z.number().int().min(100).max(120_000).optional(),
+    cpuLimit: z.number().positive().max(4).optional(), memoryMb: z.number().int().min(64).max(4096).optional(),
+    maxOutputBytes: z.number().int().min(1024).max(1024 * 1024).optional(), network: z.enum(["NONE", "OPEN"]).optional(),
+  }),
+  relay_sandbox_exec: z.object({ sandboxId: z.string().min(1).max(100), command: z.string().trim().min(1).max(10_000) }),
+  relay_sandbox_file_read: z.object({ sandboxId: z.string().min(1).max(100), path: z.string().min(1).max(500) }),
+  relay_sandbox_file_write: z.object({ sandboxId: z.string().min(1).max(100), path: z.string().min(1).max(500), content: z.string().max(1024 * 1024) }),
+  relay_sandbox_file_list: z.object({ sandboxId: z.string().min(1).max(100), path: z.string().max(500).default("") }),
+  relay_sandbox_destroy: z.object({ sandboxId: z.string().min(1).max(100) }),
+  relay_browser_create: z.object({ ttlSeconds: z.number().int().min(60).max(86_400).optional(), operationTimeoutMs: z.number().int().min(500).max(60_000).optional(), maxExtractChars: z.number().int().min(1_000).max(500_000).optional(), network: z.enum(["PUBLIC_ONLY", "OPEN"]).optional() }),
+  relay_browser_navigate: z.object({ browserSessionId: z.string().min(1).max(100), url: z.string().url().max(2_000) }),
+  relay_browser_click: z.object({ browserSessionId: z.string().min(1).max(100), selector: z.string().min(1).max(1_000) }),
+  relay_browser_type: z.object({ browserSessionId: z.string().min(1).max(100), selector: z.string().min(1).max(1_000), text: z.string().max(100_000) }),
+  relay_browser_extract: z.object({ browserSessionId: z.string().min(1).max(100), selector: z.string().min(1).max(1_000).optional() }),
+  relay_browser_screenshot: z.object({ browserSessionId: z.string().min(1).max(100) }),
+  relay_browser_close: z.object({ browserSessionId: z.string().min(1).max(100) }),
+  relay_agent_inbox_list: z.object({ status: z.enum(["UNREAD", "CLAIMED", "PROCESSED", "FAILED"]).optional(), limit: z.number().int().min(1).max(100).default(50) }),
+  relay_agent_inbox_get: z.object({ inboxItemId: z.string().min(1).max(100) }),
+  relay_agent_inbox_ack: z.object({ inboxItemId: z.string().min(1).max(100), outcome: z.enum(["PROCESSED", "FAILED"]).default("PROCESSED") }),
+  relay_capabilities_search: z.object({ query: z.string().trim().max(200).default(""), domain: z.string().trim().max(100).optional(), limit: z.number().int().min(1).max(100).default(25) }),
+  relay_email_search: z.object({ query: z.string().trim().min(1).max(1_000), limit: z.number().int().min(1).max(100).default(25) }),
+  relay_email_read: z.object({ messageId: z.string().trim().min(1).max(500) }),
+  relay_calendar_event_list: z.object({ calendarId: z.string().trim().min(1).max(500).default("primary"), timeMin: z.string().datetime().optional(), timeMax: z.string().datetime().optional(), query: z.string().trim().max(500).optional(), limit: z.number().int().min(1).max(100).default(50) }),
+  relay_calendar_event_read: z.object({ calendarId: z.string().trim().min(1).max(500).default("primary"), eventId: z.string().trim().min(1).max(1_000) }),
+  relay_calendar_availability_read: z.object({ calendarId: z.string().trim().min(1).max(500).default("primary"), timeMin: z.string().datetime(), timeMax: z.string().datetime(), timeZone: z.string().trim().max(100).optional() }).refine((value) => new Date(value.timeMin) < new Date(value.timeMax), "timeMin must precede timeMax"),
 };
 
 export async function handleMcp(secret: string, request: McpRequest, requestId: string = randomUUID()) {
-  const auth = authenticateAgent(secret);
+  const auth = await authenticateAgent(secret);
   if (!auth.ok) {
     if (auth.principal) {
-      recordActivity({ accountId: auth.principal.accountId, agentId: auth.principal.agentId, sessionId: requestId, capability: "agent.authenticate", action: request.method ?? "unknown", status: "DENIED", durationMs: 0 });
+      await recordActivity({ accountId: auth.principal.accountId, agentId: auth.principal.agentId, sessionId: requestId, capability: "agent.authenticate", action: request.method ?? "unknown", status: "DENIED", durationMs: 0 });
     }
     throw new RelayError(auth.code, auth.code === "REVOKED_CREDENTIAL" ? "This Relay credential has been revoked." : "Relay agent credential is invalid.", undefined, 401);
   }
@@ -90,7 +222,7 @@ export async function handleMcp(secret: string, request: McpRequest, requestId: 
   }
   if (request.method === "ping") return {};
   if (request.method === "tools/list") {
-    const allowed = new Set(listAllowedCapabilities(auth.principal.agentId));
+    const allowed = new Set(await listAllowedCapabilities(auth.principal.accountId, auth.principal.agentId));
     return {
       tools: Object.entries(toolDefinitions)
         .filter(([, definition]) => allowed.has(definition.capability as CapabilityName))
@@ -103,12 +235,13 @@ export async function handleMcp(secret: string, request: McpRequest, requestId: 
     if (!definition) throw new RelayError("INVALID_INPUT", "Unknown Relay MCP tool.");
     const parsedArguments = toolInputSchemas[name].safeParse(request.params?.arguments ?? {});
     if (!parsedArguments.success) throw new RelayError("INVALID_INPUT", "Tool arguments are invalid.", definition.capability);
+    const session = await touchAgentSession(auth.principal);
     const result = await executeCapability({
       principal: auth.principal,
       capability: definition.capability,
       action: definition.action,
       provider: "provider" in definition ? definition.provider : undefined,
-      sessionId: requestId,
+      sessionId: session.id,
       arguments: parsedArguments.data,
     });
     return { content: [{ type: "text", text: JSON.stringify(result) }] };

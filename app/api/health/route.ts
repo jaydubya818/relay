@@ -1,11 +1,12 @@
 import { db } from "@/lib/db";
+import { sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
-export function GET() {
+export async function GET() {
   try {
-    db().prepare("SELECT 1").get();
-    return Response.json({ ok: true, service: "relay", database: "ready", timestamp: new Date().toISOString() });
+    await db().execute(sql`select 1`);
+    return Response.json({ ok: true, service: "relay", database: "ready", datastore: "postgresql", timestamp: new Date().toISOString() });
   } catch {
     return Response.json({ ok: false, service: "relay", database: "unavailable" }, { status: 503 });
   }

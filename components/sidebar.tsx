@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const groups = [
   { label: "Plane", links: [["◫", "Overview", "/"], ["◉", "Agents", "/agents"], ["⌁", "Activity", "/activity"]] },
-  { label: "Capabilities", links: [["◇", "Memory", "/memory"], ["⎋", "Connections", "/connections"]] },
+  { label: "Capabilities", links: [["◇", "Memory", "/memory"], ["⎋", "Connections", "/connections"], ["▣", "Sandboxes", "/sandboxes"], ["◎", "Browsers", "/browsers"], ["↳", "Events", "/events"]] },
   { label: "Developer", links: [["⌘", "MCP", "/developer"]] },
   { label: "Control", links: [["⚙", "Settings", "/settings"]] },
 ];
@@ -21,7 +21,7 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
-      <div className="sidebar-foot">Relay V0<br />Capability plane healthy</div>
+      <div className="sidebar-foot">Relay V1<br />Capability plane</div>
     </aside>
   );
 }

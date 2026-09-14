@@ -5,6 +5,7 @@ coverage/
 playwright-report/
 test-results/
 output/playwright/
+.playwright-cli/
 *.tsbuildinfo
 .env
 .env.local

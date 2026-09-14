@@ -1,11 +1,21 @@
-import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("repository hygiene", () => {
-  it("ignores SQLite database sidecar files", () => {
-    for (const path of ["data/relay.db", "data/relay.db-wal", "data/relay.db-shm"]) {
-      const ignored = execFileSync("git", ["check-ignore", path], { encoding: "utf8" }).trim();
-      expect(ignored).toBe(path);
-    }
+  it("does not ship SQLite in the production persistence layer", () => {
+    const source = readFileSync("lib/db.ts", "utf8");
+    expect(source).toContain("drizzle-orm/node-postgres");
+    expect(source).not.toContain("node:sqlite");
+  });
+
+  it("records an immutable and isolated Relay V2 implementation frontier", () => {
+    const adr = readFileSync("docs/adr/ADR-016-relay-v2-implementation-frontier.md", "utf8");
+    const verifier = readFileSync("scripts/verify-v2-frontier.ts", "utf8");
+
+    expect(adr).toContain("43e0160eb2b9552f71154d18369e4626e0e79339");
+    expect(adr).toContain("codex/relay-v1-rc-soak");
+    expect(adr).toContain("BLOCKED_EXTERNAL_CONFIGURATION");
+    expect(verifier).toContain('const ALLOWED_BRANCH = "feat/relay-v2"');
+    expect(verifier).toContain('const V2_BASE_TAG = "relay-v1.0.0-rc.1"');
   });
 });

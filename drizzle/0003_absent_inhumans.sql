@@ -1,0 +1,1 @@
+ALTER TABLE "browser_sessions" ADD COLUMN "resource_policy" jsonb DEFAULT '{}'::jsonb NOT NULL;

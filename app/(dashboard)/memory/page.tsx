@@ -7,13 +7,13 @@ import { dashboardMemories } from "@/lib/memory";
 export default async function MemoryPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
   const params = await searchParams;
-  const memories = dashboardMemories(user.accountId, {
+  const memories = await dashboardMemories(user.accountId, {
     query: params.query,
     type: params.type as any,
     scope: params.scope as any,
     createdByAgentId: params.agent,
   });
-  const agents = listAgents(user.accountId);
+  const agents = await listAgents(user.accountId);
   return (
     <>
       <PageHeader eyebrow="Capabilities" title="Memory" description="Search the durable account memory available across authorized agent runtimes." />
