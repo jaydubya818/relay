@@ -33,7 +33,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-14 | Build customer runner and outbound private gateway | WO-08, WO-10, WO-11 | IMPLEMENTED | `dd0c2af` | LOCAL PASS | Live host/mTLS/attestation/network/provenance: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-15 | Build live observation and human control | WO-07, WO-08, WO-12, WO-13 | IMPLEMENTED | `656e0af` | LOCAL PASS | Live provider/video/accessibility/production latency evidence pending WO-21/WO-22 |
 | WO-16 | Qualify Slack and Telegram communications | WO-07, WO-10 | IMPLEMENTED | `c7e545a` | LOCAL PASS | Live Slack/Telegram channel qualification: BLOCKED_EXTERNAL_CONFIGURATION |
-| WO-17 | Qualify Google Drive and Linear connectors | WO-06, WO-08, WO-10 | NOT_STARTED | — | — | — |
+| WO-17 | Qualify Google Drive and Linear connectors | WO-06, WO-08, WO-10 | IMPLEMENTED | `PENDING` | LOCAL PASS | Live Google Drive/Linear qualification: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-18 | Build financial domain and controlled purchase intents | WO-07, WO-09, WO-15 | NOT_STARTED | — | — | — |
 | WO-19 | Build same-account Agent delegation | WO-04, WO-05, WO-08–WO-10 | NOT_STARTED | — | — | — |
 | WO-20 | Publish REST, events, MCP, and client SDKs | WO-05–WO-10, WO-19 | NOT_STARTED | — | — | — |
@@ -210,3 +210,14 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Added concrete Slack `chat.postMessage` and Telegram `sendMessage` adapters. Explicit 429 responses enter a single-winner delayed retry path; timeout and 5xx outcomes become `EFFECT_UNKNOWN` and cannot retry without reconciliation.
 - Added focused tenant-isolation coverage for communication connections, threads, inbound/outbound messages, routing, leases, approvals, queries, retries, and reconciliation. Cross-account send attempts fail before message persistence or provider effect.
 - Qualification passed: focused channel/control/provider suite (14/14), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (140/140); 4 opt-in local live tests remained intentionally skipped. Live Slack workspace and Telegram bot delivery/rate/latency evidence is `BLOCKED_EXTERNAL_CONFIGURATION` and remains a WO-22 gate.
+
+### 2026-09-13 — WO-17 Google Drive and Linear connectors
+
+- Qualified a two-connector V2 surface rather than a generic API proxy: Google Drive v3 search/read plus binary file create/update, and Linear issue search/read/create plus title/description update.
+- Restricted Google to `drive.file` with authenticated user-selected roots/files; broad Drive scopes, delete, move, sharing, permission changes, and Workspace-native conversion remain excluded. Restricted Linear to configured team IDs and rejected workflow-state, assignment, label, delete, and arbitrary GraphQL mutations.
+- Added signed immutable connector manifests with exact scopes, capabilities, network hosts, credential access, versioning, conformance checks, and signature verification at every operation.
+- Added account/principal/provider-bound one-time OAuth state, broker-owned PKCE and token exchange, opaque credential handles, exact scope/resource validation, scopes/restrictions display, fail-closed local revoke, reconnect semantics, and current read/write permission drift detection.
+- Added canonical Drive-file and Linear-issue adapters, pre-generated Drive create IDs, stable Linear reconciliation references, provider resource tracking, effect-unknown containment, explicit reconciliation, redacted provider receipts, idempotency-key misuse rejection, and lease call-limit consumption.
+- Corrected a pre-commit authorization flaw by replacing caller-declared Drive `appCreated` status with authoritative account/connection-scoped resource records.
+- Added focused tenant-isolation coverage for OAuth flows, connections, definitions, resource mappings, operations, receipts, lease/action bindings, revocation, permission snapshots, and queries; cross-account attempts fail before persistence or provider effect.
+- Qualification passed: focused connector/control/provider suite (17/17), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (146/146); 4 opt-in local live tests remained intentionally skipped. V2-specific Google Drive and Linear live OAuth/provider packs are `BLOCKED_EXTERNAL_CONFIGURATION`; frozen V1 credentials/evidence were not reused or modified.
