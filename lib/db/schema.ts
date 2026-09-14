@@ -53,6 +53,11 @@ export const budgetScope = pgEnum("budget_scope", ["ACCOUNT", "AGENT", "TASK", "
 export const budgetStatus = pgEnum("budget_status", ["ACTIVE", "EXHAUSTED", "DISABLED"]);
 export const budgetBalanceStatus = pgEnum("budget_balance_status", ["CURRENT", "STALE", "UNKNOWN"]);
 export const budgetReservationStatus = pgEnum("budget_reservation_status", ["RESERVED", "COMMITTED", "RELEASED", "EXPIRED", "UNKNOWN"]);
+export const v2TaskState = pgEnum("v2_task_state", ["RECEIVED", "ROUTED", "QUEUED", "STARTING", "RUNNING", "PAUSED", "WAITING_APPROVAL", "SUCCEEDED", "FAILED", "CANCELLED", "DEAD_LETTERED"]);
+export const taskCommandStatus = pgEnum("task_command_status", ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED", "DEAD_LETTERED"]);
+export const executionEffectState = pgEnum("execution_effect_state", ["PRE_EFFECT", "IDEMPOTENT_SAFE", "POSSIBLY_COMMITTED"]);
+export const eventSignatureStatus = pgEnum("event_signature_status", ["VERIFIED", "UNVERIFIED", "INVALID"]);
+export const routeStatus = pgEnum("route_status", ["ACTIVE", "DISABLED"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -593,6 +598,122 @@ export const budgetEvents = pgTable("budget_events", {
   payload: jsonb("payload").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [index("budget_event_account_idx").on(table.accountId, table.createdAt), index("budget_event_budget_idx").on(table.accountId, table.budgetId)]);
+
+export const eventRoutes = pgTable("event_routes", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  version: integer("version").notNull(),
+  status: routeStatus("status").notNull().default("ACTIVE"),
+  source: text("source").notNull(),
+  eventType: text("event_type").notNull(),
+  subjectPrefix: text("subject_prefix"),
+  agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "restrict" }),
+  preferredRuntime: text("preferred_runtime"),
+  maxAttempts: integer("max_attempts").notNull().default(5),
+  createdByPrincipalId: text("created_by_principal_id").notNull().references(() => principals.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("event_route_name_version_idx").on(table.accountId, table.name, table.version), index("event_route_match_idx").on(table.accountId, table.source, table.eventType, table.status)]);
+
+export const v2Events = pgTable("v2_events", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  source: text("source").notNull(),
+  type: text("type").notNull(),
+  subject: text("subject"),
+  occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "string" }).notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  dedupeKey: text("dedupe_key").notNull(),
+  correlationId: text("correlation_id").notNull(),
+  causationId: text("causation_id"),
+  schemaVersion: text("schema_version").notNull(),
+  classification: text("classification").notNull(),
+  signatureStatus: eventSignatureStatus("signature_status").notNull(),
+  providerSequence: bigint("provider_sequence", { mode: "bigint" }),
+  reordered: boolean("reordered").notNull().default(false),
+  data: jsonb("data"),
+}, (table) => [uniqueIndex("v2_event_dedupe_idx").on(table.accountId, table.source, table.dedupeKey), index("v2_event_account_received_idx").on(table.accountId, table.receivedAt)]);
+
+export const eventSourceCursors = pgTable("event_source_cursors", {
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  source: text("source").notNull(),
+  highestSequence: bigint("highest_sequence", { mode: "bigint" }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [primaryKey({ columns: [table.accountId, table.source] })]);
+
+export const v2Tasks = pgTable("v2_tasks", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  eventId: text("event_id").notNull().references(() => v2Events.id, { onDelete: "restrict" }),
+  routeId: text("route_id").notNull().references(() => eventRoutes.id, { onDelete: "restrict" }),
+  logicalKey: text("logical_key").notNull(),
+  agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "restrict" }),
+  status: v2TaskState("status").notNull().default("RECEIVED"),
+  preferredRuntime: text("preferred_runtime"),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  maxAttempts: integer("max_attempts").notNull(),
+  fenceToken: integer("fence_token").notNull().default(0),
+  coordinatorId: text("coordinator_id"),
+  coordinatorLeaseUntil: timestamp("coordinator_lease_until", { withTimezone: true, mode: "string" }),
+  replayOfTaskId: text("replay_of_task_id"),
+  cancellationReason: text("cancellation_reason"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("v2_task_logical_key_idx").on(table.accountId, table.logicalKey), index("v2_task_event_route_idx").on(table.accountId, table.eventId, table.routeId), index("v2_task_account_status_idx").on(table.accountId, table.status, table.createdAt), index("v2_task_agent_idx").on(table.accountId, table.agentId, table.status)]);
+
+export const taskStateHistory = pgTable("task_state_history", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  taskId: text("task_id").notNull().references(() => v2Tasks.id, { onDelete: "cascade" }),
+  fromState: text("from_state"),
+  toState: v2TaskState("to_state").notNull(),
+  reason: text("reason").notNull(),
+  fenceToken: integer("fence_token"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [index("task_history_account_task_idx").on(table.accountId, table.taskId, table.createdAt)]);
+
+export const taskCommands = pgTable("task_commands", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  taskId: text("task_id").notNull().references(() => v2Tasks.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  status: taskCommandStatus("status").notNull().default("PENDING"),
+  idempotencyKey: text("idempotency_key").notNull(),
+  attempt: integer("attempt").notNull().default(0),
+  fenceToken: integer("fence_token").notNull().default(0),
+  effectState: executionEffectState("effect_state").notNull().default("PRE_EFFECT"),
+  payload: jsonb("payload").notNull().default({}),
+  runAfter: timestamp("run_after", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  workerId: text("worker_id"),
+  leaseUntil: timestamp("lease_until", { withTimezone: true, mode: "string" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("task_command_idempotency_idx").on(table.accountId, table.idempotencyKey), index("task_command_claim_idx").on(table.status, table.runAfter, table.createdAt), index("task_command_account_task_idx").on(table.accountId, table.taskId)]);
+
+export const controlOutbox = pgTable("control_outbox", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  aggregateType: text("aggregate_type").notNull(),
+  aggregateId: text("aggregate_id").notNull(),
+  type: text("type").notNull(),
+  payload: jsonb("payload").notNull(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  publishedAt: timestamp("published_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("control_outbox_idempotency_idx").on(table.accountId, table.idempotencyKey), index("control_outbox_pending_idx").on(table.publishedAt, table.createdAt), index("control_outbox_account_idx").on(table.accountId, table.createdAt)]);
+
+export const deadLetterEntries = pgTable("dead_letter_entries", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  taskId: text("task_id").notNull().references(() => v2Tasks.id, { onDelete: "restrict" }),
+  commandId: text("command_id").notNull().references(() => taskCommands.id, { onDelete: "restrict" }),
+  reasonCode: text("reason_code").notNull(),
+  errorClass: text("error_class"),
+  evidence: jsonb("evidence").notNull().default({}),
+  replayedByTaskId: text("replayed_by_task_id"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("dead_letter_command_idx").on(table.accountId, table.commandId), index("dead_letter_account_idx").on(table.accountId, table.createdAt)]);
 
 export const sandboxes = pgTable("sandboxes", {
   id: text("id").primaryKey(),

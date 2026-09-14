@@ -26,7 +26,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-07 | Build centralized approval service | WO-03, WO-04, WO-06 | QUALIFIED | `aaeeb1b` | LOCAL PASS | Quorum and email-link authorization remain excluded |
 | WO-08 | Build capability leases and workload identity | WO-05–WO-07 | QUALIFIED | `897be3e` | LOCAL PASS | Production KMS/mTLS binding awaits provider WorkOrders |
 | WO-09 | Build multi-dimensional budget engine | WO-04, WO-06, WO-08 | QUALIFIED | `a4cb446` | LOCAL PASS | Provider meter feeds and production SLOs await provider WorkOrders |
-| WO-10 | Build durable event router and task orchestrator | WO-03, WO-04 | NOT_STARTED | — | — | — |
+| WO-10 | Build durable event router and task orchestrator | WO-03, WO-04 | QUALIFIED | pending commit | LOCAL PASS | Live Temporal/broker failover and production SLOs remain deployment qualification |
 | WO-11 | Build execution provider SDK and scheduler | WO-06, WO-08–WO-10 | NOT_STARTED | — | — | — |
 | WO-12 | Qualify Relay-managed Playwright execution | WO-11 | NOT_STARTED | — | — | — |
 | WO-13 | Qualify Browserbase and E2B adapters | WO-11 | NOT_STARTED | — | — | — |
@@ -141,3 +141,14 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Required purchase-metered capabilities to use the financial effect class, preserving the non-overridable approval floor from WO-07/WO-08; stale or unknown purchase balances fail closed.
 - Added focused tenant-isolation coverage for budgets, hierarchy lookups, Agent ownership, reservations, status mutation, usage, warning events, and lease binding.
 - Qualification passed: 50-way concurrency fixture, focused budget/lease suite (15/15), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (91/91); 3 live-provider tests remained intentionally skipped.
+
+### 2026-09-13 — WO-10 durable events and task orchestration
+
+- Added signature-verifier-first event ingress with strict V2 envelopes, account/source deduplication, provider sequence tracking, and explicit reordered-delivery evidence.
+- Added immutable versioned routes that resolve only active same-account Agents and atomically create one logical task, state history, start command, outbox messages, and audit evidence per event/route pair.
+- Added a PostgreSQL-backed multi-instance command queue with transactional claims, coordinator leases, monotonic fences, bounded classified retries, and worker-death recovery.
+- Added mandatory pre-effect classification: pre-effect and provider-idempotent work may retry; possibly committed effects never auto-retry and enter the DLQ as `EFFECT_UNKNOWN`.
+- Added poison/retry-exhaustion dead letters, single explicit account-authorized replay, durable cancellation delivery, and an at-least-once outbox whose stable idempotency keys make publisher crash recovery safe.
+- Added the deterministic `relay.task.v1` Temporal workflow contract/reducer. PostgreSQL remains the authority and Relay's command ledger owns retries; Temporal's adapter uses stable workflow IDs and cannot override fences.
+- Added focused tenant-isolation coverage for routes, normalized events, sequence cursors, tasks/jobs, state history, commands/queue, outbox, and dead letters.
+- Qualification passed: focused state/fault/isolation suite (15/15), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (99/99); 3 live-provider tests remained intentionally skipped.
