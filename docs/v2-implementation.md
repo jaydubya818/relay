@@ -34,7 +34,7 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 | WO-15 | Build live observation and human control | WO-07, WO-08, WO-12, WO-13 | IMPLEMENTED | `656e0af` | LOCAL PASS | Live provider/video/accessibility/production latency evidence pending WO-21/WO-22 |
 | WO-16 | Qualify Slack and Telegram communications | WO-07, WO-10 | IMPLEMENTED | `c7e545a` | LOCAL PASS | Live Slack/Telegram channel qualification: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-17 | Qualify Google Drive and Linear connectors | WO-06, WO-08, WO-10 | IMPLEMENTED | `67faf40` | LOCAL PASS | Live Google Drive/Linear qualification: BLOCKED_EXTERNAL_CONFIGURATION |
-| WO-18 | Build financial domain and controlled purchase intents | WO-07, WO-09, WO-15 | NOT_STARTED | — | — | — |
+| WO-18 | Build financial domain and controlled purchase intents | WO-07, WO-09, WO-15 | IMPLEMENTED | `e8eaa88` | LOCAL PASS | Aggregator disabled; independent PCI review and production protected-view qualification pending WO-22 |
 | WO-19 | Build same-account Agent delegation | WO-04, WO-05, WO-08–WO-10 | NOT_STARTED | — | — | — |
 | WO-20 | Publish REST, events, MCP, and client SDKs | WO-05–WO-10, WO-19 | NOT_STARTED | — | — | — |
 | WO-21 | Build operator and user dashboard | WO-04, WO-07, WO-10, WO-15–WO-18 | NOT_STARTED | — | — | — |
@@ -221,3 +221,16 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Corrected a pre-commit authorization flaw by replacing caller-declared Drive `appCreated` status with authoritative account/connection-scoped resource records.
 - Added focused tenant-isolation coverage for OAuth flows, connections, definitions, resource mappings, operations, receipts, lease/action bindings, revocation, permission snapshots, and queries; cross-account attempts fail before persistence or provider effect.
 - Qualification passed: focused connector/control/provider suite (17/17), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (146/146); 4 opt-in local live tests remained intentionally skipped. V2-specific Google Drive and Linear live OAuth/provider packs are `BLOCKED_EXTERNAL_CONFIGURATION`; frozen V1 credentials/evidence were not reused or modified.
+
+### 2026-09-13 — WO-18 financial domain and controlled purchase intents
+
+- Added account-scoped financial accounts, transactions, opaque payment-credential references, purchase intents, protected-checkout permits, and receipts; no raw payment field or funds-custody model exists.
+- Added canonical `money.purchase.request@1.0` binding across merchant, exact amount, currency, items, tax/shipping tolerance, credential reference, Agent/runtime/task, action hash, and idempotency key.
+- Reserved the requested amount plus declared contingency headroom atomically before approval. Any observed merchant, currency, or total change still revokes checkout and requires a fresh intent/approval; tolerance never silently expands payment authority.
+- Required a current once-only financial approval and exact live purchase-budget reservation before atomically fencing Agent input, rotating the computer-control fence, and enabling protected credential entry.
+- Returned only the human-facing credential label during checkout; the opaque vault handle remains server-side and has no V2 production execution path.
+- Added confirmed receipt reconciliation and terminal `EFFECT_UNKNOWN` handling that marks affected budget state unknown and cannot be retried. Agent control remains paused until WO-15 policy/integrity resume checks pass.
+- Added shared payment-data rejection/redaction for explicit PAN/CVV/CVC/bank fields and Luhn-valid payment numbers, a test-only simulated executor that refuses production, and a disabled-by-default qualified read-only aggregator registry.
+- Added focused tenant-isolation coverage for financial records, credential references, intents, reservations, checkout permits, control-session bindings, receipts, and aggregator access, plus a concurrent purchase-budget fixture.
+- Qualification passed: focused money suite (6/6), frontier guard, typecheck, lint, Drizzle schema check, and all runnable serial tests (152/152); 4 opt-in live-provider tests remained intentionally skipped.
+- Independent PCI/security/legal assessment, financial-aggregator selection, and production protected-view suppression validation remain external qualifications and do not authorize unattended payment execution.
