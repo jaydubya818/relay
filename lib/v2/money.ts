@@ -20,7 +20,7 @@ const currencySchema = z.string().regex(/^[A-Z]{3}$/);
 const itemSchema = z.object({ reference: z.string().min(1).max(255), description: z.string().min(1).max(1_000), quantity: z.number().int().positive().max(100_000), unitAmount: amountSchema }).strict();
 const purchaseSchema = z.object({ merchantId: z.string().min(1).max(512), merchantName: z.string().min(1).max(512), currency: currencySchema, requestedAmount: positiveAmountSchema, taxShippingTolerance: amountSchema.default("0"), items: z.array(itemSchema).min(1).max(1_000), credentialReferenceId: z.string().regex(/^pcr_[a-zA-Z0-9]{8,}$/) }).strict();
 const RAW_PAYMENT_KEY = /^(?:pan|cvv|cvc|cardNumber|card_number|routingNumber|routing_number|bankAccount|bank_account|accountNumber|account_number|iban)$/i;
-const PAYMENT_NUMBER = /(?:\d[ -]?){12,18}\d/g;
+const PAYMENT_NUMBER = /(?<![A-Za-z0-9])(?:\d[ -]?){12,18}\d(?![A-Za-z0-9])/g;
 const SCALE = 1_000_000_000n;
 
 function decimalUnits(value: string) { const [whole, fraction = ""] = value.split("."); return BigInt(whole!) * SCALE + BigInt(fraction.padEnd(9, "0")); }

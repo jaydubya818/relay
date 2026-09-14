@@ -13,11 +13,13 @@
     "build": "next build",
     "start": "next start",
     "worker": "tsx scripts/worker.ts",
+    "deploy:check": "tsx scripts/validate-private-preview.ts",
     "v2:frontier:check": "tsx scripts/verify-v2-frontier.ts",
     "qualify:google": "tsx scripts/qualify-google.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run --exclude 'tests/e2e/**' --exclude '**/*.performance.test.ts'",
+    "test:ci": "vitest run --fileParallelism=false --exclude 'tests/e2e/**' --exclude '**/*.performance.test.ts'",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:auth": "vitest run tests/auth",
@@ -33,7 +35,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:check": "drizzle-kit check",
     "db:seed": "tsx scripts/seed.ts",
-    "qualify": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:performance && pnpm build"
+    "qualify": "pnpm typecheck && pnpm lint && pnpm test:ci && pnpm test:performance && pnpm build"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
