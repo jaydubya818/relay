@@ -18,8 +18,8 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 |---|---|---|---|---|---|---|
 | WO-00 | Establish V2 isolation and governance | — | QUALIFIED | `07b1427` | LOCAL PASS | Remote branch/deploy protection: BLOCKED_EXTERNAL_CONFIGURATION |
 | WO-01 | Freeze vocabulary, schemas, and state machines | WO-00 | QUALIFIED | `b468a38` | LOCAL PASS | — |
-| WO-02 | Complete security architecture and abuse cases | WO-01 | IMPLEMENTED | pending commit | LOCAL PASS | Independent security-owner sign-off: BLOCKED_EXTERNAL_CONFIGURATION |
-| WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | NOT_STARTED | — | — | — |
+| WO-02 | Complete security architecture and abuse cases | WO-01 | IMPLEMENTED | `dbb48a0` | LOCAL PASS | Independent security-owner sign-off: BLOCKED_EXTERNAL_CONFIGURATION |
+| WO-03 | Build tenancy, principals, and account roles | WO-01, WO-02 | QUALIFIED | pending commit | SCOPED PASS | Acceptance sequencing corrected by Product Owner; live OIDC/WebAuthn pending provider qualification |
 | WO-04 | Build evidence and append-only audit substrate | WO-01, WO-02, WO-03 | NOT_STARTED | — | — | — |
 | WO-05 | Build Agent Passport and runtime attribution | WO-03, WO-04 | NOT_STARTED | — | — | — |
 | WO-06 | Build capability registry and policy decision service | WO-02–WO-05 | NOT_STARTED | — | — | — |
@@ -65,3 +65,19 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Mapped all 20 approved threats to preventative controls, detective/recovery controls, and required qualification test IDs.
 - Qualification passed: typecheck, lint, contract tests, and security-architecture completeness tests (9/9).
 - Independent security-owner acceptance remains `BLOCKED_EXTERNAL_CONFIGURATION`; no self-approval is recorded.
+
+### 2026-09-13 — Approved tenant-isolation sequencing correction
+
+- Product Owner approved qualifying WO-03 only against boundaries present at WO-03: identity persistence, membership authorization, service clients, step-up replay protection, existing APIs, and existing database/account boundaries.
+- Every later WorkOrder must add focused isolation coverage for every tenant boundary it introduces.
+- WO-22 retains the complete cross-boundary tenant-isolation release gate.
+- This resolves the circular dependency without weakening tenant isolation.
+
+### 2026-09-13 — WO-03 tenancy and principals
+
+- Added additive principal, membership, service-client, and step-up tables plus deterministic backfill for existing V1 users.
+- Added baseline OWNER/ADMIN/OPERATOR/APPROVER/MEMBER/AUDITOR permissions without using roles as Agent capability grants.
+- Added one-time service credentials, account-bound authentication, active-membership enforcement, principal suspension/session revocation, and action-bound password step-up.
+- Corrected a pre-commit design flaw that would have trusted a caller-declared step-up method; only server-verified password completion is currently implemented.
+- Scoped qualification passed: frontier and Drizzle checks, typecheck, lint, auth 3/3, database 3/3, existing security 5/5, V2 identity 5/5.
+- OIDC/WebAuthn provider adapters remain unqualified and are not represented as implemented authentication evidence.

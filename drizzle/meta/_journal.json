@@ -43,6 +43,13 @@
       "when": 1789285976375,
       "tag": "0005_google_read_capabilities",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789343463602,
+      "tag": "0006_square_odin",
+      "breakpoints": true
     }
   ]
 }

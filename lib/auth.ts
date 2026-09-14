@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
-import { accounts, agentCredentials, agents, userSessions, users } from "@/lib/db/schema";
+import { accountMemberships, accounts, agentCredentials, agents, principals, userSessions, users } from "@/lib/db/schema";
 import { hashPassword, hashSecret, verifyPassword } from "@/lib/crypto";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
@@ -37,6 +37,9 @@ export async function createAccountOwner(input: { accountName: string; name: str
     await withTransaction(async (transaction) => {
       await transaction.insert(accounts).values({ id: accountId, name: accountName, createdAt: timestamp, updatedAt: timestamp });
       await transaction.insert(users).values({ id: userId, accountId, email, name, role: "OWNER", passwordHash: hashPassword(input.password), createdAt: timestamp });
+      const principalId = id("prn");
+      await transaction.insert(principals).values({ id: principalId, type: "HUMAN", userId, displayName: name, createdAt: timestamp, updatedAt: timestamp });
+      await transaction.insert(accountMemberships).values({ accountId, principalId, role: "OWNER", createdAt: timestamp, updatedAt: timestamp });
     });
   } catch (error) {
     if ((error as { code?: string }).code === "23505") throw new RelayError("INVALID_INPUT", "An account already exists for this email.", undefined, 409);

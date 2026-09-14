@@ -1,7 +1,7 @@
 import { Client } from "pg";
 import { hashPassword } from "@/lib/crypto";
 import { closeDatabasesForTests, db, migrateDatabase } from "@/lib/db";
-import { accounts, users } from "@/lib/db/schema";
+import { accountMemberships, accounts, principals, users } from "@/lib/db/schema";
 import { id, now } from "@/lib/ids";
 
 let databaseName: string | undefined;
@@ -24,8 +24,12 @@ export async function freshDatabase() {
   const accountId = id("acct");
   const timestamp = now();
   await db().insert(accounts).values({ id: accountId, name: "Test Account", createdAt: timestamp, updatedAt: timestamp });
-  await db().insert(users).values({ id: id("usr"), accountId, email: "operator@example.com", name: "Operator", role: "OWNER", passwordHash: hashPassword("correct-horse-battery-staple"), createdAt: timestamp });
-  return { accountId };
+  const userId = id("usr");
+  const principalId = id("prn");
+  await db().insert(users).values({ id: userId, accountId, email: "operator@example.com", name: "Operator", role: "OWNER", passwordHash: hashPassword("correct-horse-battery-staple"), createdAt: timestamp });
+  await db().insert(principals).values({ id: principalId, type: "HUMAN", userId, displayName: "Operator", createdAt: timestamp, updatedAt: timestamp });
+  await db().insert(accountMemberships).values({ accountId, principalId, role: "OWNER", createdAt: timestamp, updatedAt: timestamp });
+  return { accountId, userId, principalId };
 }
 
 export async function secondAccount() {

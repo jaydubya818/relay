@@ -28,6 +28,11 @@ export const inboxStatus = pgEnum("inbox_status", ["UNREAD", "CLAIMED", "PROCESS
 export const wakeStatus = pgEnum("wake_status", ["QUEUED", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED"]);
 export const sessionStatus = pgEnum("session_status", ["ACTIVE", "EXPIRED", "REVOKED"]);
 export const accountRole = pgEnum("account_role", ["OWNER", "MEMBER"]);
+export const principalType = pgEnum("principal_type", ["HUMAN", "SERVICE"]);
+export const principalStatus = pgEnum("principal_status", ["ACTIVE", "SUSPENDED", "DISABLED"]);
+export const membershipRole = pgEnum("membership_role", ["OWNER", "ADMIN", "OPERATOR", "APPROVER", "MEMBER", "AUDITOR"]);
+export const membershipStatus = pgEnum("membership_status", ["ACTIVE", "SUSPENDED", "REMOVED"]);
+export const stepUpStatus = pgEnum("step_up_status", ["PENDING", "CONSUMED", "EXPIRED", "REVOKED"]);
 
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
@@ -44,6 +49,51 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("users_email_idx").on(table.email), index("users_account_idx").on(table.accountId)]);
+
+export const principals = pgTable("principals", {
+  id: text("id").primaryKey(),
+  type: principalType("type").notNull(),
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  displayName: text("display_name").notNull(),
+  status: principalStatus("status").notNull().default("ACTIVE"),
+  metadata: jsonb("metadata").notNull().default({}),
+  ...timestamps,
+}, (table) => [uniqueIndex("principals_user_idx").on(table.userId), index("principals_type_status_idx").on(table.type, table.status)]);
+
+export const accountMemberships = pgTable("account_memberships", {
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  principalId: text("principal_id").notNull().references(() => principals.id, { onDelete: "cascade" }),
+  role: membershipRole("role").notNull(),
+  status: membershipStatus("status").notNull().default("ACTIVE"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [primaryKey({ columns: [table.accountId, table.principalId] }), index("memberships_principal_status_idx").on(table.principalId, table.status), index("memberships_account_role_idx").on(table.accountId, table.role, table.status)]);
+
+export const serviceClients = pgTable("service_clients", {
+  id: text("id").primaryKey(),
+  principalId: text("principal_id").notNull().references(() => principals.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  secretHash: text("secret_hash").notNull(),
+  prefix: text("prefix").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("service_clients_secret_idx").on(table.secretHash), index("service_clients_principal_idx").on(table.principalId)]);
+
+export const stepUpChallenges = pgTable("step_up_challenges", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  principalId: text("principal_id").notNull().references(() => principals.id, { onDelete: "cascade" }),
+  actionClass: text("action_class").notNull(),
+  actionHash: text("action_hash"),
+  nonceHash: text("nonce_hash").notNull(),
+  authenticationMethod: text("authentication_method").notNull(),
+  status: stepUpStatus("status").notNull().default("PENDING"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("step_up_nonce_idx").on(table.nonceHash), index("step_up_principal_status_idx").on(table.accountId, table.principalId, table.status, table.expiresAt)]);
 
 export const userSessions = pgTable("user_sessions", {
   id: text("id").primaryKey(),
