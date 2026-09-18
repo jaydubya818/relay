@@ -4,9 +4,23 @@ Relay is a governed control plane for personal AI agents that act in the real wo
 
 It gives Agents durable identity, bounded authority, human approvals, budgets, event-driven execution, and provider-neutral computers and connectors—without handing runtimes durable credentials or allowing execution providers to become independent control planes.
 
-> **Release status:** Relay V2 implementation is complete in the current release candidate, but it is not approved for limited beta or GA. Local automation and the Relay-managed execution profile are qualified. Third-party providers, production topology, independent security review, human studies, and Product Owner release decisions remain mandatory WO-22 gates. See the [release dossier](docs/v2/qualification/wo22-release-dossier.md) and [gate matrix](docs/v2/qualification/wo22-gate-matrix.md).
+> **Release status:** Relay V2 implementation is complete, but the release is `BLOCKED_EXTERNAL_QUALIFICATION` and is not approved for limited beta or GA. Local automation, the Relay-managed execution profile, and an owner-only hosted private preview are qualified only to the limits described below. Third-party providers, production topology, independent security review, human studies, protected production infrastructure, and a future Product Owner release decision remain mandatory WO-22 gates. See the [release dossier](docs/v2/qualification/wo22-release-dossier.md), [gate matrix](docs/v2/qualification/wo22-gate-matrix.md), and [private-preview evidence](docs/v2/qualification/private-preview-2026-09-14.md).
 
 Relay V1 remains frozen in RC soak. V2 is additive and guarded by an automated frontier check that prevents changes to the frozen V1 references.
+
+## Hosted private preview
+
+The current `main` branch is deployed at [relay-jaydubya818.vercel.app](https://relay-jaydubya818.vercel.app) as an owner-only private preview.
+
+- Vercel Authentication protects the entire deployment; it is not a public signup or shared demo.
+- Relay signup is disabled.
+- V2 runtime actions are disabled and fail closed regardless of request input.
+- The control-plane database is a dedicated Vercel-managed Neon PostgreSQL 18 resource, isolated from V1, with 21 migrations and one owner identity. No Agents are provisioned in the hosted preview.
+- A PostgreSQL 18 logical backup and isolated restore rehearsal passed with the expected migration and tenant inventory, and all temporary data was removed.
+- The Product Owner elected to remain on Neon Free for this actions-disabled preview. Managed deletion protection is unavailable on that plan, so the combined database production gate remains `BLOCKED_EXTERNAL_CONFIGURATION`.
+- A persistent hosted worker is intentionally not deployed while runtime actions are disabled. Railway or another worker host is not required for the current preview.
+
+This deployment proves packaging, migration, bootstrap, deployment protection, and fail-closed preview behavior. It does not authorize real-world Agent execution or storage of real customer data.
 
 ## What Relay does
 
@@ -56,6 +70,22 @@ For the detailed contracts, start with the [security architecture](docs/v2/secur
 
 The V2 surface is intentionally constrained. It does not claim unattended production payments, arbitrary connector APIs, persistent high-assurance desktops, an independently operated runner control plane, or a fully self-hosted Relay control plane.
 
+## Release boundaries
+
+V2 is the smallest coherent governed-action platform: authoritative identity and state, capability leases, policy, approvals, budgets, durable events, provider-neutral execution contracts, bounded computers, two communications channels, two connectors, controlled purchase intents, delegation, APIs/MCP, and an operator dashboard.
+
+The following remain outside the V2 release boundary:
+
+- fully self-hosted Relay control plane;
+- unattended production payments or custody of funds;
+- persistent high-assurance desktop fleets;
+- arbitrary connector passthrough or broad OAuth scopes;
+- quorum approvals and expanded enterprise authorization workflows;
+- live certification of every named runtime, provider, connector, and communications channel;
+- multi-region production failover and general-availability commitments.
+
+No V2.1 or V3 implementation has started. Deferred capabilities must not be presented as part of the current release.
+
 ## Security invariants
 
 Relay is designed around several non-negotiable boundaries:
@@ -73,17 +103,28 @@ See [capability leases](docs/v2/capability-leases.md), [policy](docs/v2/policy-e
 
 ## Current qualification
 
-The latest pre-merge campaign passed:
+The latest GitHub qualification run passed:
 
 - V1/V2 frontier guard and Drizzle schema validation
 - TypeScript typecheck and ESLint
-- 172/172 runnable non-live tests
+- 180/180 runnable non-live tests, with 4 opt-in live tests intentionally skipped
 - 2/2 performance tests
 - Production Next.js build
+
+The most recent dedicated local live campaign also passed:
+
 - 6/6 Relay-managed live Playwright/Docker provider tests
 - 3/3 dashboard Playwright end-to-end tests
 
-These results do not convert missing external evidence into a pass. Browserbase, E2B, customer-hosted runner, Slack, Telegram, Google Drive, Linear, production Temporal/database/object-store/KMS topology, build provenance, penetration testing, accessibility/comprehension studies, and deployment protections retain the statuses recorded in the [WO-22 gate matrix](docs/v2/qualification/wo22-gate-matrix.md).
+Hosted-preview evidence additionally includes:
+
+- Vercel production deployment in `Ready` state with an unauthenticated browser stopped at Vercel Authentication;
+- dedicated Neon migration and idempotent owner bootstrap with 1 account, 1 user, 1 human principal, 1 owner membership, and 0 Agents;
+- a PostgreSQL 18 custom-format backup restored with `pg_restore --exit-on-error`, verifying all 21 migrations and the expected inventory;
+- protected `main` with the required `quality` check, strict up-to-date enforcement, administrator enforcement, conversation resolution, and force-push/deletion disabled;
+- immutable `relay-v2.*` release-tag rules.
+
+These results do not convert missing external evidence into a pass. Browserbase, E2B, customer-hosted runner, Slack, Telegram, Google Drive, Linear, production Temporal/database/object-store/KMS topology, build provenance, penetration testing, accessibility/comprehension studies, and protected deployment-environment review remain open. Independent security-owner review of WO-02 is also pending. The authoritative statuses are recorded in the [WO-22 gate matrix](docs/v2/qualification/wo22-gate-matrix.md) and [private-preview evidence](docs/v2/qualification/private-preview-2026-09-14.md).
 
 ## Requirements
 
@@ -109,6 +150,8 @@ pnpm dev
 Open [http://localhost:3000](http://localhost:3000).
 
 The local seed creates a dashboard owner and V1-compatible sample Agents. `pnpm db:seed` prints newly issued Agent credentials once; treat them as secrets. Change every example secret before exposing Relay outside a local development machine.
+
+Do not run the demo seed against a hosted environment. The private-preview runbook uses the fail-closed, idempotent `pnpm db:bootstrap-owner` command and refuses ambiguous tenant state.
 
 ## Agent and runtime integration
 
@@ -155,10 +198,12 @@ Provider-specific live tests must use dedicated V2 test projects and credentials
 - [`docs/v2`](docs/v2) — domain contracts and qualification evidence
 - [V2 implementation ledger](docs/v2-implementation.md) — WorkOrder history and evidence
 - [V2 release dossier](docs/v2/qualification/wo22-release-dossier.md) — release recommendation and blockers
+- [V2 private-preview runbook](docs/v2/operations/private-preview.md) — hosted deployment and rollback procedure
+- [V2 private-preview evidence](docs/v2/qualification/private-preview-2026-09-14.md) — Vercel, Neon, recovery, and plan-decision evidence
 - [V1 architecture](docs/architecture.md) and [V1 release candidate](docs/v1-release.md) — frozen V1 documentation
 
 ## Production readiness
 
-Do not represent Relay V2 as limited-beta-ready or GA-ready until the fail-closed WO-22 gate passes and the Product Owner records the corresponding release decision. The production operating contract, rollout stages, rollback behavior, and incident ownership are defined in [release operations](docs/v2/operations/release-operations.md).
+Do not represent Relay V2 as limited-beta-ready or GA-ready until the fail-closed WO-22 gate passes and the Product Owner records the corresponding release decision. In particular, do not enable runtime actions or place real customer data in the current Neon Free preview: managed deletion protection, production recovery objectives, and owner-authenticated live-flow qualification remain open. The production operating contract, rollout stages, rollback behavior, and incident ownership are defined in [release operations](docs/v2/operations/release-operations.md).
 
 Implementation completeness and release authorization are deliberately separate.
