@@ -105,3 +105,19 @@ Add a tested deployment-mode guard, environment validator, CI workflow, Vercel a
 - Complete the owner-authenticated live browser checks without weakening Vercel deployment protection.
 - Authenticate and configure a persistent worker host; Railway is installed locally but not logged in.
 - Preserve `BLOCKED_EXTERNAL_CONFIGURATION` and pending independent-security-review statuses for the external WO-22 gates.
+
+### 2026-09-18 — Deployment boundary and recovery revalidation
+
+**By:** Codex
+
+**Actions:**
+- Confirmed the current Vercel production deployment is `Ready` at revision `016007e9f1b2b8917cb66fffe0fc2222fb79195e` and that an unauthenticated headless browser is redirected to Vercel Authentication.
+- Attempted a read-only logical backup from the dedicated Neon database for an isolated restore rehearsal.
+- Recorded the exact compatibility blocker: Neon runs PostgreSQL 18.6, while the available `pg_dump` is 14.18; no invalid backup or unsupported restore was accepted as evidence.
+- Confirmed that obtaining a PostgreSQL 18 client is currently blocked by the unaccepted local Xcode license and that Docker is not running.
+- Preserved the managed-backup and owner-authenticated live-flow acceptance criteria as open.
+
+**Learnings:**
+- Deployment readiness and deployment protection are verified independently from the owner-authenticated Relay application flow.
+- A backup checkbox is insufficient: qualification requires a version-compatible artifact and a successful isolated restore.
+- Railway is not required while runtime actions remain disabled; a persistent worker should not be purchased or deployed solely to satisfy preview optics.

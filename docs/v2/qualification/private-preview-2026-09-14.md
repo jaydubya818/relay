@@ -47,3 +47,19 @@ The canonical URL returns the Vercel Authentication challenge to an unauthentica
 - Backup/restore rehearsal: pending.
 - Owner-authenticated live flow: pending.
 - All other external WO-22 gates remain open as recorded in the release dossier and gate matrix.
+
+## 2026-09-18 revalidation
+
+- Revalidated revision: `016007e9f1b2b8917cb66fffe0fc2222fb79195e` (`main`, merge of PR #4).
+- Vercel deployment `dpl_9hmvaM7cGnmetyMbThXAGfNvybSh` reports `Ready` for the production target and serves the owner alias `https://relay-jaydubya818.vercel.app`.
+- A fresh unauthenticated headless-browser session requesting `/login` was redirected to Vercel's authentication page. This reconfirms that the deployment-protection boundary remains fail closed; it does not qualify Relay's owner-authenticated application flow.
+- Neon reports PostgreSQL server version 18.6. The available local `pg_dump` is 14.18 and correctly refused to create a version-incompatible backup. PostgreSQL 17 is also installed but is not a valid PostgreSQL 18 backup client.
+- A PostgreSQL 18 client could not be installed because the host's Xcode license is not accepted, and Docker was not running. No backup artifact was created or retained, no production data was mutated, and no restore was claimed.
+- Neon's configured plan, point-in-time-restore window, deletion protection, and restore path remain unverified because the Neon CLI requires owner authentication.
+
+### Required follow-up
+
+1. Authenticate the Neon CLI as the resource owner and record the actual plan, restore window, and deletion-protection state.
+2. Make a PostgreSQL 18 `pg_dump` from the dedicated Relay database and restore it into an isolated PostgreSQL 18 target.
+3. Verify schema migrations and the expected inventory after restoration, then securely dispose of the rehearsal artifact and target.
+4. Complete the Relay login, readiness, signup-denial, and disabled-action checks in an owner-authenticated browser session without weakening Vercel Authentication.
