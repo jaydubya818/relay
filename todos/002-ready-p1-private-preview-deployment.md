@@ -101,7 +101,7 @@ Add a tested deployment-mode guard, environment validator, CI workflow, Vercel a
 - Recorded resource identifiers, inventory, qualification results, and remaining blockers in `docs/v2/qualification/private-preview-2026-09-14.md`.
 
 **Remaining:**
-- Verify managed-database backup/deletion protection; the isolated logical restore rehearsal is complete.
+- Upgrade or otherwise configure the managed database for deletion protection and verify its PITR window; the isolated logical restore rehearsal is complete.
 - Complete the owner-authenticated live browser checks without weakening Vercel deployment protection.
 - Authenticate and configure a persistent worker host; Railway is installed locally but not logged in.
 - Preserve `BLOCKED_EXTERNAL_CONFIGURATION` and pending independent-security-review statuses for the external WO-22 gates.
@@ -136,3 +136,19 @@ Add a tested deployment-mode guard, environment validator, CI workflow, Vercel a
 **Learnings:**
 - The logical recovery path is qualified with version-matched tooling.
 - The combined managed-database criterion remains open because Neon plan-level PITR retention and deletion protection still require owner-authenticated verification.
+
+### 2026-09-18 — Managed database control inspection
+
+**By:** Codex
+
+**Actions:**
+- Authenticated the Neon CLI and verified that the direct Neon organization is separate from the Vercel Marketplace-managed Relay resource.
+- Queried Vercel's authenticated storage metadata and confirmed that Relay's owned Neon resource is active, connected only to Relay, and uses billing plan `free_v3`.
+- Confirmed from Neon's current official plan documentation that Free-plan Instant Restores are limited to up to six hours or 1 GB of changes, whichever is smaller.
+- Confirmed from Neon's official protected-branch documentation that deletion prevention requires the Scale plan.
+- Attempted Vercel Marketplace SSO in an isolated browser without copying personal browser state; the SSO endpoint requires an authenticated dashboard cookie and correctly returned `Unauthorized`.
+- Preserved the combined database acceptance criterion as open and marked the managed deletion-protection requirement `BLOCKED_EXTERNAL_CONFIGURATION` rather than weakening it.
+
+**Learnings:**
+- The logical recovery path is proven, but the current Free resource cannot satisfy managed deletion protection.
+- A Neon plan upgrade is a Product Owner purchase decision and is not authorized by CLI authentication alone.

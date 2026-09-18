@@ -44,7 +44,7 @@ The canonical URL returns the Vercel Authentication challenge to an unauthentica
 - Remote branch/deployment protections: `BLOCKED_EXTERNAL_CONFIGURATION` where the WO-22 contract requires controls not represented by the current GitHub branch protection and Vercel owner-preview configuration.
 - Independent security-owner review of WO-02: pending.
 - Persistent hosted worker: blocked on worker-host authentication/configuration.
-- Backup/restore rehearsal: pending.
+- Logical backup/restore rehearsal: passed; managed PITR and deletion protection remain open.
 - Owner-authenticated live flow: pending.
 - All other external WO-22 gates remain open as recorded in the release dossier and gate matrix.
 
@@ -59,7 +59,7 @@ The canonical URL returns the Vercel Authentication challenge to an unauthentica
 
 ### Required follow-up
 
-1. Authenticate the Neon CLI as the resource owner and record the actual plan, restore window, and deletion-protection state.
+1. Decide whether to upgrade the Vercel-managed Neon resource to a plan that supports protected branches, then verify the configured PITR window and protection state in an owner-authenticated resource dashboard.
 2. Complete the Relay login, readiness, signup-denial, and disabled-action checks in an owner-authenticated browser session without weakening Vercel Authentication.
 
 ## 2026-09-18 PostgreSQL 18 recovery rehearsal
@@ -75,3 +75,14 @@ The canonical URL returns the Vercel Authentication challenge to an unauthentica
 - Production impact: no writes to Neon; no backup artifact or restored data retained.
 
 This qualifies the logical backup and isolated-restore path. The combined managed-database acceptance criterion remains open until the actual Neon plan, point-in-time-restore window, and deletion-protection state are verified through an owner-authenticated Neon session.
+
+## 2026-09-18 managed database control inspection
+
+- Authenticated Vercel storage metadata confirms `store_NoIIiEgH5AoDvwL5` is the owned, active Neon resource `neon-cerise-car`, connected only to the Relay project.
+- Vercel reports billing plan `free_v3` (`Free`) with no payment method required.
+- Neon documents Free-plan Instant Restores as up to six hours or 1 GB of changes, whichever is smaller: <https://neon.com/blog/new-usage-based-pricing>.
+- Neon documents protected branches, which prevent branch reset/deletion and project deletion, as a Scale-plan feature: <https://neon.com/blog/restrict-access-to-the-production-branch>.
+- The direct Neon OAuth account does not own the Vercel Marketplace resource; its organization contains no projects. The authoritative resource dashboard is reached through Vercel Marketplace SSO.
+- Vercel Marketplace SSO requires an authenticated Vercel browser cookie. It rejected both an isolated unauthenticated browser and an origin-scoped Vercel CLI bearer token, so the configured resource-level history window cannot be independently read from the automation session.
+
+The current Free resource cannot satisfy the deletion-protection portion of the acceptance criterion. That criterion remains open and is now explicitly `BLOCKED_EXTERNAL_CONFIGURATION`; upgrading or purchasing a paid Neon plan requires Product Owner approval. The successful logical restore rehearsal remains valid independent evidence and is not a substitute for managed deletion protection.
