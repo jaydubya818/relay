@@ -101,7 +101,7 @@ Add a tested deployment-mode guard, environment validator, CI workflow, Vercel a
 - Recorded resource identifiers, inventory, qualification results, and remaining blockers in `docs/v2/qualification/private-preview-2026-09-14.md`.
 
 **Remaining:**
-- Verify managed-database backup/deletion protection and rehearse an isolated restore.
+- Verify managed-database backup/deletion protection; the isolated logical restore rehearsal is complete.
 - Complete the owner-authenticated live browser checks without weakening Vercel deployment protection.
 - Authenticate and configure a persistent worker host; Railway is installed locally but not logged in.
 - Preserve `BLOCKED_EXTERNAL_CONFIGURATION` and pending independent-security-review statuses for the external WO-22 gates.
@@ -121,3 +121,18 @@ Add a tested deployment-mode guard, environment validator, CI workflow, Vercel a
 - Deployment readiness and deployment protection are verified independently from the owner-authenticated Relay application flow.
 - A backup checkbox is insufficient: qualification requires a version-compatible artifact and a successful isolated restore.
 - Railway is not required while runtime actions remain disabled; a persistent worker should not be purchased or deployed solely to satisfy preview optics.
+
+### 2026-09-18 — PostgreSQL 18 recovery rehearsal
+
+**By:** Codex
+
+**Actions:**
+- Used the official PostgreSQL 18 container tooling to create a read-only custom-format logical backup from the dedicated Neon database.
+- Restored the archive with `--exit-on-error` into a fresh PostgreSQL 18 database isolated in a disposable container.
+- Verified 21 Drizzle migrations and the expected private-preview inventory: 1 account, 1 user, 1 human principal, 1 owner membership, and 0 Agents.
+- Recorded the 325,351-byte artifact checksum `7f894c9460226b75f63de9141b06dd72a5589dc9e4c2cd5f3bf5cbb50e7f0801`.
+- Deleted the temporary archive and restore container, then verified no matching containers or temporary directories remained.
+
+**Learnings:**
+- The logical recovery path is qualified with version-matched tooling.
+- The combined managed-database criterion remains open because Neon plan-level PITR retention and deletion protection still require owner-authenticated verification.

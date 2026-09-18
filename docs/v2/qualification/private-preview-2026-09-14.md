@@ -60,6 +60,18 @@ The canonical URL returns the Vercel Authentication challenge to an unauthentica
 ### Required follow-up
 
 1. Authenticate the Neon CLI as the resource owner and record the actual plan, restore window, and deletion-protection state.
-2. Make a PostgreSQL 18 `pg_dump` from the dedicated Relay database and restore it into an isolated PostgreSQL 18 target.
-3. Verify schema migrations and the expected inventory after restoration, then securely dispose of the rehearsal artifact and target.
-4. Complete the Relay login, readiness, signup-denial, and disabled-action checks in an owner-authenticated browser session without weakening Vercel Authentication.
+2. Complete the Relay login, readiness, signup-denial, and disabled-action checks in an owner-authenticated browser session without weakening Vercel Authentication.
+
+## 2026-09-18 PostgreSQL 18 recovery rehearsal
+
+- Source operation: read-only PostgreSQL 18 logical backup from the dedicated Neon database.
+- Backup format: PostgreSQL custom archive with ownership and ACLs excluded.
+- Artifact size: 325,351 bytes.
+- Artifact SHA-256: `7f894c9460226b75f63de9141b06dd72a5589dc9e4c2cd5f3bf5cbb50e7f0801`.
+- Restore target: isolated disposable `postgres:18` Docker container and fresh `relay_restore` database.
+- Restore result: passed with `pg_restore --exit-on-error`.
+- Restored inventory: 21 Drizzle migrations, 1 account, 1 user, 1 human principal, 1 owner membership, and 0 Agents.
+- Cleanup: verified no `relay-v2-restore-*` containers or `/private/tmp/relay-v2-restore.*` directories remained.
+- Production impact: no writes to Neon; no backup artifact or restored data retained.
+
+This qualifies the logical backup and isolated-restore path. The combined managed-database acceptance criterion remains open until the actual Neon plan, point-in-time-restore window, and deletion-protection state are verified through an owner-authenticated Neon session.
