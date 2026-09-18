@@ -152,3 +152,13 @@ Add a tested deployment-mode guard, environment validator, CI workflow, Vercel a
 **Learnings:**
 - The logical recovery path is proven, but the current Free resource cannot satisfy managed deletion protection.
 - A Neon plan upgrade is a Product Owner purchase decision and is not authorized by CLI authentication alone.
+
+### 2026-09-18 — Product Owner retained Neon Free
+
+**By:** Product Owner / Codex
+
+**Decision:**
+- Remain on Neon Free for the owner-only, actions-disabled private preview.
+- Do not add a payment method or change the managed database plan.
+- Keep managed deletion protection `BLOCKED_EXTERNAL_CONFIGURATION` and leave the combined database acceptance criterion open.
+- Reconsider and qualify the database plan before real customer data, real-world actions, or any release beyond private preview.
