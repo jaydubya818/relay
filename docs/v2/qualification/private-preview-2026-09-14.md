@@ -74,7 +74,7 @@ The canonical URL returns the Vercel Authentication challenge to an unauthentica
 - Cleanup: verified no `relay-v2-restore-*` containers or `/private/tmp/relay-v2-restore.*` directories remained.
 - Production impact: no writes to Neon; no backup artifact or restored data retained.
 
-This qualifies the logical backup and isolated-restore path. The combined managed-database acceptance criterion remains open until the actual Neon plan, point-in-time-restore window, and deletion-protection state are verified through an owner-authenticated Neon session.
+This qualifies the logical backup and isolated-restore path. The combined managed-database acceptance criterion remains open because the current Free plan cannot provide the required managed deletion protection.
 
 ## 2026-09-18 managed database control inspection
 
@@ -86,3 +86,7 @@ This qualifies the logical backup and isolated-restore path. The combined manage
 - Vercel Marketplace SSO requires an authenticated Vercel browser cookie. It rejected both an isolated unauthenticated browser and an origin-scoped Vercel CLI bearer token, so the configured resource-level history window cannot be independently read from the automation session.
 
 The current Free resource cannot satisfy the deletion-protection portion of the acceptance criterion. That criterion remains open and is now explicitly `BLOCKED_EXTERNAL_CONFIGURATION`; upgrading or purchasing a paid Neon plan requires Product Owner approval. The successful logical restore rehearsal remains valid independent evidence and is not a substitute for managed deletion protection.
+
+## 2026-09-18 Product Owner plan decision
+
+The Product Owner decided to remain on Neon Free for the owner-only, actions-disabled private preview. No billing or plan change was made. Managed deletion protection remains `BLOCKED_EXTERNAL_CONFIGURATION`, and the combined database acceptance criterion must stay open. Before Relay stores real customer data, enables real-world actions, or advances beyond private preview, the database plan and deletion-protection gate must be reconsidered and qualified.
