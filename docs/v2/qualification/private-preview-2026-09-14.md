@@ -90,3 +90,9 @@ The current Free resource cannot satisfy the deletion-protection portion of the 
 ## 2026-09-18 Product Owner plan decision
 
 The Product Owner decided to remain on Neon Free for the owner-only, actions-disabled private preview. No billing or plan change was made. Managed deletion protection remains `BLOCKED_EXTERNAL_CONFIGURATION`, and the combined database acceptance criterion must stay open. Before Relay stores real customer data, enables real-world actions, or advances beyond private preview, the database plan and deletion-protection gate must be reconsidered and qualified.
+
+## 2026-09-18 owner-authenticated preview qualification
+
+The owner-authenticated qualification remains `REQUIRES_HUMAN_REVIEW` because normal Vercel Authentication was not completed in the visible qualification browser. Operational health/readiness passed and the temporary CLI-created automation bypass was immediately revoked with zero bypass entries on read-back; those checks are not owner-login evidence. Automated qualification remained green, while the checked-in development-mode Playwright browser performance case reproducibly missed its `<200 ms` p95 target. No threshold was weakened and no unverified fix was retained.
+
+Full evidence and the exact remaining browser steps are recorded in [`owner-authenticated-preview-2026-09-18.md`](./owner-authenticated-preview-2026-09-18.md). Verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`.
