@@ -54,6 +54,18 @@ const publishedRecord = { reference: "published-1", revision: "1", recordType: "
 
 describe("federation trust boundaries", () => {
   afterEach(cleanupDatabase);
+  it("persists a metadata-only signed denial receipt after authorization rolls back", async () => {
+    const f = await fixture();
+    await revokeFederationGrant(f.jay, f.grant.grantId, f.bindings.signer);
+    await expect(submitFederationRequest(f.ava.credential, f.submission, f.bindings)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" });
+    const denials = (await listAuditRecords(f.sarah.accountId)).filter((record) => record.eventType === "federation.request.denied");
+    expect(denials).toHaveLength(1);
+    expect(denials[0]).toMatchObject({ outcome: "DENIED", agentId: f.ava.agentId, details: { targetAgentId: f.sofie.agentId, capability: "knowledge.query", resource: f.view.viewId, reasonCode: "CAPABILITY_DENIED" } });
+    expect(await f.bindings.signer.verify(denials[0].recordHash, denials[0].signature)).toBe(true);
+    expect(JSON.stringify(denials)).not.toContain(f.submission.payload.query);
+    expect(await db().select().from(federationRequests)).toHaveLength(0);
+    expect((await pollFederationInbox(f.sofie.credential, f.bindings)).deliveries).toHaveLength(0);
+  });
   it("qualifies the two-owner golden path from publication through work and artifact sharing", async () => {
     const f = await fixture();
     const request = await receive(f);

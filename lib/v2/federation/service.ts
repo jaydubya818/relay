@@ -6,7 +6,7 @@ import { hashSecret } from "@/lib/crypto";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
-import { appendAuditRecordInTransaction } from "@/lib/v2/evidence/audit";
+import { appendAuditRecord, appendAuditRecordInTransaction } from "@/lib/v2/evidence/audit";
 import { evaluatePolicy } from "@/lib/v2/policy";
 import { consumeApprovalInTransaction, createApprovalRequest } from "@/lib/v2/approvals";
 import { expireBudgetReservations, reconcileBudgetReservation, reserveBudgetInTransaction } from "@/lib/v2/budgets";
@@ -187,6 +187,17 @@ export async function submitFederationRequest(secret: string, value: unknown, bi
     await transaction.insert(controlOutbox).values({ id: id("out"), accountId: row.targetOwnerId, aggregateType: "federation_request", aggregateId: requestId, type: "federation.request.accepted", payload: { requestId, status: row.status }, idempotencyKey: `federation:${requestId}` });
     await appendAuditRecordInTransaction(transaction, { accountId: caller.ownerId, agentId: caller.agentId, eventType: "federation.request.accepted", outcome: row.status, details: { requestId, targetAgentId: row.targetAgentId, capability: row.capability, resource: row.resource } }, bindings.signer);
     return { requestId, status: row.status, idempotentReplay: false };
+  }).catch(async (error: unknown) => {
+    // Authorization failures roll back admission, including any audit written in
+    // that transaction. Persist the caller's denial separately after rollback.
+    // Admission rate limits have already succeeded, bounding these signed writes.
+    if (error instanceof RelayError && error.code === "CAPABILITY_DENIED") {
+      await appendAuditRecord({ accountId: caller.ownerId, agentId: caller.agentId,
+        eventType: "federation.request.denied", outcome: "DENIED",
+        details: { targetAgentId: target.agentId, capability: submission.capability, resource: submission.resource, reasonCode: error.code },
+      }, bindings.signer);
+    }
+    throw error;
   });
 }
 
