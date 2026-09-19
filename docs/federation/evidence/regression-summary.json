@@ -1,0 +1,304 @@
+{
+  "nonBrowserRegression": {
+    "passed": 197,
+    "failed": 0,
+    "skipped": 4,
+    "filesPassed": 42,
+    "files": [
+      {
+        "file": "tests/auth/authentication.test.ts",
+        "passed": 3,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/browser/browser.test.ts",
+        "passed": 4,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/browser/playwright-live.test.ts",
+        "passed": 0,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/database/migrations.test.ts",
+        "passed": 3,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/federation/federation.test.ts",
+        "passed": 17,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/events/events.test.ts",
+        "passed": 4,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/google/google-capabilities.test.ts",
+        "passed": 2,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/integration/golden-path.test.ts",
+        "passed": 3,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/integration/v1-golden-path.test.ts",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/mcp/projection.test.ts",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/oauth/github-oauth.test.ts",
+        "passed": 2,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/oauth/google-oauth.test.ts",
+        "passed": 2,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/operations/health.test.ts",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/operations/worker.test.ts",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/sandbox/docker-live.test.ts",
+        "passed": 0,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/sandbox/sandbox.test.ts",
+        "passed": 4,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/security/isolation.test.ts",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/security/v1-boundaries.test.ts",
+        "passed": 4,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/sessions/agent-sessions.test.ts",
+        "passed": 1,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/unit/crypto.test.ts",
+        "passed": 2,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/unit/repository-hygiene.test.ts",
+        "passed": 2,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/approvals.test.ts",
+        "passed": 6,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/bootstrap.test.ts",
+        "passed": 4,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/budgets.test.ts",
+        "passed": 7,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/communication-providers.test.ts",
+        "passed": 3,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/connector-providers.test.ts",
+        "passed": 2,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/contracts.test.ts",
+        "passed": 7,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/dashboard.test.ts",
+        "passed": 2,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/delegations.test.ts",
+        "passed": 6,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/deployment.test.ts",
+        "passed": 4,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/developer-platform.test.ts",
+        "passed": 5,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/evidence.test.ts",
+        "passed": 6,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/execution-providers.test.ts",
+        "passed": 7,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/identity.test.ts",
+        "passed": 5,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/leases.test.ts",
+        "passed": 8,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/money.test.ts",
+        "passed": 6,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/orchestration.test.ts",
+        "passed": 8,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/passports.test.ts",
+        "passed": 5,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/policy.test.ts",
+        "passed": 6,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/relay-managed-provider-live.test.ts",
+        "passed": 0,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/relay-managed-provider.test.ts",
+        "passed": 5,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/release-qualification.test.ts",
+        "passed": 5,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/runners.test.ts",
+        "passed": 15,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/security-architecture.test.ts",
+        "passed": 2,
+        "skipped": 0,
+        "failed": 0
+      },
+      {
+        "file": "tests/v2/third-party-providers.test.ts",
+        "passed": 15,
+        "skipped": 0,
+        "failed": 0
+      }
+    ]
+  },
+  "performance": {
+    "passed": 2,
+    "failed": 0
+  },
+  "checks": {
+    "typecheck": "PASSED",
+    "lint": "PASSED",
+    "migrationConsistency": "PASSED",
+    "frontier": "PASSED",
+    "productionBuild": "PASSED"
+  },
+  "browserE2E": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "configuration": "Existing dashboard.spec.ts; workers=1; dedicated disposable database on 55439; temporary config removed after run",
+    "wallTimeSeconds": 35.1
+  },
+  "cleanup": {
+    "automatedTestDatabaseContainer": "relay-federation-automated-qual",
+    "removedWithVolumes": true,
+    "temporaryBrowserConfigRemoved": true,
+    "unrelatedExistingContainerPreserved": "relay-v2-test-postgres"
+  }
+}
