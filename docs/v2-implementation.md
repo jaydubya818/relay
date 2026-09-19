@@ -327,3 +327,14 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Fix commit: `bce7cc6` (`fix(v2): harden evidence and policy qualification`).
 - Qualification passed: V1/V2 frontier guard, Drizzle schema check, typecheck, lint, all runnable non-live tests (172/172), performance tests (2/2), production build, Relay-managed live provider suite (6/6), and dashboard Playwright E2E (3/3).
 - WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`. Required CI/deployment configuration, third-party provider and production-topology evidence, independent security/human review, and Product Owner release decisions remain unchanged; no V1 or V2.1/V3 surface was modified.
+
+### 2026-09-18 — owner-authenticated preview qualification attempt
+
+- Qualified `origin/main` at `2a2bf372477165d5fed8a9430d90558df4358da3` from an isolated disposable clone without switching or editing the V1 soak checkout.
+- Hosted Vercel health and readiness returned database/migration/event ready. A CLI-created automation bypass was immediately revoked with regeneration disabled; read-back reported zero bypass entries. No bypass was retained or used as owner-login evidence.
+- Hosted inventory remained 21 migrations, 1 account, 1 user, 1 human principal, 1 active owner membership, 0 Agents, and no active unexpired application session before login.
+- Focused authentication/security/dashboard/release qualification passed 15/15. Full qualification passed typecheck, lint, 180 runnable tests with 4 intentional live-provider skips, 2/2 performance tests, and the production build.
+- Local Playwright functional flows passed 2/2, including login/navigation/credential creation and signup/empty states/logout/session revocation. The browser performance case failed reproducibly at 224.909 ms and 222.460 ms p95 against the unchanged `<200 ms` threshold. No unverified correction or threshold change was retained.
+- Normal Vercel Authentication was not completed in the visible browser. Hosted Relay login, protected-route/session behavior, signup denial, runtime-action denial, all owner routes, approval context, activity correlation, accessibility smoke, and required screenshots therefore remain `REQUIRES_HUMAN_REVIEW`.
+- Verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`. Evidence: `docs/v2/qualification/owner-authenticated-preview-2026-09-18.md`.
+- Remote branch/deployment enforcement retains `BLOCKED_EXTERNAL_CONFIGURATION`; WO-02 independent security-owner review remains pending. No Telegram, Browserbase/E2B, connector, V2.1/V3, or V1 work began.
