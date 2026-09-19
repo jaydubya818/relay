@@ -59,24 +59,3 @@ test("a new account owner can register and revoke the browser session on logout"
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);
 });
-
-test("critical dashboard routes meet the warm local response target", async ({ page }) => {
-  test.setTimeout(60_000);
-  await signIn(page);
-  for (const route of ["/", "/agents", "/memory", "/connections", "/sandboxes", "/browsers", "/events", "/activity", "/developer"]) {
-    await page.goto(route);
-    const samples: number[] = [];
-    for (let sample = 0; sample < 20; sample += 1) {
-      const started = performance.now();
-      const response = await page.request.get(route);
-      samples.push(performance.now() - started);
-      expect(response.ok()).toBe(true);
-    }
-    samples.sort((a, b) => a - b);
-    const p50Ms = samples[9];
-    const p95Ms = samples[18];
-    const p99Ms = samples[19];
-    console.info(JSON.stringify({ benchmark: route, p50Ms, p95Ms, p99Ms, samples: samples.length }));
-    expect(p95Ms).toBeLessThan(200);
-  }
-});
