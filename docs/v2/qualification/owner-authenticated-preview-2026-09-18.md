@@ -172,3 +172,17 @@ No Telegram implementation may begin from this result.
 - Remote branch/deployment protections remain `BLOCKED_EXTERNAL_CONFIGURATION` exactly as previously recorded. Independent security-owner review of WO-02 remains pending.
 
 Verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`.
+
+## 14. 2026-09-19 hosted performance root-cause and remediation
+
+- Preserved the original exact-preview `/` failure of p50 `391.915`, p95 `520.835`, and p99 `600.829` ms.
+- Added owner-only, private-preview-only, non-sensitive stage timing and established that Vercel `sfo1` was crossing regions to the pooled Neon database in `us-east-1` on every database-dependent request.
+- Warm `sfo1` measurements were: simple query p95 `60.068` ms, Relay authentication/session p95 `125.027` ms, and V2 dashboard read-model p95 `126.977` ms. Protection/network controls were materially smaller and did not explain the application-route regression.
+- Corrected only the evidenced topology defect by setting Vercel to `iad1` in commit `ee3a5e3`; no threshold, security check, query, V1 surface, or product scope changed.
+- On an authenticated protected `iad1` comparison deployment, the simple-query, authentication/session, and dashboard-read-model p95 values fell to `9.679`, `9.320`, and `12.231` ms. Two isolated warm `/` repetitions measured total-response p95 `147.6` and `169.4` ms and passed the unchanged `<200 ms` target. The initial cold/transient distribution measured p95 `235.1` ms and remains recorded separately.
+- The exact final automatic deployment `dpl_9pNSqSUQptf5armoorvys7pTzvjW` is `Ready`, serves the canonical branch alias, and has all functions in `iad1`. Vercel Security Checkpoint Code 21 then blocked both retained and fresh normal-auth browser sessions; no bypass was used. Exact-final-deployment browser navigation and complete-navigation timing therefore remain externally blocked.
+- Final local qualification passed typecheck, lint, 184 runnable tests with 5 opt-in live-provider skips, 2/2 dedicated performance tests, the production build, Playwright functional 2/2, and production performance 1/1. Local `/` measured p50 `113.529`, p95 `125.374`, and p99 `133.413` ms.
+- Performance verdict: `PASS` for the existing warm authenticated-request contract. Owner-preview verdict remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` until the exact final normal-auth browser recheck is possible.
+- Detailed evidence: [`hosted-performance-2026-09-19.md`](./hosted-performance-2026-09-19.md).
+
+WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review and formal accessibility/comprehension remain pending. No V1, Telegram, V2.1, or V3 work was performed.
