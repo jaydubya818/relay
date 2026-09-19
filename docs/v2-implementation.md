@@ -349,3 +349,14 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - A candidate V1 missing-Agent correction was committed and immediately reverted when the frozen V1 boundary was recognized. Final diff against `origin/main` has no V1 application change.
 - Final automated qualification passed typecheck, lint, the full serial CI suite, both dedicated performance tests, production build, Playwright functional 2/2 and production performance 1/1.
 - Owner preview remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` because the exact hosted deployment misses the performance threshold. WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote checks/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review and formal accessibility/comprehension remain pending.
+
+### 2026-09-19 — hosted performance root-cause and remediation
+
+- Added owner-only, private-preview-only, non-sensitive application-stage timing in commits `f7b5daa` and `122d603`; no durable credential, owner identifier, or secret is returned.
+- Established that the dominant regression was Vercel `sfo1` repeatedly crossing regions to pooled Neon in `us-east-1`. Warm pre-fix p95 was `60.068` ms for a simple query, `125.027` ms for Relay authentication/session work, and `126.977` ms for the V2 dashboard read model.
+- Applied the smallest evidenced correction in `ee3a5e3`: Vercel now runs in `iad1`. No acceptance threshold, authentication, authorization, database query, V1 surface, or product feature changed.
+- The authenticated protected post-fix preview passed two independent warm `/` distributions at p95 `147.6` and `169.4` ms against the unchanged `<200 ms` contract. The first cold/transient p95 `235.1` ms is preserved separately.
+- Final local production `/` passed at p50/p95/p99 `113.529 / 125.374 / 133.413` ms. Regression passed typecheck, lint, 184 runnable CI tests with 5 opt-in live-provider skips, 2/2 dedicated performance tests, production build, Playwright functional 2/2, and production performance 1/1.
+- The final automatic preview `dpl_9pNSqSUQptf5armoorvys7pTzvjW` is Ready and verified in `iad1`, but Vercel Security Checkpoint Code 21 prevented the exact-final normal-auth browser rerun. No bypass was used.
+- Performance verdict is `PASS` for the defined warm authenticated-request metric. Owner preview remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` pending that exact-final browser recheck. Evidence: `docs/v2/qualification/hosted-performance-2026-09-19.md`.
+- WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review and formal accessibility/comprehension remain pending. No V1, Telegram, V2.1, or V3 work was performed.

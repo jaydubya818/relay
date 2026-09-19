@@ -109,3 +109,11 @@ Full evidence and the exact remaining browser steps are recorded in [`owner-auth
 - Verdict remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` because hosted performance misses the acceptance threshold. Remote branch/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 security-owner review and formal accessibility/comprehension remain pending.
 
 Detailed evidence: [`owner-authenticated-preview-2026-09-18.md`](./owner-authenticated-preview-2026-09-18.md).
+
+## 2026-09-19 hosted performance remediation
+
+Stage timing proved that the protected preview's dominant latency was the Vercel `sfo1` to Neon `us-east-1` database path, amplified by session validation, pool waves, and cold connections. The smallest correction aligned Vercel with the database in `iad1` (`ee3a5e3`). On an authenticated protected post-fix preview, two independent warm `/` runs passed the unchanged `<200 ms` contract at p95 `147.6` and `169.4` ms; the initial cold/transient p95 `235.1` ms is preserved separately. Final local production `/` measured p50 `113.529`, p95 `125.374`, and p99 `133.413` ms.
+
+The exact final preview `dpl_9pNSqSUQptf5armoorvys7pTzvjW` is Ready and verified in `iad1`, but Vercel Security Checkpoint Code 21 prevented the exact-final normal-auth browser rerun after the measurement volume. No bypass was used. Performance is `PASS` for the defined warm authenticated-request metric; owner preview remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` pending that exact-final browser recheck. See [`hosted-performance-2026-09-19.md`](./hosted-performance-2026-09-19.md).
+
+WO-22 and all unrelated external gates remain unchanged. No V1, Telegram, V2.1, or V3 work was performed.

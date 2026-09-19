@@ -183,3 +183,13 @@ The exact branch initially lacked branch-scoped `RELAY_DEPLOYMENT_MODE`, so the 
 Local production performance passed all nine routes with `/` p95 162.102 ms against the unchanged `<200 ms` threshold. The exact protected Vercel preview failed every hosted route; an isolated `/` run measured p50 391.915 ms, p95 520.835 ms and p99 600.829 ms. Classification is `ENVIRONMENT_SPECIFIC_REGRESSION`.
 
 The owner-preview verdict remains `OWNER PREVIEW QUALIFICATION INCOMPLETE`. WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote checks/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review, penetration evidence, formal accessibility/comprehension, provider/topology evidence and Product Owner release decisions remain open. No V1 net change, V2.1/V3 work, or new connector/provider implementation was retained.
+
+## 2026-09-19 hosted performance root-cause and remediation
+
+The protected-preview performance failure was traced to a cross-region application/database topology: Vercel functions in `sfo1` repeatedly accessed pooled Neon in `us-east-1`. An owner-only private-preview probe measured warm pre-fix p95 of `60.068` ms for a simple query, `125.027` ms for Relay authentication/session work, and `126.977` ms for the V2 dashboard read model. Network and Vercel-protection controls were materially smaller.
+
+Commit `ee3a5e3` aligned Vercel functions to `iad1`. An authenticated protected comparison preview then measured warm p95 of `9.679` ms for a simple query, `9.320` ms for authentication/session work, and `12.231` ms for the dashboard read model. Two independent warm `/` distributions passed the unchanged `<200 ms` contract at p95 `147.6` and `169.4` ms; the first cold/transient p95 `235.1` ms remains separately recorded. Final local production `/` passed at p50/p95/p99 `113.529 / 125.374 / 133.413` ms.
+
+The final automatic deployment is Ready with all functions verified in `iad1`, but Vercel Security Checkpoint Code 21 prevented an exact-final normal-auth browser rerun. No bypass was used. Performance is `PASS` for the established warm authenticated-request contract; owner preview remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` pending the exact-final browser recheck. Full evidence is in [`hosted-performance-2026-09-19.md`](./hosted-performance-2026-09-19.md).
+
+This does not close WO-22. Its status remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review, penetration evidence, formal accessibility/comprehension, provider/topology evidence, and Product Owner release decisions remain open.
