@@ -173,3 +173,13 @@ Hosted health/readiness and the full automated regression remained green, but no
 The checked-in development-mode Playwright suite passed both functional flows and reproducibly failed its warm-route performance case at 224.909 ms and 222.460 ms p95 against the unchanged `<200 ms` threshold. Dedicated performance tests and the production build passed. No threshold was weakened and no unverified product or harness change was retained.
 
 Detailed evidence: [`owner-authenticated-preview-2026-09-18.md`](./owner-authenticated-preview-2026-09-18.md). Verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`. WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; all unrelated external, independent-review, and Product Owner gates are unchanged.
+
+## 2026-09-19 owner-authenticated preview completion
+
+Normal owner authentication completed on final revision `f39288e74c74bc3764457bbc52d8f3961bc47e11`, deployment `dpl_7id7j1jxSmBM4MJh6JaLTKAorTeo`. Login, session persistence, logout/revocation, signup denial, invalid-session rejection, all V2 dashboard routes, inherited owner routes, empty states, console health, keyboard semantics, and the private-preview runtime denial passed live. The tenant remained 1 account, 1 owner, 0 Agents and 0 Agent credentials; no synthetic consequential approval or action was created.
+
+The exact branch initially lacked branch-scoped `RELAY_DEPLOYMENT_MODE`, so the runtime denial returned 500. Only known non-secret safety values were added to the qualification branch; the corrected deployment returns 503 `CAPABILITY_DENIED`. No Vercel secret was exported or protection bypass retained.
+
+Local production performance passed all nine routes with `/` p95 162.102 ms against the unchanged `<200 ms` threshold. The exact protected Vercel preview failed every hosted route; an isolated `/` run measured p50 391.915 ms, p95 520.835 ms and p99 600.829 ms. Classification is `ENVIRONMENT_SPECIFIC_REGRESSION`.
+
+The owner-preview verdict remains `OWNER PREVIEW QUALIFICATION INCOMPLETE`. WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote checks/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review, penetration evidence, formal accessibility/comprehension, provider/topology evidence and Product Owner release decisions remain open. No V1 net change, V2.1/V3 work, or new connector/provider implementation was retained.

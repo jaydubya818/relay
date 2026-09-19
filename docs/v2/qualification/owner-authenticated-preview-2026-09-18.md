@@ -1,10 +1,12 @@
 # Relay V2 owner-authenticated preview qualification — 2026-09-18
 
-Status: `REQUIRES_HUMAN_REVIEW`
+Status: `BLOCKED_EXTERNAL_QUALIFICATION`
 
 Verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`
 
 This record covers qualification only. It does not authorize Telegram, Browserbase/E2B, connector expansion, V2.1/V3 work, or any V1 change.
+
+The 2026-09-18 incomplete attempt is preserved below as historical evidence. The 2026-09-19 completion record at the end is authoritative for the current branch and deployment.
 
 ## 1. Branch, revision, and isolation
 
@@ -114,3 +116,59 @@ Overall browser result: 2 passed, 1 failed. Classification: `FAILED` for the bro
 `OWNER PREVIEW QUALIFICATION INCOMPLETE`
 
 No Telegram implementation may begin from this result.
+
+## 13. 2026-09-19 owner-authenticated completion record
+
+### Exact revision and deployment
+
+- Qualification branch: `codex/relay-owner-preview-qualification`.
+- Final application revision: `f39288e74c74bc3764457bbc52d8f3961bc47e11`.
+- Final Vercel preview: `dpl_7id7j1jxSmBM4MJh6JaLTKAorTeo`, `Ready`, canonical branch alias `https://relay-git-codex-relay-owner-preview-qualification-jaydubya818.vercel.app`.
+- The temporary V1 missing-Agent correction in `5680056` was reverted by `f39288e`; the final diff against `origin/main` contains no V1 application change.
+- No V2.1/V3, Telegram, live third-party provider, or connector-expansion work was started.
+
+### Owner authentication and session behavior
+
+- `PASSED_LIVE` — normal Vercel Authentication completed through the owner GitHub account. No deployment-protection bypass was created or retained.
+- `PASSED_LIVE` — Relay rendered its own login, accepted the existing owner identity, created a production `__Host-relay_session`, and redirected to the authenticated Overview.
+- The owner password was reset only after explicit Product Owner approval because the original credential was unavailable. Exactly one existing owner hash was replaced, one prior active session was revoked, and the replacement was stored as a generic macOS Keychain item without printing it. A read-only verification proved the Keychain value matched the hosted owner hash.
+- `PASSED_LIVE` — the authenticated session persisted across reload and all protected route transitions.
+- `PASSED_LIVE` — logout revoked the application session; a subsequent `/v2` request redirected to `/login`.
+- `PASSED_LIVE` — an explicitly invalid `__Host-relay_session` received HTTP 307 to `/login`.
+- `PASSED_LIVE` — `/signup` redirected to `/login` with signup disabled.
+
+### Hosted route and state inspection
+
+- `PASSED_LIVE` — all ten V2 routes rendered with one `main`, one `h1`, the expected current navigation item, and their truthful empty/disabled states: `/v2`, `/v2/agents`, `/v2/approvals`, `/v2/tasks`, `/v2/governance`, `/v2/infrastructure`, `/v2/computers`, `/v2/connections`, `/v2/activity`, and `/v2/settings`.
+- `PASSED_LIVE` — the inherited owner routes `/`, `/agents`, `/memory`, `/connections`, `/sandboxes`, `/browsers`, `/events`, `/activity`, `/developer`, and `/settings` rendered without console warnings or errors during the route sweep.
+- V2 state remained truthful: zero active work, approvals, Agents, runtime clients, policies, budgets, runners, placements, computers, communication identities, connectors, messages, or audit records.
+- Settings preserved `BLOCKED_EXTERNAL_CONFIGURATION` for remote checks/deployment enforcement and the pending independent WO-02 review.
+- `NOT_RUN_NO_FIXTURE` — no approval decision or approval/activity correlation was fabricated because the hosted tenant has zero Agents and zero pending approvals. Automated approval, step-up, evidence, isolation, and replay coverage remains green.
+
+### Denial, accessibility, and data-integrity evidence
+
+- `PASSED_LIVE` — after correcting branch-scoped non-secret preview settings, `POST /api/v2/runtime/actions` returned HTTP 503 with `CAPABILITY_DENIED`; no durable runtime credential was used.
+- The first live denial attempt returned HTTP 500 because `RELAY_DEPLOYMENT_MODE` was scoped only to a different preview branch. The exact qualification branch now has `RELAY_DEPLOYMENT_MODE=private-preview`, `RELAY_V2_ACTIONS_ENABLED=false`, `RELAY_ALLOW_SIGNUP=false`, and branch-specific public/issuer URLs. No Vercel secret was exported.
+- A missing V1 Agent detail route produced a server exception. A candidate fix passed focused tests but was reverted because V1 is frozen. The finding remains evidence only and is not a Relay V2 change.
+- `PASSED_LIVE` — keyboard smoke focused `Skip to content` first; the V2 command page had one `main`, one `h1`, `nav[aria-label="Relay V2"]`, one current-page marker, zero unnamed buttons, and zero duplicate IDs.
+- Formal screen-reader/platform and multi-participant approval-comprehension work remains `REQUIRES_HUMAN_REVIEW`.
+- Post-qualification inventory: 1 account, 1 user, 1 principal, 1 membership, 0 Agents, 0 Agent credentials, 4 total sessions, 0 active sessions at the inventory point, and 4 revoked sessions. The final owner login created a new active session afterward. Signup and denial probes created no account, Agent, or credential.
+
+### Regression and performance evidence
+
+- `PASSED_AUTOMATED` — typecheck, lint, the full serial CI suite, both dedicated performance tests, and the production build completed successfully after the final net code state. The first sandboxed attempt was invalid because local Postgres/network access was denied; the identical unrestricted run passed.
+- `PASSED_AUTOMATED` — Playwright functional flows passed 2/2.
+- `PASSED_AUTOMATED` — the production-mode Playwright gate passed 1/1 with one warmup and 20 sequential samples per route. Final local production p95 values were: `/` 162.102 ms; `/agents` 6.826 ms; `/memory` 7.438 ms; `/connections` 6.877 ms; `/sandboxes` 8.445 ms; `/browsers` 5.192 ms; `/events` 5.882 ms; `/activity` 5.062 ms; `/developer` 5.982 ms.
+- Development-mode `/` remained above target at p50 214.624 ms, p95 223.455 ms, and p99 228.768 ms.
+- Hosted final-deployment HTTP timing used `curl time_total`, one warmup, and 20 sequential samples inside each route. The nine routes were sampled concurrently across routes; every hosted p95 exceeded 200 ms. Final p95 values were `/` 807.424 ms, `/agents` 408.495 ms, `/memory` 509.800 ms, `/connections` 575.419 ms, `/sandboxes` 401.398 ms, `/browsers` 700.023 ms, `/events` 543.265 ms, `/activity` 470.807 ms, and `/developer` 536.125 ms.
+- A separate, globally isolated `/` run confirmed p50 391.915 ms, p95 520.835 ms, and p99 600.829 ms. The `<200 ms` threshold was not weakened.
+- Classification: `ENVIRONMENT_SPECIFIC_REGRESSION`. Local production is green, while the exact protected Vercel preview is not. This is not classified as a development-only contract defect and is not dismissed as insufficient evidence.
+
+### Final status
+
+- Owner login, persistence, logout, signup denial, protected-route denial, runtime-action denial, V2 dashboard routes, empty states, keyboard semantics, console health, and database non-creation checks are `PASSED_LIVE`.
+- Approval decision evidence is `NOT_RUN_NO_FIXTURE`; formal accessibility/comprehension remains `REQUIRES_HUMAN_REVIEW`.
+- Hosted performance remains `ENVIRONMENT_SPECIFIC_REGRESSION` and blocks the owner-preview acceptance threshold.
+- Remote branch/deployment protections remain `BLOCKED_EXTERNAL_CONFIGURATION` exactly as previously recorded. Independent security-owner review of WO-02 remains pending.
+
+Verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`.
