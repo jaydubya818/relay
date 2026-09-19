@@ -13,6 +13,7 @@
     "build": "next build",
     "start": "next start",
     "worker": "tsx scripts/worker.ts",
+    "soak:check": "node --env-file=.env.local --import tsx scripts/soak-check.ts",
     "deploy:check": "tsx scripts/validate-private-preview.ts",
     "v2:frontier:check": "tsx scripts/verify-v2-frontier.ts",
     "qualify:google": "tsx scripts/qualify-google.ts",

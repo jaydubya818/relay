@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
 import { createAgent } from "@/lib/agents";
-import { connectGoogle, disconnectGoogle } from "@/lib/connections";
+import { connectGoogle, disconnectGoogle, googleSecret } from "@/lib/connections";
+import { decryptSecret } from "@/lib/crypto";
+import { db } from "@/lib/db";
+import { connectionCredentials, connections } from "@/lib/db/schema";
 import { handleMcp } from "@/lib/mcp";
 import { cleanupDatabase, freshDatabase, secondAccount } from "../helpers";
 
@@ -10,6 +14,8 @@ function value(result: unknown) { return JSON.parse((result as { content: Array<
 describe("Google read capabilities", () => {
   let accountId: string;
   beforeEach(async () => {
+    vi.stubEnv("GOOGLE_CLIENT_ID", "test-google-client-id");
+    vi.stubEnv("GOOGLE_CLIENT_SECRET", "test-google-client-secret");
     accountId = (await freshDatabase()).accountId;
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL, init?: RequestInit) => {
       const url = String(input);
@@ -23,7 +29,7 @@ describe("Google read capabilities", () => {
     }));
     await connectGoogle(accountId, "valid-google-token", { refreshToken: "refresh", expiresAt: new Date(Date.now() + 3600_000).toISOString(), scopes: ["gmail.readonly", "calendar.readonly"] });
   });
-  afterEach(async () => { vi.unstubAllGlobals(); await cleanupDatabase(); });
+  afterEach(async () => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); await cleanupDatabase(); });
 
   it("projects and executes only explicitly granted email and calendar reads", async () => {
     const allowed = await createAgent(accountId, { name: "Allowed", capabilities: ["email.search", "email.read", "calendar.event.list", "calendar.event.read", "calendar.availability.read"] });
@@ -45,5 +51,68 @@ describe("Google read capabilities", () => {
     const other = await secondAccount();
     await connectGoogle(other, "other-google-token", { expiresAt: new Date(Date.now() + 3600_000).toISOString() });
     await expect(call(agent.credential, "relay_email_search", { query: "anything" })).rejects.toMatchObject({ code: "CONNECTION_REQUIRED" });
+  });
+
+  it("recovers an ERROR connection when its existing refresh grant succeeds later", async () => {
+    const agent = await createAgent(accountId, { name: "Recovery Agent", capabilities: ["email.search", "calendar.event.list"] });
+    await db().update(connectionCredentials).set({ tokenExpiresAt: new Date(Date.now() - 60_000).toISOString() });
+    let refreshAttempts = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.includes("oauth2.googleapis.com/token")) {
+        refreshAttempts += 1;
+        if (refreshAttempts === 1) return Response.json({ error: "unauthorized_client", error_description: "Unauthorized" }, { status: 401 });
+        return Response.json({ access_token: "recovered-google-token", expires_in: 3600 });
+      }
+      if (url.endsWith("/profile")) return Response.json({ emailAddress: "workspace@example.com" });
+      if (url.includes("/messages?")) return Response.json({ messages: [{ id: "msg-after-refresh" }], resultSizeEstimate: 1 });
+      if (url.includes("/events?")) return Response.json({ items: [{ id: "event-after-refresh" }] });
+      throw new Error(`Unexpected Google URL: ${url}`);
+    }));
+
+    await expect(call(agent.credential, "relay_email_search", { query: "after:refresh" })).rejects.toMatchObject({ code: "CONNECTION_REQUIRED" });
+    let [connection] = await db().select().from(connections).where(eq(connections.accountId, accountId));
+    expect(connection.status).toBe("ERROR");
+    const failedAt = connection.updatedAt;
+
+    expect(value(await call(agent.credential, "relay_email_search", { query: "after:refresh" }))).toMatchObject({ messages: [{ id: "msg-after-refresh" }] });
+    expect(value(await call(agent.credential, "relay_calendar_event_list"))).toMatchObject({ items: [{ id: "event-after-refresh" }] });
+
+    [connection] = await db().select().from(connections).where(eq(connections.accountId, accountId));
+    const [credential] = await db().select().from(connectionCredentials);
+    expect(connection.status).toBe("CONNECTED");
+    expect(new Date(connection.updatedAt).getTime()).toBeGreaterThan(new Date(failedAt).getTime());
+    expect(decryptSecret(credential.encryptedAccessToken)).toBe("recovered-google-token");
+    if (!credential.encryptedRefreshToken || !credential.tokenExpiresAt) throw new Error("Expected durable refresh credentials.");
+    expect(decryptSecret(credential.encryptedRefreshToken)).toBe("refresh");
+    expect(new Date(credential.tokenExpiresAt).getTime()).toBeGreaterThan(Date.now());
+    expect(refreshAttempts).toBe(2);
+  });
+
+  it("keeps a concurrent successful refresh from being overwritten by a late failure", async () => {
+    await db().update(connectionCredentials).set({ tokenExpiresAt: new Date(Date.now() - 60_000).toISOString() });
+    let releaseFailure!: () => void;
+    const delayedFailure = new Promise<void>((resolve) => { releaseFailure = resolve; });
+    let refreshAttempts = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (!url.includes("oauth2.googleapis.com/token")) throw new Error(`Unexpected Google URL: ${url}`);
+      refreshAttempts += 1;
+      if (refreshAttempts === 1) {
+        await delayedFailure;
+        return Response.json({ error: "temporarily_unavailable" }, { status: 503 });
+      }
+      return Response.json({ access_token: "concurrent-google-token", expires_in: 3600 });
+    }));
+
+    const first = googleSecret(accountId, "email.read");
+    await vi.waitFor(() => expect(refreshAttempts).toBe(1));
+    const second = googleSecret(accountId, "email.read");
+    await expect(second).resolves.toBe("concurrent-google-token");
+    releaseFailure();
+    await expect(first).resolves.toBe("concurrent-google-token");
+
+    const [connection] = await db().select().from(connections).where(eq(connections.accountId, accountId));
+    expect(connection.status).toBe("CONNECTED");
   });
 });
