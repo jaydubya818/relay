@@ -72,7 +72,7 @@ export async function revokeSession(value?: string) {
 
 export async function currentUser() {
   const store = await cookies();
-  return await parseSession(store.get(SESSION_COOKIE)?.value);
+  return await parseSession(store.get(sessionCookieName())?.value);
 }
 
 export async function requireUser() {
