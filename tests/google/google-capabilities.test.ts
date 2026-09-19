@@ -14,6 +14,8 @@ function value(result: unknown) { return JSON.parse((result as { content: Array<
 describe("Google read capabilities", () => {
   let accountId: string;
   beforeEach(async () => {
+    vi.stubEnv("GOOGLE_CLIENT_ID", "test-google-client-id");
+    vi.stubEnv("GOOGLE_CLIENT_SECRET", "test-google-client-secret");
     accountId = (await freshDatabase()).accountId;
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL, init?: RequestInit) => {
       const url = String(input);
@@ -27,7 +29,7 @@ describe("Google read capabilities", () => {
     }));
     await connectGoogle(accountId, "valid-google-token", { refreshToken: "refresh", expiresAt: new Date(Date.now() + 3600_000).toISOString(), scopes: ["gmail.readonly", "calendar.readonly"] });
   });
-  afterEach(async () => { vi.unstubAllGlobals(); await cleanupDatabase(); });
+  afterEach(async () => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); await cleanupDatabase(); });
 
   it("projects and executes only explicitly granted email and calendar reads", async () => {
     const allowed = await createAgent(accountId, { name: "Allowed", capabilities: ["email.search", "email.read", "calendar.event.list", "calendar.event.read", "calendar.availability.read"] });
