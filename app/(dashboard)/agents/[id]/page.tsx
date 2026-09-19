@@ -1,7 +1,7 @@
 import { AgentCredentialActions, CapabilityToggle, RevokeCredentialButton } from "@/components/actions";
 import { PageHeader, Status } from "@/components/page";
-import { getAgent } from "@/lib/agents";
 import { requireUser } from "@/lib/auth";
+import { getDashboardAgent } from "@/lib/dashboard-agent";
 import { listActivity } from "@/lib/activity";
 import { CAPABILITIES } from "@/lib/types";
 import { listAgentSessions } from "@/lib/agent-sessions";
@@ -12,7 +12,7 @@ import { listConnections } from "@/lib/connections";
 
 export default async function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
-  const agent = await getAgent(user.accountId, (await params).id);
+  const agent = await getDashboardAgent(user.accountId, (await params).id);
   const [activity, sessions, allSandboxes, allBrowsers, allInbox, connections] = await Promise.all([listActivity(user.accountId, { agentId: agent.id, limit: 8 }), listAgentSessions(user.accountId, agent.id), listSandboxes(user.accountId), listBrowserSessions(user.accountId), listAccountInbox(user.accountId), listConnections(user.accountId)]);
   const sandboxes = allSandboxes.filter((resource) => resource.ownerAgentId === agent.id);
   const browsers = allBrowsers.filter((resource) => resource.ownerAgentId === agent.id);
