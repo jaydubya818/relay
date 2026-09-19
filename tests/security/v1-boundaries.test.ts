@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAgent, getAgent, revokeCredential } from "@/lib/agents";
-import { getDashboardAgent } from "@/lib/dashboard-agent";
 import { connectGoogle, disconnectGoogle } from "@/lib/connections";
 import { ingestEvent } from "@/lib/events";
 import { handleMcp } from "@/lib/mcp";
@@ -31,13 +30,6 @@ describe("V1 security boundaries", () => {
     await expect(call(second.credential, "relay_browser_extract", { browserSessionId: browser.id })).rejects.toMatchObject({ status: 404 });
     await expect(ingestEvent({ accountId, type: "security.event", source: "test", deliveryId: "security-1", occurredAt: new Date().toISOString(), subjectType: "test", subjectId: "one" }, { agentIds: [second.agentId] })).rejects.toMatchObject({ status: 404 });
     expect(value(await call(second.credential, "relay_agent_inbox_list"))).toEqual([]);
-  });
-
-  it("renders missing and cross-account dashboard agents as not found", async () => {
-    const first = await createAgent(accountId, { name: "Private Agent" });
-    const otherAccount = await secondAccount();
-    await expect(getDashboardAgent(accountId, "agt_missing")).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
-    await expect(getDashboardAgent(otherAccount, first.agentId)).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
   });
 
   it("never logs provider tokens or email content", async () => {

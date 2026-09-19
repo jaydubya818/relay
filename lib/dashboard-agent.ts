@@ -1,6 +1,4 @@
-import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { getAgent } from "@/lib/agents";
 import { db } from "@/lib/db";
 import { agents } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
@@ -10,13 +8,4 @@ export async function dashboardAgent(user: SessionUser, agentId: string): Promis
   const [agent] = await db().select({ id: agents.id, name: agents.name }).from(agents).where(and(eq(agents.id, agentId), eq(agents.accountId, user.accountId), eq(agents.status, "ACTIVE"))).limit(1);
   if (!agent) throw new RelayError("INVALID_INPUT", "Active Agent not found.", undefined, 404);
   return { credentialId: `dashboard:${user.id}`, agentId: agent.id, accountId: user.accountId, agentName: agent.name };
-}
-
-export async function getDashboardAgent(accountId: string, agentId: string) {
-  try {
-    return await getAgent(accountId, agentId);
-  } catch (error) {
-    if (error instanceof RelayError && error.status === 404) notFound();
-    throw error;
-  }
 }
