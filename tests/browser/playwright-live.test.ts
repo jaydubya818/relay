@@ -36,4 +36,15 @@ describe("PlaywrightBrowserProvider live", () => {
       await provider.close(session);
     }
   }, 120_000);
+
+  live("closes a context in its owning process when the provider TTL elapses", async () => {
+    const provider = new PlaywrightBrowserProvider();
+    const policy: BrowserResourcePolicy = { ttlSeconds: 0.05, operationTimeoutMs: 2_000, maxExtractChars: 10_000, network: "OPEN" };
+    const session = await provider.create(policy);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    await expect(provider.extract(session, undefined, policy)).rejects.toMatchObject({ code: "PROVIDER_ERROR" });
+    await expect(provider.close(session)).resolves.toBeUndefined();
+  }, 120_000);
 });

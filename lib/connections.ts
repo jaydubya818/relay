@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
 import { db, withTransaction } from "@/lib/db";
 import { capabilityGrants, connectionCredentials, connections } from "@/lib/db/schema";
@@ -102,7 +102,7 @@ export async function disconnectGoogle(accountId: string) {
 }
 
 export async function googleSecret(accountId: string, capability: "email.search" | "email.read" | "calendar.event.list" | "calendar.event.read" | "calendar.availability.read") {
-  const [row] = await db().select({ connectionId: connections.id, encryptedSecret: connectionCredentials.encryptedAccessToken, encryptedRefreshToken: connectionCredentials.encryptedRefreshToken, tokenExpiresAt: connectionCredentials.tokenExpiresAt }).from(connections).innerJoin(connectionCredentials, eq(connectionCredentials.connectionId, connections.id)).where(and(eq(connections.accountId, accountId), eq(connections.provider, "GOOGLE"), eq(connections.status, "CONNECTED"))).limit(1);
+  const [row] = await db().select({ connectionId: connections.id, connectionUpdatedAt: connections.updatedAt, encryptedSecret: connectionCredentials.encryptedAccessToken, encryptedRefreshToken: connectionCredentials.encryptedRefreshToken, tokenExpiresAt: connectionCredentials.tokenExpiresAt }).from(connections).innerJoin(connectionCredentials, eq(connectionCredentials.connectionId, connections.id)).where(and(eq(connections.accountId, accountId), eq(connections.provider, "GOOGLE"), inArray(connections.status, ["CONNECTED", "ERROR"]))).limit(1);
   if (!row) throw new RelayError("CONNECTION_REQUIRED", "Connect Google Workspace in Relay before using this capability.", capability, 409);
   if (!row.tokenExpiresAt || new Date(row.tokenExpiresAt).getTime() > Date.now() + 60_000) return decryptSecret(row.encryptedSecret);
   if (!row.encryptedRefreshToken) throw new RelayError("CONNECTION_REQUIRED", "Reconnect Google Workspace to restore offline access.", capability, 409);
@@ -110,13 +110,22 @@ export async function googleSecret(accountId: string, capability: "email.search"
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) throw new RelayError("CONNECTION_REQUIRED", "Google OAuth refresh is not configured.", capability, 503);
   const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, refresh_token: decryptSecret(row.encryptedRefreshToken), grant_type: "refresh_token" }), cache: "no-store" });
-  const refreshed = await response.json() as { access_token?: string; expires_in?: number; error_description?: string };
-  if (!response.ok || !refreshed.access_token) {
-    await db().update(connections).set({ status: "ERROR", updatedAt: now() }).where(and(eq(connections.id, row.connectionId), eq(connections.accountId, accountId)));
+  const refreshed = await response.json() as { access_token?: string; refresh_token?: string; expires_in?: number; error_description?: string };
+  const accessToken = refreshed.access_token;
+  if (!response.ok || !accessToken) {
+    const [current] = await db().select({ encryptedSecret: connectionCredentials.encryptedAccessToken, tokenExpiresAt: connectionCredentials.tokenExpiresAt }).from(connections).innerJoin(connectionCredentials, eq(connectionCredentials.connectionId, connections.id)).where(and(eq(connections.id, row.connectionId), eq(connections.accountId, accountId), eq(connections.status, "CONNECTED"))).limit(1);
+    if (current?.tokenExpiresAt && new Date(current.tokenExpiresAt).getTime() > Date.now() + 60_000) return decryptSecret(current.encryptedSecret);
+    await db().update(connections).set({ status: "ERROR", updatedAt: now() }).where(and(eq(connections.id, row.connectionId), eq(connections.accountId, accountId), eq(connections.updatedAt, row.connectionUpdatedAt), inArray(connections.status, ["CONNECTED", "ERROR"])));
     throw new RelayError("CONNECTION_REQUIRED", refreshed.error_description ?? "Google authorization expired. Reconnect Google Workspace.", capability, 409);
   }
-  await db().update(connectionCredentials).set({ encryptedAccessToken: encryptSecret(refreshed.access_token), tokenExpiresAt: new Date(Date.now() + Number(refreshed.expires_in ?? 3600) * 1000).toISOString(), updatedAt: now() }).where(eq(connectionCredentials.connectionId, row.connectionId));
-  return refreshed.access_token;
+  const timestamp = now();
+  await withTransaction(async (transaction) => {
+    const updatedCredential = await transaction.update(connectionCredentials).set({ encryptedAccessToken: encryptSecret(accessToken), ...(refreshed.refresh_token ? { encryptedRefreshToken: encryptSecret(refreshed.refresh_token) } : {}), tokenExpiresAt: new Date(Date.now() + Number(refreshed.expires_in ?? 3600) * 1000).toISOString(), updatedAt: timestamp }).where(eq(connectionCredentials.connectionId, row.connectionId)).returning({ connectionId: connectionCredentials.connectionId });
+    if (updatedCredential.length === 0) throw new RelayError("CONNECTION_REQUIRED", "Connect Google Workspace in Relay before using this capability.", capability, 409);
+    const recovered = await transaction.update(connections).set({ status: "CONNECTED", updatedAt: timestamp }).where(and(eq(connections.id, row.connectionId), eq(connections.accountId, accountId), inArray(connections.status, ["CONNECTED", "ERROR"]))).returning({ id: connections.id });
+    if (recovered.length === 0) throw new RelayError("CONNECTION_REQUIRED", "Connect Google Workspace in Relay before using this capability.", capability, 409);
+  });
+  return accessToken;
 }
 
 export async function testGoogle(accountId: string) {
