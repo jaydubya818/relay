@@ -28,9 +28,11 @@ describe("WO-21 operator dashboard boundary", () => {
     const styles = await readFile("app/globals.css", "utf8");
     const command = await readFile("app/v2/page.tsx", "utf8");
     const sidebar = await readFile("components/v2/sidebar.tsx", "utf8");
+    const settings = await readFile("app/v2/settings/page.tsx", "utf8");
     expect(controls).toContain("confirmation"); expect(controls).toContain("Confirm"); expect(controls).toContain("Cancel");
     expect(styles).toContain("prefers-reduced-motion"); expect(styles).toContain("focus-visible"); expect(styles).toContain("@media (max-width: 660px)");
     expect(command).toContain("need human reconciliation"); expect(command).toContain("No active work");
     expect(sidebar).toContain('<aside className="v2-sidebar" aria-label="Relay V2 navigation">'); expect(sidebar).toContain('["10", "Settings", "/v2/settings"]');
+    expect(settings).toContain("BLOCKED_EXTERNAL_CONFIGURATION"); expect(settings).not.toContain("protections are `FAILED`");
   });
 });
