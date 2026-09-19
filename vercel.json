@@ -3,7 +3,7 @@
   "framework": "nextjs",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build",
-  "regions": ["sfo1"],
+  "regions": ["iad1"],
   "headers": [
     {
       "source": "/(.*)",
