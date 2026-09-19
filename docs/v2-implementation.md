@@ -338,3 +338,14 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - Normal Vercel Authentication was not completed in the visible browser. Hosted Relay login, protected-route/session behavior, signup denial, runtime-action denial, all owner routes, approval context, activity correlation, accessibility smoke, and required screenshots therefore remain `REQUIRES_HUMAN_REVIEW`.
 - Verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`. Evidence: `docs/v2/qualification/owner-authenticated-preview-2026-09-18.md`.
 - Remote branch/deployment enforcement retains `BLOCKED_EXTERNAL_CONFIGURATION`; WO-02 independent security-owner review remains pending. No Telegram, Browserbase/E2B, connector, V2.1/V3, or V1 work began.
+
+### 2026-09-19 — owner-authenticated preview completion
+
+- Completed normal Vercel Authentication and Relay owner login on `codex/relay-owner-preview-qualification`; qualified final application revision `f39288e74c74bc3764457bbc52d8f3961bc47e11` on Vercel deployment `dpl_7id7j1jxSmBM4MJh6JaLTKAorTeo`.
+- Passed live login, reload persistence, logout/revocation, signup denial, invalid-session redirect, ten V2 routes, inherited owner routes, truthful empty states, console health, keyboard skip-link semantics and runtime-action denial.
+- Corrected qualification-branch configuration by adding only five non-secret private-preview values. The runtime gate now returns HTTP 503 `CAPABILITY_DENIED`; no secret was exported and no protection bypass was used.
+- Preserved the zero-fixture hosted boundary: 1 account, 1 owner, 0 Agents and 0 Agent credentials. Approval execution is `NOT_RUN_NO_FIXTURE`; automated approval/step-up/evidence/isolation suites remain green.
+- Added and passed the production-faithful Playwright route gate without weakening `<200 ms`; final local production `/` p95 was 162.102 ms. Hosted final-deployment `/` was p95 807.424 ms in the cross-route run and p95 520.835 ms in an isolated confirmation. Classification: `ENVIRONMENT_SPECIFIC_REGRESSION`.
+- A candidate V1 missing-Agent correction was committed and immediately reverted when the frozen V1 boundary was recognized. Final diff against `origin/main` has no V1 application change.
+- Final automated qualification passed typecheck, lint, the full serial CI suite, both dedicated performance tests, production build, Playwright functional 2/2 and production performance 1/1.
+- Owner preview remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` because the exact hosted deployment misses the performance threshold. WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote checks/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review and formal accessibility/comprehension remain pending.

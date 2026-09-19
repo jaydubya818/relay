@@ -96,3 +96,16 @@ The Product Owner decided to remain on Neon Free for the owner-only, actions-dis
 The owner-authenticated qualification remains `REQUIRES_HUMAN_REVIEW` because normal Vercel Authentication was not completed in the visible qualification browser. Operational health/readiness passed and the temporary CLI-created automation bypass was immediately revoked with zero bypass entries on read-back; those checks are not owner-login evidence. Automated qualification remained green, while the checked-in development-mode Playwright browser performance case reproducibly missed its `<200 ms` p95 target. No threshold was weakened and no unverified fix was retained.
 
 Full evidence and the exact remaining browser steps are recorded in [`owner-authenticated-preview-2026-09-18.md`](./owner-authenticated-preview-2026-09-18.md). Verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`.
+
+## 2026-09-19 owner-authenticated completion
+
+- Normal Vercel Authentication and Relay owner login completed on `codex/relay-owner-preview-qualification` without a deployment bypass.
+- Final application revision `f39288e74c74bc3764457bbc52d8f3961bc47e11` is deployed as `dpl_7id7j1jxSmBM4MJh6JaLTKAorTeo` and serves the qualification branch alias.
+- Login, reload persistence, logout/revocation, signup denial, invalid-session redirect, all ten V2 routes, inherited owner routes, empty states, console health, and keyboard/semantic smoke passed live.
+- Runtime actions fail closed with HTTP 503 `CAPABILITY_DENIED`. Five non-secret safety settings were added only to this qualification branch after the first denial probe exposed missing branch scope. No stored Vercel secret was exported.
+- Hosted state remained 1 account, 1 user, 1 principal, 1 membership, 0 Agents, and 0 Agent credentials. No synthetic approval, Agent, credential, or action fixture was created.
+- Local production performance passed the unchanged `<200 ms` p95 gate on all nine routes; `/` p95 was 162.102 ms. The exact protected Vercel preview failed: isolated `/` p95 was 520.835 ms. Classification is `ENVIRONMENT_SPECIFIC_REGRESSION`.
+- A missing V1 Agent detail route was observed to crash. A candidate correction was reverted in full because V1 is frozen; the final branch has no V1 application diff.
+- Verdict remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` because hosted performance misses the acceptance threshold. Remote branch/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 security-owner review and formal accessibility/comprehension remain pending.
+
+Detailed evidence: [`owner-authenticated-preview-2026-09-18.md`](./owner-authenticated-preview-2026-09-18.md).
