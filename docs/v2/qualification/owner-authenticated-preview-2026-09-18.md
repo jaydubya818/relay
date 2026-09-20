@@ -1,12 +1,12 @@
 # Relay V2 owner-authenticated preview qualification — 2026-09-18
 
-Status: `BLOCKED_EXTERNAL_QUALIFICATION`
+Status: `OWNER_PREVIEW_QUALIFIED`
 
-Verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`
+Verdict: `OWNER PREVIEW QUALIFIED`
 
 This record covers qualification only. It does not authorize Telegram, Browserbase/E2B, connector expansion, V2.1/V3 work, or any V1 change.
 
-The 2026-09-18 incomplete attempt is preserved below as historical evidence. The 2026-09-19 completion record at the end is authoritative for the current branch and deployment.
+The 2026-09-18 incomplete attempt and 2026-09-19 checkpoint limitation are preserved below as historical evidence. The 2026-09-20 exact-final record at the end is authoritative for the current branch and deployment.
 
 ## 1. Branch, revision, and isolation
 
@@ -186,3 +186,40 @@ Verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`.
 - Detailed evidence: [`hosted-performance-2026-09-19.md`](./hosted-performance-2026-09-19.md).
 
 WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review and formal accessibility/comprehension remain pending. No V1, Telegram, V2.1, or V3 work was performed.
+
+## 15. 2026-09-20 exact-final owner browser qualification
+
+### Exact source and deployment
+
+- Final application revision: `de727a5` (`fix(v2): focus skip-link target`).
+- Exact protected preview: `dpl_8GCcV5W3tW6yUibicAE2xDKBqCoT`, `Ready`, Vercel `iad1`.
+- Normal Vercel Authentication completed through the owner's GitHub passkey in the retained visible browser session. No Security Checkpoint remained, and no automation or deployment-protection bypass was created.
+- Relay accepted the existing owner identity from the existing macOS Keychain credential without displaying or exporting the password.
+
+### Authenticated application and route sweep
+
+- `PASSED_LIVE` — the browser reached Relay rather than a Vercel checkpoint; `/v2` rendered the authenticated Command surface.
+- `PASSED_LIVE` — the Relay session persisted through reload and navigation.
+- `PASSED_LIVE` — all ten V2 routes rendered one `main`, one expected `h1`, the labelled `Relay V2` navigation, exactly one correct `aria-current="page"`, zero duplicate IDs, zero unnamed controls, truthful empty states, and no application error: `/v2`, `/v2/agents`, `/v2/approvals`, `/v2/tasks`, `/v2/governance`, `/v2/infrastructure`, `/v2/computers`, `/v2/connections`, `/v2/activity`, and `/v2/settings`.
+- `PASSED_LIVE` — inherited owner routes `/`, `/agents`, `/memory`, `/connections`, `/sandboxes`, `/browsers`, `/events`, `/activity`, `/developer`, and `/settings` rendered authenticated content with one `main`, the expected `h1`, zero duplicate IDs, and no application error.
+- `PASSED_LIVE` — after clearing third-party login-frame messages, the exact-final Relay route sweep produced no page exceptions or Relay console errors.
+- `PASSED_LIVE` — a non-credential runtime-action probe returned HTTP 503 `CAPABILITY_DENIED`: runtime actions remain explicitly disabled and fail closed.
+- V2 remained truthfully empty: zero active work, pending approvals, Agents, runtime clients, policies, budgets, runners, placements, computers, communications, connectors, messages, or audit records. Approval execution remains `NOT_RUN_NO_FIXTURE`; no fixture was manufactured.
+
+### Accessibility defect and correction
+
+- The first replay exposed one genuine defect: activating `Skip to content` changed the fragment but left focus on `body` because the existing `main` target was not programmatically focusable.
+- Revision `de727a5` adds only `tabIndex={-1}` to the existing `main#v2-content` target and a focused regression assertion. Typecheck, lint, focused dashboard tests 2/2, and production build passed before deployment.
+- `PASSED_LIVE` on the exact corrected deployment — first Tab focused `Skip to content`; activation set `#v2-content` and moved focus to `MAIN#v2-content`. The route retained one `main`, one `h1`, labelled navigation, one current-page marker, zero duplicate IDs, and zero unnamed controls.
+
+### Logout, invalid session, and signup denial
+
+- `PASSED_LIVE` — Sign out returned to Relay `/login`; a subsequent protected `/v2` navigation remained on `/login`, proving revocation was enforced.
+- `PASSED_LIVE` — an explicitly invalid secure `__Host-relay_session` was denied and redirected to `/login`.
+- `PASSED_LIVE` — `/signup` redirected to `/login`. A same-origin signup submission returned HTTP 403 `INVALID_INPUT` with `Account registration is not enabled.` The browser remained unauthenticated and protected `/v2` remained denied; no signup account, Agent, credential, or session was created.
+
+### Final verdict
+
+`OWNER PREVIEW QUALIFIED`
+
+This verdict is limited to the owner-only, actions-disabled private preview. The performance contract and its historical `sfo1` failure and `iad1` pass evidence are unchanged. WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 security-owner review and formal accessibility/comprehension remain pending. This does not establish limited-beta readiness and does not authorize Telegram, V2.1, V3, or additional provider work.

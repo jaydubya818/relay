@@ -117,3 +117,15 @@ Stage timing proved that the protected preview's dominant latency was the Vercel
 The exact final preview `dpl_9pNSqSUQptf5armoorvys7pTzvjW` is Ready and verified in `iad1`, but Vercel Security Checkpoint Code 21 prevented the exact-final normal-auth browser rerun after the measurement volume. No bypass was used. Performance is `PASS` for the defined warm authenticated-request metric; owner preview remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` pending that exact-final browser recheck. See [`hosted-performance-2026-09-19.md`](./hosted-performance-2026-09-19.md).
 
 WO-22 and all unrelated external gates remain unchanged. No V1, Telegram, V2.1, or V3 work was performed.
+
+## 2026-09-20 exact-final owner-browser completion
+
+Normal Vercel Authentication completed through the owner's GitHub passkey in the retained visible browser; no checkpoint or bypass remained. Relay owner login then succeeded on exact application revision `de727a5`, protected deployment `dpl_8GCcV5W3tW6yUibicAE2xDKBqCoT`, Ready in `iad1`.
+
+All ten V2 routes and all ten inherited owner routes rendered their expected authenticated and truthful empty states without Relay page or console errors. The session survived reload and navigation; runtime actions returned HTTP 503 `CAPABILITY_DENIED`; approvals remain `NOT_RUN_NO_FIXTURE`.
+
+The replay found and corrected one focused accessibility defect: the skip-link fragment target was not focusable. The corrected exact deployment moves keyboard focus from `Skip to content` to `MAIN#v2-content` and retains one main/h1, labelled/current navigation, zero duplicate IDs, and zero unnamed controls. Typecheck, lint, focused dashboard tests 2/2, and production build passed.
+
+Logout revoked the Relay session; protected navigation returned to `/login`; an invalid `__Host-relay_session` was denied; `/signup` remained unavailable; and the signup endpoint returned HTTP 403 before creating an account or session.
+
+Verdict: `OWNER PREVIEW QUALIFIED`. WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review and formal accessibility/comprehension remain pending. Limited-beta readiness is unchanged.

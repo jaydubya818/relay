@@ -193,3 +193,11 @@ Commit `ee3a5e3` aligned Vercel functions to `iad1`. An authenticated protected 
 The final automatic deployment is Ready with all functions verified in `iad1`, but Vercel Security Checkpoint Code 21 prevented an exact-final normal-auth browser rerun. No bypass was used. Performance is `PASS` for the established warm authenticated-request contract; owner preview remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` pending the exact-final browser recheck. Full evidence is in [`hosted-performance-2026-09-19.md`](./hosted-performance-2026-09-19.md).
 
 This does not close WO-22. Its status remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review, penetration evidence, formal accessibility/comprehension, provider/topology evidence, and Product Owner release decisions remain open.
+
+## 2026-09-20 exact-final owner-preview qualification
+
+The exact-final owner browser replay passed on revision `de727a5`, protected deployment `dpl_8GCcV5W3tW6yUibicAE2xDKBqCoT`, Ready in Vercel `iad1`. Normal GitHub-passkey Vercel Authentication and Relay owner login succeeded without a protection bypass. All V2 and inherited owner routes, reload persistence, truthful empty states, runtime-action denial, console/page-error checks, logout/revocation, invalid-session denial, and signup denial passed live.
+
+The replay exposed and corrected one bounded accessibility defect: the skip link reached the fragment but not keyboard focus. The exact corrected deployment now focuses `MAIN#v2-content`; focused tests, typecheck, lint, and production build passed. No fixture or consequential action was created, and approvals remain `NOT_RUN_NO_FIXTURE`.
+
+Owner-preview verdict: `OWNER PREVIEW QUALIFIED`. This does not change the aggregate release verdict: WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent security, penetration, formal accessibility/comprehension, provider/topology, and Product Owner release-decision gates remain open. Relay remains `NOT_READY_FOR_LIMITED_BETA`.
