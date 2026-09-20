@@ -308,3 +308,67 @@ pnpm build
 Only after code readiness should the owner authorize dedicated bot creation, secure credential provisioning, interactive authentication and consequential live testing. No credential is requested here. **INCOMPLETE; no main merge or qualified release.** Continuation commits remain local because the publication authorization covered only `6fc769d` and its existing history.
 
 Continuation handoff: MyEve companion verified at `64c40fe6d14f99205978bcd6c94bb668dff6a163`. All continuation source changes are committed locally. The feature branch is ahead of the published checkpoint; post-push parity above refers to the approved publication, not these unpublished commits. The task-created PostgreSQL 55447 server was stopped and its disposable cluster and wire-check script removed. No hosted resource or live credential existed to revoke. Both working trees are clean, with dependency symlinks excluded locally. Final changed-file hygiene scan and source review found no committed credential or temporary artifact.
+
+
+## Execution-boundary qualification checkpoint — 2026-09-20
+
+This addendum supersedes earlier statements that continuation commits are unpublished. Historical counts and findings above remain intact.
+
+### Source publication
+
+- Relay starting checkpoint **`29c8a3cd39b982f1ee389ac35d07b43b5cf9f318`** was pushed normally to the canonical existing `jaydubya818/relay` feature branch `feat/relay-v2-telegram-private-beta`; exact local/remote parity verified.
+- MyEve starting checkpoint **`64c40fe6d14f99205978bcd6c94bb668dff6a163`** was published to canonical `jaydubya818/MyEveBot`, branch `codex/telegram-owner-integration`; exact local/remote parity verified. The companion clone retains its local origin and uses an explicit `github` remote for canonical publication.
+- MyEve implementation under qualification: **`28077ab0215bef16608e4235ca2df594f6c7bb30`**. Relay runtime source is unchanged from `29c8a3c`; this checkpoint adds qualification documentation.
+- No merge, release tag, deployment or broad enablement. Hygiene scan plus source review found no committed credentials, private owner data, environment files or temporary artifacts.
+
+### Implemented fixes
+
+MyEve migration **0031_owner_model_reservations** extends canonical Run/owner-channel budget state. Atomic reservations serialize concurrent provider admission. Each durable step binds model identity and the material request hash. Completed retries reuse stored results; ambiguous calls retain reservations and cannot be resent. Usage settles once; invalid/null/empty cost fails closed. Cancellation only releases a reservation's proven unused portion after known completion. Approval waiting and restart do not reset consumed/reserved budget.
+
+The local task/session limits remain **$0.10, 12,000 tokens and 8 model calls**, further narrowed by current MyEve Agent policy. This is below the requested $5 maximum. No aggregate hosted campaign-spend qualification is claimed. The provider adapter uses the existing Gateway pricing API and conservative input/output reservation; its envelope must still be verified against the actual selected model before end-to-end hard-spend qualification can pass.
+
+Canonical Context Assembly now records an external-request scope without private memory, Agent instructions, goals, summaries or saved skills. The provider boundary independently strips private system context. Only canonical public `web_fetch` and explicitly permitted `send_email` can be exposed, subject to MyEve capability checks. Paid provider-managed search, delegation and private tools are excluded. Eve's public-network DNS/private-address/redirect protections are reused. Unreserved compaction fails closed.
+
+Action approval hashes additionally bind the channel work, owner, budget limits and expiry. A material budget change after approval denies the effect. The changes reuse the existing Eve model selector, task accounting, Context Assembly, Action Gateway and continuation primitives.
+
+### Evidence classes
+
+| Class / check | Observed result |
+|---|---|
+| Automated Relay complete serial suite | **246 passed / 5 skipped**, 50 passing files, 3 skipped files |
+| Automated Relay Telegram/channel subset | **59 passed**, included in 246 |
+| Automated MyEve complete suite | **624 passed / 85 files** |
+| Durable model-budget database cases | **13 passed** |
+| Provider/context boundary unit cases | **16 passed**, model/provider mocked |
+| Canonical owner continuation/authority/recovery/context database cases | **20 passed** |
+| Runtime transport-scope cases | **5 passed**, no model execution |
+| Safe approval-presentation cases | **2 passed** |
+| Actual Eve/model execution | **NOT RUN** |
+| Actual-model adversarial private-context test | **NOT RUN**; controlled private-canary Context Assembly test passes automatically |
+| Actual host/runtime interruption and recovery | **NOT RUN**; durable retry/restart component cases pass |
+| Deployed integration | **NOT RUN** |
+| Real Telegram happy path / approval / denial matrix | **NOT RUN** |
+| Live Telegram scenario count | **0** |
+| Relay performance | **2 passed**; dashboard p95 1.500041 ms; concurrency p95 39.356333 ms, 64 operations, zero errors |
+| Migrations | Fresh schema PASS; populated MyEve 0030→0031 upgrade PASS with admitted-work sentinel preserved; **31** ordered MyEve migrations |
+| Typecheck | Both repositories PASS |
+| Lint | Relay PASS; no MyEve lint script defined |
+| Production builds | Both local builds PASS; no deployment |
+| Executor inventory | MyEve **528 classified / UNKNOWN=0** |
+| Release denial | Built MyEve endpoint returned **503 OWNER_EXECUTOR_NOT_QUALIFIED**; both release constants remain false |
+
+Category subsets overlap full-suite totals. Existing historical UI evidence is retained; no new UI qualification is claimed. MyEve defines no separate performance command. No dependency change or new audit result is claimed.
+
+Installed canonical runtime inspected: **Eve 0.27.13 / Node 24.18.1**, mounted by `withEve` at `/eve/v1/**`. Installed docs confirm post-call session quotas, dynamic resolver fallback and durable workflow behavior. Source/documentation inspection is not actual Eve runtime qualification.
+
+### External prerequisite inspection and stop point
+
+Existing Vercel project links and environment-variable names were inspected without printing secret values. The local normal MyEve OIDC token is expired. Model keys belonging to separate Federation qualification preview branches were found and preserved; they were not borrowed. No Telegram bot/webhook credential was found in the inspected settings, and an authorized qualification pairing/deployment has not been established. No duplicate bot was created.
+
+Automatic approval review rejected a full development-environment export because it could copy unrelated credentials. That command did not run; its destination file does not exist. A narrower request to access only model authentication for the intended MyEve qualification scope is pending owner approval. Credentials must not be pasted into chat.
+
+Remaining work: actual selected-model reservation-envelope proof; complete Eve context/cancellation/restart and exact approval qualification; final source/migration integration; clean exact-revision qualification deployments; authorized Telegram bot/identity and real happy/approval/denial traffic. No deployment was attempted because actual-runtime qualification is not green. Owner-only credential/authentication work is the current external stop point, not evidence that the remaining runtime tests have passed.
+
+Cleanup: the local gate-probe server 3228 and disposable PostgreSQL 55447 were stopped; its cluster was removed. No hosted resource, webhook, live credential or enablement was created. Local release denial is verified; hosted emergency-stop behavior is unqualified.
+
+**TELEGRAM PRIVATE-BETA GOLDEN PATH INCOMPLETE. Do not merge.**
