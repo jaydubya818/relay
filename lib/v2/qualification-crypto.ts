@@ -1,3 +1,4 @@
+import { qualificationFetch } from "../qualification";
 import { headers } from 'next/headers';
 import { GoogleKmsEd25519Provider } from './evidence/google-kms';
 import { GoogleKmsKeyWrapper, type WrappingVersion } from './evidence/google-wrapper';
@@ -10,7 +11,7 @@ export function qualificationCrypto(environment: Record<string,string|undefined>
   const value=(await headers()).get('x-vercel-oidc-token');
   if(!value)throw new Error('Missing request workload identity.');
   return value;
-}, request: typeof fetch = fetch) {
+}, request: typeof fetch = (input, init) => qualificationFetch(input instanceof Request ? input.url : String(input), init, new URL(input instanceof Request ? input.url : String(input)).hostname === "sts.googleapis.com" ? "google-sts" : "google-kms")) {
   if(environment.RELAY_QUALIFICATION_MODE!=='true' || environment.VERCEL!=='1' || environment.VERCEL_TARGET_ENV!=='federation-qualification') throw new Error('Qualification crypto requires the dedicated hosted environment.');
   const identity=JSON.parse(environment.RELAY_QUALIFICATION_IDENTITY_JSON ?? '') as VercelWorkloadIdentity;
   if(identity.projectId!=='prj_3IRvr9knK5VJcBTgTYMvhv6ixmJK' || identity.ownerId!=='team_p8z8exJRTGfOPk1GC9vUOpv3' || identity.issuer!=='https://oidc.vercel.com/jaydubya818' || identity.subject!=='owner:jaydubya818:project:relay:environment:federation-qualification') throw new Error('Qualification identity is not the authorized Relay deployment.');
