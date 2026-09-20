@@ -90,3 +90,42 @@ The current Free resource cannot satisfy the deletion-protection portion of the 
 ## 2026-09-18 Product Owner plan decision
 
 The Product Owner decided to remain on Neon Free for the owner-only, actions-disabled private preview. No billing or plan change was made. Managed deletion protection remains `BLOCKED_EXTERNAL_CONFIGURATION`, and the combined database acceptance criterion must stay open. Before Relay stores real customer data, enables real-world actions, or advances beyond private preview, the database plan and deletion-protection gate must be reconsidered and qualified.
+
+## 2026-09-18 owner-authenticated preview qualification
+
+The owner-authenticated qualification remains `REQUIRES_HUMAN_REVIEW` because normal Vercel Authentication was not completed in the visible qualification browser. Operational health/readiness passed and the temporary CLI-created automation bypass was immediately revoked with zero bypass entries on read-back; those checks are not owner-login evidence. Automated qualification remained green, while the checked-in development-mode Playwright browser performance case reproducibly missed its `<200 ms` p95 target. No threshold was weakened and no unverified fix was retained.
+
+Full evidence and the exact remaining browser steps are recorded in [`owner-authenticated-preview-2026-09-18.md`](./owner-authenticated-preview-2026-09-18.md). Verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`.
+
+## 2026-09-19 owner-authenticated completion
+
+- Normal Vercel Authentication and Relay owner login completed on `codex/relay-owner-preview-qualification` without a deployment bypass.
+- Final application revision `f39288e74c74bc3764457bbc52d8f3961bc47e11` is deployed as `dpl_7id7j1jxSmBM4MJh6JaLTKAorTeo` and serves the qualification branch alias.
+- Login, reload persistence, logout/revocation, signup denial, invalid-session redirect, all ten V2 routes, inherited owner routes, empty states, console health, and keyboard/semantic smoke passed live.
+- Runtime actions fail closed with HTTP 503 `CAPABILITY_DENIED`. Five non-secret safety settings were added only to this qualification branch after the first denial probe exposed missing branch scope. No stored Vercel secret was exported.
+- Hosted state remained 1 account, 1 user, 1 principal, 1 membership, 0 Agents, and 0 Agent credentials. No synthetic approval, Agent, credential, or action fixture was created.
+- Local production performance passed the unchanged `<200 ms` p95 gate on all nine routes; `/` p95 was 162.102 ms. The exact protected Vercel preview failed: isolated `/` p95 was 520.835 ms. Classification is `ENVIRONMENT_SPECIFIC_REGRESSION`.
+- A missing V1 Agent detail route was observed to crash. A candidate correction was reverted in full because V1 is frozen; the final branch has no V1 application diff.
+- Verdict remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` because hosted performance misses the acceptance threshold. Remote branch/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 security-owner review and formal accessibility/comprehension remain pending.
+
+Detailed evidence: [`owner-authenticated-preview-2026-09-18.md`](./owner-authenticated-preview-2026-09-18.md).
+
+## 2026-09-19 hosted performance remediation
+
+Stage timing proved that the protected preview's dominant latency was the Vercel `sfo1` to Neon `us-east-1` database path, amplified by session validation, pool waves, and cold connections. The smallest correction aligned Vercel with the database in `iad1` (`ee3a5e3`). On an authenticated protected post-fix preview, two independent warm `/` runs passed the unchanged `<200 ms` contract at p95 `147.6` and `169.4` ms; the initial cold/transient p95 `235.1` ms is preserved separately. Final local production `/` measured p50 `113.529`, p95 `125.374`, and p99 `133.413` ms.
+
+The exact final preview `dpl_9pNSqSUQptf5armoorvys7pTzvjW` is Ready and verified in `iad1`, but Vercel Security Checkpoint Code 21 prevented the exact-final normal-auth browser rerun after the measurement volume. No bypass was used. Performance is `PASS` for the defined warm authenticated-request metric; owner preview remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` pending that exact-final browser recheck. See [`hosted-performance-2026-09-19.md`](./hosted-performance-2026-09-19.md).
+
+WO-22 and all unrelated external gates remain unchanged. No V1, Telegram, V2.1, or V3 work was performed.
+
+## 2026-09-20 exact-final owner-browser completion
+
+Normal Vercel Authentication completed through the owner's GitHub passkey in the retained visible browser; no checkpoint or bypass remained. Relay owner login then succeeded on exact application revision `de727a5`, protected deployment `dpl_8GCcV5W3tW6yUibicAE2xDKBqCoT`, Ready in `iad1`.
+
+All ten V2 routes and all ten inherited owner routes rendered their expected authenticated and truthful empty states without Relay page or console errors. The session survived reload and navigation; runtime actions returned HTTP 503 `CAPABILITY_DENIED`; approvals remain `NOT_RUN_NO_FIXTURE`.
+
+The replay found and corrected one focused accessibility defect: the skip-link fragment target was not focusable. The corrected exact deployment moves keyboard focus from `Skip to content` to `MAIN#v2-content` and retains one main/h1, labelled/current navigation, zero duplicate IDs, and zero unnamed controls. Typecheck, lint, focused dashboard tests 2/2, and production build passed.
+
+Logout revoked the Relay session; protected navigation returned to `/login`; an invalid `__Host-relay_session` was denied; `/signup` remained unavailable; and the signup endpoint returned HTTP 403 before creating an account or session.
+
+Verdict: `OWNER PREVIEW QUALIFIED`. WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review and formal accessibility/comprehension remain pending. Limited-beta readiness is unchanged.
