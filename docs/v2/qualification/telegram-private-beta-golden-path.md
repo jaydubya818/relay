@@ -372,3 +372,39 @@ Remaining work: actual selected-model reservation-envelope proof; complete Eve c
 Cleanup: the local gate-probe server 3228 and disposable PostgreSQL 55447 were stopped; its cluster was removed. No hosted resource, webhook, live credential or enablement was created. Local release denial is verified; hosted emergency-stop behavior is unqualified.
 
 **TELEGRAM PRIVATE-BETA GOLDEN PATH INCOMPLETE. Do not merge.**
+
+
+## Scoped model-authentication continuation — 2026-09-20
+
+Historical starting checkpoint preserved: Relay `b8b9d3df7c47b089d6509633dbcf2547058dbf1a` (246 tests); MyEve `28077ab0215bef16608e4235ca2df594f6c7bb30` (624 tests). Narrow model-authentication access is now approved; the earlier pending-approval note is historical.
+
+MyEve implementation revision **`482037068774e0ab70cd6e2cd2ab34272fc04769`**, branch `codex/telegram-owner-integration`, fixes the missing shared qualification allowance with migration **0032_owner_qualification_budget.sql**. It extends the existing canonical model-call reservations with a database-wide **$5** ledger. Concurrent Run admission is atomic; restart/retry cannot reset accounting; cancellation/uncertainty retain liability; completed settlement refunds only proven unused reservation; receipt cleanup does not replenish allowance. Populated 0031→0032 migration preserves spent and uncertain work. No reset API or execution enablement was added. The same durable qualification database must be retained across restarts.
+
+The checkout did not contain the stated fixed $0.25 reservation: its **$0.10 task ceiling** remains the stricter limit. Canonical intended model is **Anthropic Claude Sonnet 5 (`anthropic/claude-sonnet-5`) through Vercel AI Gateway**, on installed **Eve 0.27.13 / Node 24.18.1**. No model/provider has actually been invoked. The isolated Agent still must explicitly select this canonical model. Public, unauthenticated pricing evidence is preserved in MyEve's `apps/eve/docs/qualification/telegram-model-pricing.json`.
+
+With 11,200 input tokens plus 800 output tokens and a 2× margin, current base/cache-write pricing yields **$0.072**, or **$0.0792** using the catalog's higher regional rates. Both are below $0.10 and $0.25. These are conditional estimates, **not qualified actual-provider liability bounds**: actual framework/token framing, usage reconciliation and model execution remain unverified. Existing task bounds remain 12,000 tokens, 8 model calls, 12 tool calls and 60 seconds; paid provider search is excluded.
+
+Fresh evidence:
+
+| Check | Result |
+|---|---|
+| Relay full suite | **246 passed / 5 skipped**, including cross-repository component fixture |
+| MyEve full suite | **630 passed / 85 files** |
+| MyEve PostgreSQL model budget subset | **19 passed**, including six new aggregate cases |
+| Concurrent aggregate ceiling | Exactly 50 of 60 $0.10 reservations admitted; total $5; rejected Run counters unchanged |
+| Aggregate cancellation/restart/retry/cleanup/settlement and populated upgrade | PASS, component/database evidence |
+| MyEve typecheck / local build / migration order | PASS / PASS / **32 migrations** |
+| MyEve executor governance | **528 classified / UNKNOWN=0** |
+| Actual Eve/provider execution and provider accounting | **NOT RUN** |
+| Actual-model private-canary isolation | **NOT RUN** |
+| Actual Eve interruption/cancellation/recovery | **NOT RUN** |
+| Final integration readiness / deployment | **NOT QUALIFIED / NOT DEPLOYED** |
+| Telegram live scenarios | **0** |
+
+No Relay production code changed. Previous Relay typecheck/lint/build/performance/UI results remain historical, not rerun claims. Component authority-chain regressions remain green; actual runtime authority remains unqualified.
+
+**Exact current blocker:** `AI_GATEWAY_API_KEY` is absent from the current process. Vercel's documented single-variable API requires its environment-variable ID; the specific approved key's ID or single-credential local/keychain reference is not available. The owner has been asked for this **non-secret reference**, never the value. No full environment enumeration/export, unrelated credential access or credential copying occurred. Separate Federation credentials were not borrowed. Broad authentication approval is accepted; this request only locates the exact approved credential.
+
+No Telegram prerequisite inspection was performed in this continuation: it remains behind actual-runtime readiness. Bot existence/configuration is unconfirmed. No bot was created, no live traffic occurred, and both immutable execution gates remain false. No merge or tag. The disposable loopback PostgreSQL fixture was stopped and removed; no credential file was created. Source hygiene review found no newly committed secrets, private data, environment files or temporary artifacts.
+
+Smallest owner action: provide the non-secret variable ID/reference for the approved qualification `AI_GATEWAY_API_KEY`. Continue actual runtime/provider/private-canary/cancellation tests after scoped retrieval and liability validation. **TELEGRAM PRIVATE-BETA GOLDEN PATH INCOMPLETE. Do not merge.**
