@@ -1,8 +1,13 @@
+import { purposeSigner } from "@/lib/v2/evidence/signing-provider";
 import { z } from "zod";
 import { canonicalJson } from "@/lib/v2/contracts";
 import { decryptArtifact, encryptArtifact, verifyAuditSignature, type AuditSigner, type KeyWrapper } from "@/lib/v2/evidence/crypto";
 import { RelayError } from "@/lib/errors";
 import { submissionSchema } from "./contracts";
+
+export const MAX_FEDERATION_TOKEN_CHARS = 256 * 1024;
+// Ed25519 produces exactly 64 bytes, i.e. 86 unpadded base64url characters.
+export const MAX_FEDERATION_SIGNING_BYTES = MAX_FEDERATION_TOKEN_CHARS - 1 - 86;
 
 const envelopeSchema = z.object({
   id: z.string().min(1).max(255), protocol: z.literal("relay.federation"), version: z.literal("1.0"),
@@ -34,10 +39,16 @@ export async function unseal(ownerId: string, value: unknown, wrapper: KeyWrappe
 
 // Compact JWS (EdDSA). The existing signer/KMS boundary signs the JWS signing input.
 export async function signDelivery(envelope: Record<string, unknown>, audience: string, requestId: string, expiresAt: string, bindings: FederationBindings) {
-  const header = Buffer.from(canonicalJson({ alg: "EdDSA", typ: "relay-federation+jwt", kid: bindings.signer.keyId })).toString("base64url");
+  const signer = purposeSigner(bindings.signer, "federation-delivery");
+  const header = Buffer.from(canonicalJson({ alg: "EdDSA", typ: "relay-federation+jwt", kid: signer.keyId })).toString("base64url");
   const payload = Buffer.from(canonicalJson({ iss: bindings.issuer, aud: audience, jti: requestId, iat: Math.floor(Date.now() / 1000), exp: Math.min(Math.floor(Date.parse(expiresAt) / 1000), Math.floor(Date.now() / 1000) + 60), envelope })).toString("base64url");
   const material = `${header}.${payload}`;
-  return `${material}.${await bindings.signer.sign(material)}`;
+  if (Buffer.byteLength(material, "utf8") > MAX_FEDERATION_SIGNING_BYTES) {
+    throw new RelayError("INVALID_INPUT", "Federation delivery exceeds the canonical 256 KiB token limit.", undefined, 413);
+  }
+  const signature = await signer.sign(material);
+  if (!/^[A-Za-z0-9_-]{86}$/.test(signature)) throw new Error("Invalid Ed25519 signature encoding.");
+  return `${material}.${signature}`;
 }
 export async function verifyDelivery(token: string, input: {
   issuer: string; audience: string;
@@ -45,7 +56,7 @@ export async function verifyDelivery(token: string, input: {
   // MUST be atomic and durable, called only after signature and claims validation.
   claimRequest(requestId: string, expiresAt: number): Promise<boolean>;
 }) {
-  if (token.length > 256 * 1024) throw new Error("Oversized federation delivery.");
+  if (token.length > MAX_FEDERATION_TOKEN_CHARS) throw new Error("Oversized federation delivery.");
   const parts = token.split(".");
   if (parts.length !== 3) throw new Error("Invalid JWS.");
   const header = z.object({ alg: z.literal("EdDSA"), typ: z.literal("relay-federation+jwt"), kid: z.string().min(1).max(255) }).strict().parse(JSON.parse(Buffer.from(parts[0], "base64url").toString()));

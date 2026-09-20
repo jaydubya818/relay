@@ -1,3 +1,4 @@
+import { purposeSigner } from "@/lib/v2/evidence/signing-provider";
 import { createHash, createPublicKey, randomBytes, verify as verifySignature } from "node:crypto";
 import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -25,6 +26,7 @@ function issuer() {
 function encode(value: unknown) { return Buffer.from(canonicalJson(value)).toString("base64url"); }
 
 async function signToken<T>(type: "RLY-WORKLOAD" | "RLY-LEASE", claims: T, signer: AuditSigner) {
+  signer = purposeSigner(signer, type === "RLY-LEASE" ? "lease" : "session");
   const encodedHeader = encode({ alg: "EdDSA", kid: signer.keyId, typ: type });
   const encodedPayload = encode(claims);
   const signingInput = `${encodedHeader}.${encodedPayload}`;
@@ -43,13 +45,15 @@ function decodeToken(token: string) {
   }
 }
 
-export interface LeaseKeyResolver { publicKeyForKeyId(keyId: string): Promise<string | undefined>; }
+export interface LeaseKeyResolver { publicKeyForKeyId(keyId: string): Promise<string | undefined>; publicKeyForPurpose?(keyId: string, purpose: "lease" | "session"): Promise<string | undefined>; }
 export interface OfflineLeaseCounter { consume(leaseId: string, callId: string, maxCalls: number): Promise<boolean>; }
 
 async function verifyWithResolver(token: string, expectedType: string, resolver: LeaseKeyResolver) {
   const decoded = decodeToken(token);
   if (decoded.header.typ !== expectedType) throw new RelayError("INVALID_CREDENTIAL", "Signed token type is invalid.", undefined, 401);
-  const publicKey = await resolver.publicKeyForKeyId(decoded.header.kid!);
+  const publicKey = resolver.publicKeyForPurpose
+    ? await resolver.publicKeyForPurpose(decoded.header.kid!, expectedType === "RLY-LEASE" ? "lease" : "session")
+    : process.env.NODE_ENV === "production" ? undefined : await resolver.publicKeyForKeyId(decoded.header.kid!);
   if (!publicKey || !verifyAuditSignature(publicKey, decoded.signingInput, decoded.signature)) throw new RelayError("INVALID_CREDENTIAL", "Signed token verification failed.", undefined, 401);
   return decoded.payload;
 }
@@ -168,7 +172,7 @@ export async function issueCapabilityLease(input: { accountId: string; action: A
       const reserved = await transaction.update(capabilityLeases).set({ delegatedCallCount: sql`${capabilityLeases.delegatedCallCount} + ${maxCalls}` }).where(and(eq(capabilityLeases.accountId, input.accountId), eq(capabilityLeases.id, parentLease.id), eq(capabilityLeases.status, "ACTIVE"), sql`${capabilityLeases.callCount} + ${capabilityLeases.delegatedCallCount} + ${maxCalls} <= ${capabilityLeases.maxCalls}`)).returning({ id: capabilityLeases.id });
       if (!reserved.length) throw new RelayError("CAPABILITY_DENIED", "Parent lease authority was concurrently exhausted.", undefined, 409);
     }
-    await transaction.insert(capabilityLeases).values({ id: leaseId, accountId: input.accountId, agentId: action.agentId, runtimeClientId: action.runtimeClientId, workloadId: input.workloadId, taskId: action.taskId, parentLeaseId: input.parentLeaseId, policyDecisionId: decision.id, approvalDecisionId, budgetReservationId: input.budgetReservationId, claims, claimsHash, signature, signingKeyId: signer.keyId, tokenHash: canonicalHash(token), maxCalls, revocationEpoch: epoch.epoch, issuedAt, notBefore: issuedAt, expiresAt: new Date(latestExpiry).toISOString() });
+    await transaction.insert(capabilityLeases).values({ id: leaseId, accountId: input.accountId, agentId: action.agentId, runtimeClientId: action.runtimeClientId, workloadId: input.workloadId, taskId: action.taskId, parentLeaseId: input.parentLeaseId, policyDecisionId: decision.id, approvalDecisionId, budgetReservationId: input.budgetReservationId, claims, claimsHash, signature, signingKeyId: purposeSigner(signer, "lease").keyId, tokenHash: canonicalHash(token), maxCalls, revocationEpoch: epoch.epoch, issuedAt, notBefore: issuedAt, expiresAt: new Date(latestExpiry).toISOString() });
     if (budgetReservation) {
       const bound = await transaction.update(budgetReservations).set({ leaseId }).where(and(eq(budgetReservations.accountId, input.accountId), eq(budgetReservations.id, budgetReservation.id), eq(budgetReservations.status, "RESERVED"), isNull(budgetReservations.leaseId))).returning({ id: budgetReservations.id });
       if (!bound.length) throw new RelayError("CAPABILITY_DENIED", "Budget reservation was concurrently bound.", undefined, 409);

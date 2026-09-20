@@ -1,7 +1,11 @@
 import { createCipheriv, createDecipheriv, createHash, generateKeyPairSync, privateDecrypt, publicEncrypt, randomBytes, sign, verify } from "node:crypto";
 
+import type { SigningPurpose } from "./signing-provider";
+
 export interface AuditSigner {
+  forPurpose?(purpose: SigningPurpose): AuditSigner;
   readonly keyId: string;
+  verificationKeys?(): Array<{ keyId: string; algorithm: "Ed25519"; publicKeyPem: string }>;
   sign(recordHash: string): Promise<string>;
   verify(recordHash: string, signature: string): Promise<boolean>;
   publicKeyPem(): Promise<string>;
