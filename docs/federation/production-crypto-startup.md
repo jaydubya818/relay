@@ -52,3 +52,27 @@ Local verification includes purpose/provider tests, PostgreSQL-backed historical
 export rotation, complete Relay tests, and a production-build startup smoke that
 requires managed-secret production startup to fail. It is not the hosted golden
 path and cannot close either external gate.
+
+## Request-scoped qualification composition
+
+The candidate now composes `qualificationCrypto` from instrumentation only when
+both federation and qualification flags are explicitly true. It requires Vercel's
+`federation-qualification` custom environment and the pinned Relay project/team.
+Public configuration variables are `RELAY_QUALIFICATION_IDENTITY_JSON`,
+`RELAY_QUALIFICATION_SIGNING_KEYS_JSON` (public SPKI registry only), and
+`RELAY_QUALIFICATION_WRAPPING_VERSIONS_JSON`. Actual resource IDs must be supplied
+by the operator after provisioning approval. Do not put credentials in these JSON
+values. STS reads the current request's OIDC header; no ADC or environment token
+fallback is used. KMS key-level roles include metadata reads on signing and
+wrapping versions.
+
+The wrapper authenticates owner and immutable key version through symmetric KMS
+AAD, recording the version inside opaque wrapped-key data. Retired enabled
+versions can decrypt; disabled/revoked versions cannot. The producer refuses
+compact JWS tokens above 262,144 characters before signing.
+
+This composition is **not approval to deploy or enable qualification**. Maximum
+raw Ed25519 request compatibility is unverified, and controller enforcement still
+needs integration into the origin/provider paths. Both external gates remain
+NOT_RUN. Keep flags false until those engineering prerequisites and explicit
+hosted authorization are satisfied.
