@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parsePrivateTelegramUpdate, readBoundedTelegramBody, TELEGRAM_MAX_BODY_BYTES, verifyTelegramSecret } from "@/lib/v2/telegram-input";
 
 const message = { message_id: 2, date: 1700000000, from: { id: 123, is_bot: false, username: "ignored" }, chat: { id: 123, type: "private" }, text: "Research public information" };
@@ -49,4 +49,14 @@ describe("Telegram private-beta input boundary", () => {
     const bytes = body({ update_id: 1, message });
     await expect(readBoundedTelegramBody(new Request("https://relay.test", { method: "POST", body: bytes }))).resolves.toEqual(bytes);
   });
+});
+
+it("times out a stalled body without turning cancellation into success", async () => {
+  vi.useFakeTimers();
+  try {
+    const request=new Request("https://relay.test",{method:"POST",body:new ReadableStream(),duplex:"half"} as RequestInit);
+    const assertion=expect(readBoundedTelegramBody(request)).rejects.toMatchObject({status:408});
+    await vi.advanceTimersByTimeAsync(2001);
+    await assertion;
+  } finally { vi.useRealTimers(); }
 });

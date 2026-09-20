@@ -54,9 +54,11 @@ export async function readBoundedTelegramBody(request: Request) {
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
+  const deadline = Date.now() + 2000;
   try {
     while (true) {
-      const { value, done } = await reader.read();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const { value, done } = await Promise.race([reader.read(), new Promise<never>((_, reject) => { timer = setTimeout(() => { reject(new RelayError("INVALID_INPUT", "Telegram request timed out.", undefined, 408)); void reader.cancel(); }, Math.max(1, deadline - Date.now())); })]).finally(() => clearTimeout(timer));
       if (done) break;
       total += value.byteLength;
       if (total > TELEGRAM_MAX_BODY_BYTES) {

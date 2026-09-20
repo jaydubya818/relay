@@ -1095,3 +1095,39 @@ export const agentWakeRequests = pgTable("agent_wake_requests", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [index("agent_wake_account_status_idx").on(table.accountId, table.status, table.createdAt)]);
+
+// Correlation only: canonical tasks, messages, approvals and executor Runs remain authoritative.
+export const channelWorkLinks = pgTable("channel_work_links", {
+  taskId: text("task_id").primaryKey().references(() => v2Tasks.id, { onDelete: "cascade" }),
+  accountId: text("account_id").notNull().references(() => accounts.id),
+  bindingId: text("binding_id").notNull().references(() => telegramBindings.id),
+  messageId: text("message_id").notNull().references(() => communicationMessages.id),
+  runId: text("run_id"), resultId: text("result_id"), snapshotEncrypted: text("snapshot_encrypted"),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  ...timestamps,
+}, (t) => [uniqueIndex("channel_work_message_idx").on(t.messageId), index("channel_work_account_idx").on(t.accountId, t.createdAt)]);
+
+export const channelControls = pgTable("channel_controls", {
+  id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => accounts.id),
+  taskId: text("task_id").notNull().references(() => v2Tasks.id), bindingId: text("binding_id").notNull().references(() => telegramBindings.id),
+  reference: text("reference").notNull(), bindingHash: text("binding_hash").notNull(),
+  kind: text("kind").notNull(), choice: text("choice"),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }), ...timestamps,
+}, (t) => [uniqueIndex("channel_control_reference_idx").on(t.taskId, t.reference, t.bindingHash), index("channel_control_account_idx").on(t.accountId)]);
+
+export const channelDeliveryAttempts = pgTable("channel_delivery_attempts", {
+  id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => accounts.id),
+  messageId: text("message_id").notNull().references(() => communicationMessages.id), attempt: integer("attempt").notNull(),
+  outcome: text("outcome").notNull(), startedAt: timestamp("started_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+}, (t) => [uniqueIndex("channel_delivery_attempt_idx").on(t.messageId, t.attempt)]);
+
+export const channelExecutionNonces = pgTable("channel_execution_nonces", {
+  nonce: text("nonce").primaryKey(), accountId: text("account_id").notNull(), environment: text("environment").notNull(), expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+});
+export const channelExecutionReceipts = pgTable("channel_execution_receipts", {
+  commandId: text("command_id").primaryKey(), accountId: text("account_id").notNull(),
+  requestId: text("request_id").notNull(), payloadHash: text("payload_hash").notNull(),
+  responseEncrypted: text("response_encrypted"), ...timestamps,
+});

@@ -39,7 +39,8 @@
     "db:bootstrap-owner": "tsx scripts/bootstrap-owner.ts",
     "db:check": "drizzle-kit check",
     "db:seed": "tsx scripts/seed.ts",
-    "qualify": "pnpm typecheck && pnpm lint && pnpm test:ci && pnpm test:performance && pnpm build"
+    "qualify": "pnpm typecheck && pnpm lint && pnpm test:ci && pnpm test:performance && pnpm build",
+    "worker:channels": "tsx scripts/channel-worker.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

@@ -56,12 +56,12 @@ export async function publishEventRoute(input: { accountId: string; actorPrincip
   });
 }
 
-export async function ingestVerifiedEvent(input: { envelope: z.input<typeof relayEventSchema>; rawBody: Uint8Array; headers: Readonly<Record<string, string>> }, verifier: WebhookVerifier, signer: AuditSigner) {
+export async function ingestVerifiedEvent(input: { envelope: z.input<typeof relayEventSchema>; rawBody: Uint8Array; headers: Readonly<Record<string, string>> }, verifier: WebhookVerifier, signer: AuditSigner, existingTransaction?: RelayDatabase) {
   const proposed = relayEventSchema.parse(input.envelope);
   const verification = await verifier.verify({ accountId: proposed.accountid, source: proposed.source, rawBody: input.rawBody, headers: input.headers });
   if (!verification.valid) throw new RelayError("INVALID_CREDENTIAL", "Inbound event signature verification failed.", undefined, 401);
   const envelope = relayEventSchema.parse({ ...proposed, signaturestatus: "verified" });
-  return await withTransaction(async (transaction) => {
+  const persist = async (transaction: RelayDatabase) => {
     await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`event:${envelope.accountid}:${envelope.source}`}, 0))`);
     const [existing] = await transaction.select().from(v2Events).where(and(eq(v2Events.accountId, envelope.accountid), eq(v2Events.source, envelope.source), eq(v2Events.dedupeKey, envelope.dedupekey))).limit(1);
     if (existing) {
@@ -92,7 +92,8 @@ export async function ingestVerifiedEvent(input: { envelope: z.input<typeof rela
     await transaction.insert(controlOutbox).values({ id: id("obx"), accountId: envelope.accountid, aggregateType: "event", aggregateId: eventId, type: "event.accepted", payload: { taskIds, reordered }, idempotencyKey: `event-accepted:${eventId}` });
     await appendAuditRecordInTransaction(transaction, { accountId: envelope.accountid, eventType: "event.accepted", outcome: "SUCCESS", details: { eventId, source: envelope.source, type: envelope.type, signatureStatus: "VERIFIED", routeCount: taskIds.length, reordered, verificationEvidence: verification.evidence ?? {} } }, signer);
     return { eventId, taskIds, duplicate: false, reordered };
-  });
+  };
+  return existingTransaction ? await persist(existingTransaction) : await withTransaction(persist);
 }
 
 export async function claimTaskCommand(workerId: string, leaseSeconds = 30) {
@@ -100,7 +101,7 @@ export async function claimTaskCommand(workerId: string, leaseSeconds = 30) {
   return await withTransaction(async (transaction) => {
     await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended('relay:v2:command-claim', 0))`);
     const timestamp = now();
-    const [command] = await transaction.select().from(taskCommands).where(and(eq(taskCommands.status, "PENDING"), lte(taskCommands.runAfter, timestamp))).orderBy(asc(taskCommands.runAfter), asc(taskCommands.createdAt)).limit(1);
+    const [command] = await transaction.select().from(taskCommands).where(and(eq(taskCommands.kind, "START_TASK"), eq(taskCommands.status, "PENDING"), lte(taskCommands.runAfter, timestamp))).orderBy(asc(taskCommands.runAfter), asc(taskCommands.createdAt)).limit(1);
     if (!command) return undefined;
     const leaseUntil = new Date(Date.now() + Math.min(Math.max(leaseSeconds, 5), 300) * 1_000).toISOString();
     const [task] = await transaction.update(v2Tasks).set({ status: "STARTING", fenceToken: sql`${v2Tasks.fenceToken} + 1`, coordinatorId: workerId, coordinatorLeaseUntil: leaseUntil, attemptCount: sql`${v2Tasks.attemptCount} + 1`, updatedAt: timestamp }).where(and(eq(v2Tasks.accountId, command.accountId), eq(v2Tasks.id, command.taskId), eq(v2Tasks.status, "QUEUED"))).returning();
@@ -179,7 +180,7 @@ export async function failTaskCommand(input: { accountId: string; commandId: str
 export async function reapExpiredTaskCommands(signer: AuditSigner, timestamp = now()) {
   return await withTransaction(async (transaction) => {
     await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended('relay:v2:command-reaper', 0))`);
-    const expired = await transaction.select().from(taskCommands).where(and(eq(taskCommands.status, "PROCESSING"), lte(taskCommands.leaseUntil, timestamp)));
+    const expired = await transaction.select().from(taskCommands).where(and(eq(taskCommands.kind, "START_TASK"), eq(taskCommands.status, "PROCESSING"), lte(taskCommands.leaseUntil, timestamp)));
     let requeued = 0;
     let deadLettered = 0;
     for (const command of expired) {

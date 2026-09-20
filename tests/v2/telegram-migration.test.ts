@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { expect, it } from "vitest";
 
-it("upgrades the canonical schema to Telegram enrollment and permits repeated migration", async () => {
+it.each([20,21])("upgrades schema %s to channel execution and permits repeated migration", async (prior) => {
   const adminUrl = process.env.RELAY_TEST_DATABASE_URL ?? "postgresql://127.0.0.1:55432/postgres";
   const databaseName = `relay_telegram_upgrade_${process.pid}_${Date.now()}`;
   const admin = new Client({ connectionString: adminUrl });
@@ -19,18 +19,19 @@ it("upgrades the canonical schema to Telegram enrollment and permits repeated mi
     await admin.query(`CREATE DATABASE ${databaseName}`);
     await client.connect();
     const journal = JSON.parse(await readFile("drizzle/meta/_journal.json", "utf8")) as { entries: Array<{ idx: number; tag: string }> };
-    const baseline = { ...journal, entries: journal.entries.filter((entry) => entry.idx <= 20) };
+    const baseline = { ...journal, entries: journal.entries.filter((entry) => entry.idx <= prior) };
     await mkdir(join(temporary, "meta"));
     await writeFile(join(temporary, "meta/_journal.json"), JSON.stringify(baseline));
     for (const entry of baseline.entries) await copyFile(`drizzle/${entry.tag}.sql`, join(temporary, `${entry.tag}.sql`));
     const database = drizzle(client);
     await migrate(database, { migrationsFolder: temporary });
-    expect((await client.query("SELECT to_regclass('public.telegram_bindings') AS table_name")).rows[0].table_name).toBeNull();
+    expect((await client.query("SELECT to_regclass('public.channel_work_links') AS table_name")).rows[0].table_name).toBeNull();
     await client.query("INSERT INTO accounts (id, name) VALUES ('acct_upgrade_sentinel', 'Upgrade sentinel')");
     await migrate(database, { migrationsFolder: "drizzle" });
     await migrate(database, { migrationsFolder: "drizzle" });
     expect((await client.query("SELECT name FROM accounts WHERE id = 'acct_upgrade_sentinel'")).rows).toEqual([{ name: "Upgrade sentinel" }]);
     expect((await client.query("SELECT to_regclass('public.telegram_bindings') AS table_name")).rows[0].table_name).toBe("telegram_bindings");
+    expect((await client.query("SELECT to_regclass('public.channel_work_links') AS table_name")).rows[0].table_name).toBe("channel_work_links");
     expect((await client.query("SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations")).rows[0].count).toBe(journal.entries.length);
   } finally {
     await client.end();
