@@ -12,6 +12,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
@@ -917,6 +918,35 @@ export const communicationConnections = pgTable("communication_connections", {
 export const communicationThreads = pgTable("communication_threads", {
   id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }), connectionId: text("connection_id").notNull().references(() => communicationConnections.id, { onDelete: "cascade" }), externalConversationId: text("external_conversation_id").notNull(), externalThreadId: text("external_thread_id").notNull().default(""), recipientId: text("recipient_id").notNull(), knownRecipient: boolean("known_recipient").notNull().default(false), createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("communication_thread_external_idx").on(table.connectionId, table.externalConversationId, table.externalThreadId), index("communication_thread_account_idx").on(table.accountId, table.connectionId)]);
+
+export const telegramPairingChallenges = pgTable("telegram_pairing_challenges", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  connectionId: text("connection_id").notNull().references(() => communicationConnections.id, { onDelete: "cascade" }),
+  ownerPrincipalId: text("owner_principal_id").notNull().references(() => principals.id),
+  agentId: text("agent_id").notNull().references(() => agents.id),
+  secretHash: text("secret_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }),
+  ...timestamps,
+}, (table) => [uniqueIndex("telegram_pairing_secret_idx").on(table.secretHash), index("telegram_pairing_connection_idx").on(table.accountId, table.connectionId)]);
+
+export const telegramBindings = pgTable("telegram_bindings", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  connectionId: text("connection_id").notNull().references(() => communicationConnections.id, { onDelete: "cascade" }),
+  ownerPrincipalId: text("owner_principal_id").notNull().references(() => principals.id),
+  agentId: text("agent_id").notNull().references(() => agents.id),
+  telegramUserId: text("telegram_user_id").notNull(),
+  telegramChatId: text("telegram_chat_id").notNull(),
+  pairingChallengeId: text("pairing_challenge_id").notNull().references(() => telegramPairingChallenges.id),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+  ...timestamps,
+}, (table) => [
+  uniqueIndex("telegram_binding_active_connection_idx").on(table.connectionId).where(sql`${table.revokedAt} IS NULL`),
+  uniqueIndex("telegram_binding_challenge_idx").on(table.pairingChallengeId),
+  index("telegram_binding_account_idx").on(table.accountId, table.connectionId),
+]);
 
 export const communicationMessages = pgTable("communication_messages", {
   id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }), connectionId: text("connection_id").notNull().references(() => communicationConnections.id, { onDelete: "restrict" }), threadId: text("thread_id").notNull().references(() => communicationThreads.id, { onDelete: "restrict" }), direction: communicationDirection("direction").notNull(), providerMessageId: text("provider_message_id").notNull(), providerEventId: text("provider_event_id"), senderId: text("sender_id").notNull(), content: jsonb("content").notNull(), contentHash: text("content_hash").notNull(), classification: text("classification").notNull(), status: communicationMessageStatus("status").notNull(), taskId: text("task_id"), actionIntentId: text("action_intent_id"), leaseId: text("lease_id"), approvalDecisionId: text("approval_decision_id"), idempotencyKey: text("idempotency_key").notNull(), providerReceipt: jsonb("provider_receipt"), attemptCount: integer("attempt_count").notNull().default(0), retryAfter: timestamp("retry_after", { withTimezone: true, mode: "string" }), createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
