@@ -9,6 +9,16 @@ export type DeliveryOutcome={kind:"sent";messageId:string}|{kind:"retry";retryAf
 export interface OwnerChannelSender { send(input:{chatId:string;reply:Reply}):Promise<DeliveryOutcome> }
 export class TelegramOwnerSender implements OwnerChannelSender {
   constructor(private readonly token:string,private readonly fetcher:typeof fetch=fetch) {}
+  async acknowledge(callbackId:string,text:string):Promise<boolean> {
+    if(!callbackId||callbackId.length>255||text.length>200)return false;
+    try{
+      const response=await this.fetcher(`https://api.telegram.org/bot${encodeURIComponent(this.token)}/answerCallbackQuery`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({callback_query_id:callbackId,text,cache_time:0}),redirect:"error",signal:AbortSignal.timeout(1500)});
+      if(!response.ok)return false;
+      const reader=response.body?.getReader();if(!reader)return false;let size=0;const chunks:Uint8Array[]=[];
+      try{for(;;){const part=await reader.read();if(part.done)break;size+=part.value.length;if(size>4096){await reader.cancel();return false;}chunks.push(part.value);}}finally{reader.releaseLock();}
+      const result=JSON.parse(Buffer.concat(chunks).toString("utf8"));return result?.ok===true&&result.result===true;
+    }catch{return false;}
+  }
   async send(input:{chatId:string;reply:Reply}):Promise<DeliveryOutcome> {
     // Plain text: no Markdown/HTML parser, no arbitrary destination from model output.
     try {

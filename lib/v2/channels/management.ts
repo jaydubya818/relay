@@ -18,11 +18,12 @@ export async function telegramManagement(accountId:string,principalId:string,con
   const [agent]=await rows<{name:string;status:string}>(sql`SELECT name,status FROM agents WHERE id=${config.agentId} AND account_id=${accountId}`);
   const [binding]=await rows<{id:string;revoked_at:Date|null;updated_at:Date}>(sql`SELECT id,revoked_at,updated_at FROM telegram_bindings WHERE connection_id=${config.connectionId} AND account_id=${accountId} ORDER BY created_at DESC LIMIT 1`);
   const [connection]=await rows<{status:string}>(sql`SELECT status FROM communication_connections WHERE id=${config.connectionId} AND account_id=${accountId}`);
-  const [activity]=await rows<{last_activity:Date|null}>(sql`SELECT max(created_at) AS last_activity FROM communication_messages WHERE connection_id=${config.connectionId} AND account_id=${accountId}`);
+  const [activity]=await rows<{last_activity:Date|string|null}>(sql`SELECT max(created_at) AS last_activity FROM communication_messages WHERE connection_id=${config.connectionId} AND account_id=${accountId}`);
   const [waiting]=await rows<{count:number}>(sql`SELECT count(*)::int AS count FROM channel_work_links w JOIN v2_tasks t ON t.id=w.task_id WHERE w.account_id=${accountId} AND w.binding_id=${binding?.id??""} AND t.status IN ('WAITING_APPROVAL','PAUSED')`);
   const [failed]=await rows<{count:number}>(sql`SELECT count(*)::int AS count FROM communication_messages WHERE account_id=${accountId} AND connection_id=${config.connectionId} AND direction='OUTBOUND' AND status IN ('FAILED','EFFECT_UNKNOWN') AND retry_after IS NULL`);
-  const state=connection?.status==="ERROR"?"PROVIDER_ATTENTION":binding?.revoked_at?"REVOKED":!agent||agent.status!=="ACTIVE"?"AGENT_UNAVAILABLE":!binding?"READY_TO_PAIR":!config.executionEnabled?"EXECUTION_DISABLED":waiting.count?"APPROVAL_WAITING":failed.count?"DELIVERY_FAILURE":"PAIRED";
-  return {state,enabled:true,issues:[],agentName:agent?.name??null,bindingId:binding?.revoked_at?null:binding?.id??null,lastActivity:activity.last_activity?.toISOString()??null,executionEnabled:config.executionEnabled};
+  const [cancellation]=await rows<{count:number}>(sql`SELECT count(*)::int AS count FROM task_commands c JOIN channel_work_links w ON w.task_id=c.task_id WHERE c.account_id=${accountId} AND w.binding_id=${binding?.id??""} AND c.kind='CHANNEL_CANCEL' AND c.status<>'COMPLETED'`);
+  const state=connection?.status==="ERROR"?"PROVIDER_ATTENTION":binding?.revoked_at?(cancellation.count?"REVOKED_CANCELLATION_PENDING":"REVOKED"):!agent||agent.status!=="ACTIVE"?"AGENT_UNAVAILABLE":!binding?"READY_TO_PAIR":!config.executionEnabled?"EXECUTION_DISABLED":waiting.count?"APPROVAL_WAITING":failed.count?"DELIVERY_FAILURE":"PAIRED";
+  return {state,enabled:true,issues:[],agentName:agent?.name??null,bindingId:binding?.revoked_at?null:binding?.id??null,lastActivity:activity.last_activity?new Date(activity.last_activity).toISOString():null,executionEnabled:config.executionEnabled};
 }
 export async function setupTelegramPairing(accountId:string,principalId:string,config=channelConfiguration()) {
   await owner(accountId,principalId,config);

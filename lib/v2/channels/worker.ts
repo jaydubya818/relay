@@ -1,3 +1,5 @@
+import { enqueueChannelCancellation } from "./cancellation";
+import { ExecutorNotAdmitted } from "./executor";
 import { sql } from "drizzle-orm";
 import { withTransaction } from "@/lib/db";
 import { id } from "@/lib/ids";
@@ -13,11 +15,11 @@ export async function runChannelExecutionCycle(config:ChannelConfiguration,trans
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended('relay:channel-command-claim',0))`);
     // A crashed command is reconciled, never blindly re-executed. The executor's
     // canonical Run and effect receipts decide whether continuation is possible.
-    await tx.execute(sql`UPDATE task_commands SET status='PENDING',kind='CHANNEL_STATUS',lease_until=NULL,run_after=now(),updated_at=now() WHERE account_id=${config.accountId} AND kind LIKE 'CHANNEL_%' AND status='PROCESSING' AND lease_until<now()`);
+    await tx.execute(sql`UPDATE task_commands SET status='PENDING',kind='CHANNEL_STATUS',lease_until=NULL,run_after=now(),updated_at=now() WHERE account_id=${config.accountId} AND kind LIKE 'CHANNEL_%' AND kind<>'CHANNEL_CANCEL' AND status='PROCESSING' AND lease_until<now()`);
     const [candidate]=await rows<Claim>(sql`SELECT c.*,w.binding_id,w.message_id,w.run_id,w.snapshot_encrypted,w.expires_at,w.created_at AS created_at,m.thread_id,m.content,t.agent_id
       FROM task_commands c JOIN channel_work_links w ON w.task_id=c.task_id AND w.account_id=c.account_id
       JOIN communication_messages m ON m.id=w.message_id JOIN v2_tasks t ON t.id=c.task_id
-      WHERE c.account_id=${config.accountId} AND c.kind LIKE 'CHANNEL_%' AND c.status='PENDING' AND c.run_after<=now()
+      WHERE c.account_id=${config.accountId} AND c.kind LIKE 'CHANNEL_%' AND c.kind<>'CHANNEL_CANCEL' AND c.status='PENDING' AND c.run_after<=now()
       AND t.status NOT IN ('SUCCEEDED','FAILED','CANCELLED','DEAD_LETTERED')
       AND NOT EXISTS(SELECT 1 FROM task_commands busy JOIN channel_work_links bw ON bw.task_id=busy.task_id WHERE bw.binding_id=w.binding_id AND busy.status='PROCESSING' AND busy.lease_until>now())
       AND (c.kind<>'CHANNEL_START' OR NOT EXISTS(SELECT 1 FROM channel_work_links earlier JOIN v2_tasks et ON et.id=earlier.task_id WHERE earlier.binding_id=w.binding_id AND earlier.created_at<w.created_at AND et.status NOT IN ('SUCCEEDED','FAILED','CANCELLED','DEAD_LETTERED')))
@@ -26,8 +28,7 @@ export async function runChannelExecutionCycle(config:ChannelConfiguration,trans
     await lockBinding(config.connectionId,tx);
     const binding=await currentBinding(candidate.binding_id,tx);
     if(!binding || binding.connection_id!==config.connectionId || binding.owner_principal_id!==config.ownerPrincipalId || binding.agent_id!==config.agentId || binding.agent_status!=="ACTIVE" || !await channelGranted(binding,"channel.owner.receive",tx) || new Date(candidate.expires_at).getTime()<=Date.now()) {
-      await tx.execute(sql`UPDATE task_commands SET status='CANCELLED' WHERE id=${candidate.id}`);
-      await tx.execute(sql`UPDATE v2_tasks SET status='CANCELLED',completed_at=now(),updated_at=now() WHERE id=${candidate.task_id}`);
+      await enqueueChannelCancellation(tx,candidate.account_id,candidate.task_id);
       if(binding)await enqueueReply(tx,{binding,threadId:candidate.thread_id,taskId:candidate.task_id,key:`channel-unavailable:${candidate.task_id}`,reply:{text:"Your request cannot run because its identity, Agent, permission, or lifetime is no longer valid."},system:true});
       return;
     }
@@ -58,12 +59,13 @@ export async function runChannelExecutionCycle(config:ChannelConfiguration,trans
     if(!current || current.agent_status!=="ACTIVE" || !await channelGranted(current,"channel.owner.receive",tx))throw new Error("Channel authority changed.");
     return transport.call(command);
   })); if(snapshot.requestId!==work.requestId||snapshot.ownerPrincipalId!==work.ownerPrincipalId||snapshot.agentId!==work.agentId||claim.run_id&&snapshot.runId!==claim.run_id)throw new Error("Run identity changed."); }
-  catch {
+  catch(error) {
+    const notAdmitted=error instanceof ExecutorNotAdmitted && operation==="status" && !claim.run_id;
     await withTransaction(async tx=>{
-      await tx.execute(sql`UPDATE task_commands SET status='PENDING',kind='CHANNEL_STATUS',lease_until=NULL,run_after=now()+interval '10 seconds',updated_at=now() WHERE id=${claim.id} AND worker_id=${workerId} AND fence_token=${claim.fence_token} AND status='PROCESSING'`);
-      await channelAudit(tx,signer,claim.binding,"channel.executor_unconfirmed","RECONCILE",{taskId:claim.task_id,attempt:claim.attempt});
+      await tx.execute(sql`UPDATE task_commands SET status='PENDING',kind=${notAdmitted?'CHANNEL_START':'CHANNEL_STATUS'},lease_until=NULL,run_after=now()+interval '10 seconds',updated_at=now() WHERE id=${claim.id} AND worker_id=${workerId} AND fence_token=${claim.fence_token} AND status='PROCESSING'`);
+      await channelAudit(tx,signer,claim.binding,"channel.executor_unconfirmed",notAdmitted?"NOT_ADMITTED":"RECONCILE",{taskId:claim.task_id,attempt:claim.attempt});
     });
-    return {processed:true,state:"RECONCILE"};
+    return {processed:true,state:notAdmitted?"ADMISSION_RETRY":"RECONCILE"};
   }
   await withTransaction(async tx=>{
     const owned=await rows<{id:string}>(sql`UPDATE task_commands SET status='COMPLETED',lease_until=NULL,updated_at=now() WHERE id=${claim.id} AND worker_id=${workerId} AND fence_token=${claim.fence_token} AND status='PROCESSING' AND lease_until>now() RETURNING id`,tx);

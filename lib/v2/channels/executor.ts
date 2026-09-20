@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
 import { channelExecutionNonces, channelExecutionReceipts } from "@/lib/db/schema";
@@ -9,6 +10,8 @@ import { signExecution, verifyExecution } from "./signing";
 
 export class ExecutorUnavailable extends Error {}
 export class ExecutorOutcomeUnknown extends Error {}
+export class ExecutorNotAdmitted extends Error {}
+const nonAdmissionSchema=z.object({code:z.literal("OWNER_WORK_NOT_ADMITTED"),requestId:z.string(),ownerPrincipalId:z.string(),agentId:z.string(),workHash:z.string()}).strict();
 
 /** Executor-side handler. Mount in the executor's authenticated owner-ingress host.
  * Nonces and receipt storage must be in that host's durable isolated database.
@@ -48,14 +51,23 @@ export class HttpOwnerExecutor implements ExecutionTransport {
     let response: Response;
     try { response = await this.fetcher(this.config.endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(assertion), redirect: "error", signal: AbortSignal.timeout(10000) }); }
     catch { throw new ExecutorOutcomeUnknown("Executor response unavailable; reconcile only."); }
-    if (!response.ok) throw new ExecutorOutcomeUnknown("Executor did not return a confirmed receipt.");
+    if (!response.ok && response.status !== 409) throw new ExecutorOutcomeUnknown("Executor did not return a confirmed receipt.");
     const reader = response.body?.getReader();
     if (!reader) throw new ExecutorOutcomeUnknown("Executor receipt missing.");
     let bytes = 0; const chunks: Uint8Array[] = [];
     try { while (true) { const item = await reader.read(); if (item.done) break; bytes += item.value.byteLength; if (bytes > 32768) { await reader.cancel(); throw new Error(); } chunks.push(item.value); } }
     catch { throw new ExecutorOutcomeUnknown("Executor receipt unavailable."); }
     finally { reader.releaseLock(); }
-    const result = executionSnapshotSchema.safeParse(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+    let value:unknown;
+    try{value=JSON.parse(Buffer.concat(chunks).toString("utf8"));}catch{throw new ExecutorOutcomeUnknown("Executor receipt invalid.");}
+    if(response.status===409){
+      const proof=nonAdmissionSchema.safeParse(value);
+      if(command.operation==="status" && proof.success && proof.data.requestId===command.work.requestId
+        && proof.data.ownerPrincipalId===command.work.ownerPrincipalId && proof.data.agentId===command.work.agentId
+        && proof.data.workHash===canonicalHash(command.work))throw new ExecutorNotAdmitted("Authenticated executor confirms exact work was not admitted.");
+      throw new ExecutorOutcomeUnknown("Executor non-admission proof invalid.");
+    }
+    const result = executionSnapshotSchema.safeParse(value);
     if (!result.success) throw new ExecutorOutcomeUnknown("Executor receipt invalid.");
     assertSnapshotBinding(command, result.data);
     return result.data;

@@ -1,3 +1,4 @@
+import { enqueueChannelCancellation } from "./channels/cancellation";
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { db, withTransaction, type RelayDatabase } from "@/lib/db";
@@ -114,6 +115,8 @@ export async function revokeTelegramBinding(input: { accountId: string; ownerPri
     const [revoked] = await transaction.update(telegramBindings).set({ revokedAt: timestamp, updatedAt: timestamp }).where(and(eq(telegramBindings.id, binding.id), isNull(telegramBindings.revokedAt))).returning({ id: telegramBindings.id });
     if (!revoked) return { revoked: true };
     await transaction.update(telegramPairingChallenges).set({ consumedAt: timestamp, updatedAt: timestamp }).where(and(eq(telegramPairingChallenges.connectionId, binding.connectionId), isNull(telegramPairingChallenges.consumedAt)));
+    const pending=(await transaction.execute(sql`SELECT w.task_id FROM channel_work_links w JOIN v2_tasks t ON t.id=w.task_id WHERE w.account_id=${input.accountId} AND w.binding_id=${binding.id} AND t.status NOT IN ('SUCCEEDED','FAILED','CANCELLED','DEAD_LETTERED')`)).rows as Array<{task_id:string}>;
+    for(const work of pending)await enqueueChannelCancellation(transaction,input.accountId,work.task_id);
     // Disconnect the canonical channel too: existing outbound authority rejects it.
     await transaction.update(communicationConnections).set({ status: "DISCONNECTED", revokedAt: timestamp, updatedAt: timestamp }).where(and(eq(communicationConnections.id, binding.connectionId), eq(communicationConnections.accountId, input.accountId)));
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.ownerPrincipalId, agentId: binding.agentId, eventType: "telegram.binding_revoked", outcome: "REVOKED", details: { bindingId: binding.id, connectionId: binding.connectionId } }, signer);

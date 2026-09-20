@@ -1,3 +1,4 @@
+import { runChannelCancellationCycle } from "@/lib/v2/channels/cancellation";
 import { claimTaskCommand } from "@/lib/v2/orchestration";
 import { sql } from "drizzle-orm";
 import { afterEach,describe,expect,it } from "vitest";
@@ -11,7 +12,7 @@ import { runChannelExecutionCycle } from "@/lib/v2/channels/worker";
 import { runChannelDeliveryCycle,TelegramOwnerSender } from "@/lib/v2/channels/delivery";
 import { rows,decode,type Reply } from "@/lib/v2/channels/store";
 import { signExecution,verifyExecution } from "@/lib/v2/channels/signing";
-import { receiveOwnerExecution } from "@/lib/v2/channels/executor";
+import { receiveOwnerExecution,ExecutorNotAdmitted } from "@/lib/v2/channels/executor";
 import { WORK_BUDGET,type ExecutionCommand,type ExecutionSnapshot } from "@/lib/v2/channels/contracts";
 import { cleanupDatabase,freshDatabase } from "../helpers";
 async function setup(){
@@ -20,12 +21,12 @@ async function setup(){
  await issueAgentPassport({accountId:owner.accountId,agentId,ownerPrincipalId:owner.principalId,policy:{trustTier:"REGISTERED",capabilityEligibility:[],policyReferences:[],budgetReferences:[],allowedEnvironments:{providerIds:["relay-managed"],minimumAssurance:"registered"},dataAccess:[],expiresAt:"2099-01-01T00:00:00.000Z"}},signer);
  await activateV2Agent({accountId:owner.accountId,agentId,actorPrincipalId:owner.principalId},signer);
  const config:ChannelConfiguration={enabled:true,executionEnabled:true,environment:"preview",accountId:owner.accountId,ownerPrincipalId:owner.principalId,agentId,connectionId:"test-channel",botUsername:"fixture_bot",botToken:"synthetic-no-network",webhookSecret:"fixture-webhook-secret-1234567890",endpoint:"https://executor.invalid/owner",audience:"fixture",signer,issues:[]};
- const challenge=await setupTelegramPairing(owner.accountId,owner.principalId,config);let sequence=10;
- const webhook=(body:unknown,secret=config.webhookSecret)=>telegramWebhook(new Request("https://relay.invalid/api/channels/telegram/webhook",{method:"POST",headers:{"content-type":"application/json","x-telegram-bot-api-secret-token":secret},body:JSON.stringify(body)}),config);
+ const challenge=await setupTelegramPairing(owner.accountId,owner.principalId,config);let sequence=10;const acknowledgements:string[]=[];
+ const webhook=(body:unknown,secret=config.webhookSecret)=>telegramWebhook(new Request("https://relay.invalid/api/channels/telegram/webhook",{method:"POST",headers:{"content-type":"application/json","x-telegram-bot-api-secret-token":secret},body:JSON.stringify(body)}),config,async(_id,text)=>{acknowledgements.push(text);return true;});
  const post=(text:string,user=123,updateId=sequence++)=>webhook({update_id:updateId,message:{message_id:updateId,date:Math.floor(Date.now()/1000),from:{id:user,is_bot:false},chat:{id:user,type:"private"},text}});
  expect((await post(`/start ${new URL(challenge.url).searchParams.get("start")}`)).status).toBe(200);
  const [binding]=await rows<{id:string}>(sql`SELECT id FROM telegram_bindings`);
- return {...owner,agentId,signer,config,post,webhook,bindingId:binding.id};
+ return {...owner,agentId,signer,config,post,webhook,bindingId:binding.id,acknowledgements};
 }
 const count=async(table:string)=>(await rows<{count:number}>(sql.raw(`SELECT count(*)::int AS count FROM ${table}`)))[0].count;
 function completed(c:ExecutionCommand):ExecutionSnapshot{return {requestId:c.work.requestId,ownerPrincipalId:c.work.ownerPrincipalId,agentId:c.work.agentId,runId:`run_${c.work.requestId}`,state:"COMPLETED",resultId:`result_${c.work.requestId}`,text:"Your active goal is isolated qualification."};}
@@ -52,6 +53,38 @@ describe("durable owner channel",()=>{
   const f=await setup();await f.post("request");await db().execute(sql`UPDATE task_commands SET status='PROCESSING',lease_until=now()-interval '1 second' WHERE kind='CHANNEL_START'`);
   const operations:string[]=[];await runChannelExecutionCycle(f.config,{call:async c=>{operations.push(c.operation);return completed(c);}},f.signer);expect(operations).toEqual(["status"]);
  });
+ it.each([false,true])("retries admission only with proof and no known Run (known=%s)",async known=>{
+  const f=await setup();await f.post("request");await db().execute(sql`UPDATE task_commands SET status='PROCESSING',lease_until=now()-interval '1 second' WHERE kind='CHANNEL_START'`);
+  if(known)await db().execute(sql`UPDATE channel_work_links SET run_id='already-admitted'`);
+  await runChannelExecutionCycle(f.config,{call:async()=>{throw new ExecutorNotAdmitted();}},f.signer);
+  expect((await rows<{kind:string}>(sql`SELECT kind FROM task_commands`))[0].kind).toBe(known?"CHANNEL_STATUS":"CHANNEL_START");
+  if(!known){
+   await db().execute(sql`UPDATE task_commands SET run_after=now()-interval '1 second'`);
+   const operations:string[]=[];await runChannelExecutionCycle(f.config,{call:async c=>{operations.push(c.operation);return completed(c);}},f.signer);expect(operations).toEqual(["start"]);
+  }
+ });
+ it("persists cancellation through revocation and never converts it back to START",async()=>{
+  const f=await setup();await f.post("request");await disconnectTelegram(f.accountId,f.principalId,f.bindingId,f.config);
+  expect((await telegramManagement(f.accountId,f.principalId,f.config)).state).toBe("REVOKED_CANCELLATION_PENDING");
+  await db().execute(sql`UPDATE task_commands SET status='PROCESSING',lease_until=now()-interval '1 second' WHERE kind='CHANNEL_CANCEL'`);
+  expect(await runChannelExecutionCycle(f.config,{call:async()=>{throw new Error("must not execute");}},f.signer)).toEqual({processed:false});
+  let cancellations=0;
+  f.config.executionEnabled=false;
+  await runChannelCancellationCycle(f.config,{call:async c=>{expect(c.operation).toBe("cancel");cancellations++;return {...completed(c),state:"CANCELLED"};}},f.signer);
+  expect(await runChannelCancellationCycle(f.config,{call:async()=>{throw new Error();}},f.signer)).toEqual({processed:false});
+  expect(cancellations).toBe(1);expect((await telegramManagement(f.accountId,f.principalId,f.config)).state).toBe("REVOKED");
+ });
+ it("keeps cancellation visibly pending when the executor cannot confirm it",async()=>{
+  const f=await setup();await f.post("request");await disconnectTelegram(f.accountId,f.principalId,f.bindingId,f.config);
+  expect(await runChannelCancellationCycle(f.config,{call:async()=>{throw new Error("unavailable");}},f.signer)).toMatchObject({state:"UNCONFIRMED"});
+  expect((await telegramManagement(f.accountId,f.principalId,f.config)).state).toBe("REVOKED_CANCELLATION_PENDING");
+  expect((await rows<{kind:string}>(sql`SELECT kind FROM task_commands WHERE status='PENDING'`))[0].kind).toBe("CHANNEL_CANCEL");
+ });
+ it("disabling execution drains cancellation without dispatching work",async()=>{
+  const f=await setup();await f.post("request");f.config.executionEnabled=false;f.config.enabled=false;
+  const operations:string[]=[];await runChannelCancellationCycle(f.config,{call:async c=>{operations.push(c.operation);return {...completed(c),state:"CANCELLED"};}},f.signer);
+  expect(operations).toEqual(["cancel"]);expect((await rows<{status:string}>(sql`SELECT status FROM v2_tasks`))[0].status).toBe("CANCELLED");
+ });
  it("retries delivery alone after a known pre-effect rate limit",async()=>{
   const f=await setup();await f.post("request");await runChannelExecutionCycle(f.config,{call:async c=>completed(c)},f.signer);
   await runChannelDeliveryCycle(f.config,{send:async()=>({kind:"retry",retryAfterSeconds:2})},f.signer);expect((await rows<{status:string}>(sql`SELECT status FROM v2_tasks`))[0].status).toBe("SUCCEEDED");
@@ -66,7 +99,7 @@ describe("durable owner channel",()=>{
   await runChannelExecutionCycle(f.config,{call:async c=>{commands.push(c);return {...completed(c),state:"WAITING_APPROVAL",pending:{kind:"approval",reference:"canonical-approval",bindingHash:"exact-hash",summary:"Write isolated artifact",target:"test workspace",consequence:"Creates one test artifact",expiresAt:new Date(Date.now()+60000).toISOString(),estimatedCost:null}};}},f.signer);
   const [out]=await rows<{content:{encrypted:string}}>(sql`SELECT content FROM communication_messages WHERE direction='OUTBOUND'`);const data=decode<Reply>(out.content.encrypted).buttons![0].data;expect(data).not.toContain("canonical-approval");expect(data.length).toBeLessThanOrEqual(64);
   const callback=(user:number)=>f.webhook({update_id:555,callback_query:{id:"query",from:{id:user,is_bot:false},message:{message_id:999,chat:{id:user,type:"private"}},data}});
-  expect((await callback(456)).status).toBe(403);expect((await callback(123)).status).toBe(200);expect((await callback(123)).status).toBe(200);
+  expect((await callback(456)).status).toBe(403);expect((await callback(123)).status).toBe(200);expect((await callback(123)).status).toBe(200);expect(f.acknowledgements).toHaveLength(3);expect(f.acknowledgements[2]).toContain("already recorded");
   await runChannelExecutionCycle(f.config,{call:async c=>{commands.push(c);return completed(c);}},f.signer);expect(commands.map(c=>c.operation)).toEqual(["start","approval"]);expect(commands[1].decision).toEqual({reference:"canonical-approval",bindingHash:"exact-hash",choice:"approve"});expect(commands[1].work).toEqual(commands[0].work);
  });
  it("suppresses queued delivery after revocation",async()=>{

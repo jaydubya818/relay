@@ -4,7 +4,7 @@
 
 **INCOMPLETE — NOT_READY_FOR_HOSTED_GOLDEN_PATH. NOT_READY_FOR_LIMITED_BETA.**
 
-This continuation implements and locally tests the Relay channel pipeline. It does **not** complete the canonical MyEve executor adapter or prove canonical Telegram approval continuation. Missing credentials are not the blocker. The remaining work is code and qualification, listed below. `OWNER_EXECUTOR_QUALIFIED` is deliberately false: configuration cannot enable this unfinished execution path. The existing `private-preview` execution denial is also retained.
+The published checkpoint implements the Relay channel pipeline. The unpublished continuation adds a canonical MyEve companion and passes a cross-repository component path. It does **not** qualify actual Eve model execution or live Telegram approval continuation. Missing credentials are not the blocker. The remaining work is code and qualification, listed below. `OWNER_EXECUTOR_QUALIFIED` is deliberately false: configuration cannot enable this unfinished execution path. The existing `private-preview` execution denial is also retained.
 
 - Live Telegram scenarios: **0**.
 - Hosted resources created, live webhooks registered, Production execution enabled, merges to main: **0**.
@@ -12,6 +12,8 @@ This continuation implements and locally tests the Relay channel pipeline. It do
 - Production signing credential: **NOT CONFIGURED**; no credential requested in chat.
 - Dedicated private-beta bot required: **YES**; not created.
 - No local fixture is counted as live evidence or as canonical MyEve execution evidence.
+
+The sections through “Final verification update” preserve the historical `6fc769d` checkpoint. Statements there about missing adapters describe that checkpoint; the continuation addendum below records subsequent implementation and current blockers.
 
 ## Source identity
 
@@ -242,3 +244,67 @@ git diff --check
 The committed browser test also runs under the standard Playwright configuration after its disposable seed. For the recorded production-build run, a temporary config selected only `telegram-connection.spec.ts` at loopback port 3219, with `RELAY_UI_TEST_DATABASE_URL` pointing to the disposable UI database. No screenshot contained a pairing secret. Temporary browser configuration and test output are not committed.
 
 Cleanup and handoff: local app server stopped; disposable PostgreSQL stopped and its cluster removed; test provider containers checked; no hosted resources or live credentials existed to revoke. No `.env`, database, browser profile, test output or machine dependency tree is committed. The feature branch is preserved for review, with execution gated. No PR claiming golden-path completion and no main merge are authorized by this evidence.
+
+
+## Approved publication and continuation — 2026-09-20
+
+### Published checkpoint
+
+- Canonical remote: `https://github.com/jaydubya818/relay.git`.
+- Remote feature branch: `feat/relay-v2-telegram-private-beta`; never `main`.
+- Approved local HEAD and verified remote SHA: **`6fc769db1a95a31417f6b6d93a1684cf4240a184`**. Exact parity was verified after the normal push.
+- The push contained only the previously committed history. Review of the 30 changed paths and three unpublished commits found no credentials, private data, environment files, dependency trees, qualification artifacts or temporary files. Pattern scanning was combined with source review; no standalone secret-scanner result is claimed.
+- Execution stayed gated by `OWNER_EXECUTOR_QUALIFIED=false`, with private-preview denial retained. No deployment, release tag, main merge or Telegram activation occurred.
+- Historical evidence remains **237 Relay tests, 2 performance tests, 1 UI test; typecheck, lint, build, migrations and dependency audit PASS; live Telegram 0; golden path INCOMPLETE**. These counts are not added to later runs.
+
+### Unpublished implementation
+
+The companion MyEve branch is `codex/telegram-owner-integration`, based on `396631afa4739e5ca8ac0c5c81781f82f3160403`. Its qualification record is `apps/eve/docs/qualification/telegram-owner-channel.md`. The first local companion commit `073cd51` is historical: subsequent interoperability and cancellation fixes are required. The original MyEve checkout advanced independently to `38dc7281659b025f02b89edb138d38763b516955`; it was preserved and must be reconciled/retested before combining changes.
+
+Implemented using existing canonical primitives:
+
+- Signed MyEve admission with explicit Relay account/owner/Agent mapping, replay protection, canonical Run admission, one-session/one-turn binding and scheduled observation. Owner ingress uses `/api/relay/owner-execution`; Federation and web cookies are not authority.
+- Immutable pending Action continuation through the existing pending-send storage, canonical approval decision, Action Gateway, recovery and atomic Run/Outcome completion. Human approval waiting preserves only the remaining active-time budget once. Safe email approval text contains recipients and subject, not body or provider credentials.
+- Relay STATUS can retry START only after an authenticated, exact-work non-admission proof and only without a known Run. Ambiguous outcomes still reconcile without resending an effect.
+- Durable cancellation in the existing Relay command queue, drained with normal execution disabled. Management distinguishes revoked pairing with cancellation pending from confirmed executor cancellation. MyEve supports cancellation before START and after mapping/Agent revocation; completed cancellation receipts suppress private result text.
+- Telegram callback acknowledgements use bounded `answerCallbackQuery` requests. Failure to acknowledge cannot undo or repeat a decision. The [Telegram API contract](https://core.telegram.org/bots/api#answercallbackquery) was checked; no live Telegram call was made.
+- A direct actual Relay signer/MyEve verifier check caught and fixed the `sha256:` wire-hash prefix mismatch. Three direct interoperability assertions and a fixed hash vector pass.
+
+The shared MyEve changes touch auth, session/Context Assembly binding, task accounting, Action Gateway and Run completion to enforce the existing authority boundaries. They do not introduce another execution or approval architecture. MyEve migration **0030_owner_channel_handoff** follows 0029; Relay needs no additional migration for this continuation.
+
+### Current local evidence
+
+| Check | Result |
+|---|---|
+| Relay serial regression including opt-in cross-repository fixture | **246 passed / 5 skipped**, 50 passing files, 3 skipped files |
+| MyEve full regression including real PostgreSQL owner scenarios | **593 passed**, 83 files; includes 18 database scenarios |
+| Relay → actual MyEve canonical services component path | PASS: one Run, one Action attempt, one Outcome; research/draft/effect 1/1/1 despite lost approval response; subsequent revocation cancels another Run |
+| TypeScript, Relay lint, diff whitespace | PASS |
+| Both local production builds | PASS; no deployment |
+| MyEve fresh migrations and populated 0029→0030 upgrade | PASS; pre-existing Agent sentinel preserved and all three projection tables present |
+| MyEve migration order and executor inventory | 30 ordered migrations; **525 classified sources / UNKNOWN=0** |
+| New production dependency changes | None; historical audit retained, no fresh MyEve audit claimed |
+| New UI/performance qualification | Not rerun; historical evidence remains separately recorded |
+| Live Telegram, actual model/provider execution | **0** |
+
+The cross-repository fixture imports actual MyEve services and uses real PostgreSQL schemas; model execution, harmless provider and Telegram transport are synthetic. It does not qualify Context Assembly disclosure or installed Eve runtime behavior. All fixture identities and keys are synthetic. Both immutable release gates remain false.
+
+Reproduction, from Relay with the companion path set explicitly and a disposable loopback database:
+
+```sh
+RELAY_MYEVE_TESTS=1 RELAY_MYEVE_SOURCE=/path/to/myeve-companion RELAY_TEST_DATABASE_URL=postgresql://127.0.0.1:55447/postgres pnpm test:ci
+pnpm typecheck
+pnpm lint
+pnpm build
+```
+
+### Remaining gates
+
+- Hard per-call model token/spend reservation and all tool-call bounds. Post-step usage accounting, unknown-cost refusal and twelve guarded Action starts do not establish the complete advertised budget. Installed Eve session limits are also post-call checks and allow a human to reset a quota window; they cannot silently replace this contract.
+- Actual Eve dispatch and scoped Context Assembly, host restart, session observation, scheduled wake-up, cooperative cancellation and cleanup qualification.
+- Final combined-source migration/deployment readiness, reconciliation with independent MyEve changes, and the historical Relay 0021 branch collision.
+- Real Telegram and provider/result-delivery qualification, including approval comprehension, expired controls, recovery and revocation under live timing.
+
+Only after code readiness should the owner authorize dedicated bot creation, secure credential provisioning, interactive authentication and consequential live testing. No credential is requested here. **INCOMPLETE; no main merge or qualified release.** Continuation commits remain local because the publication authorization covered only `6fc769d` and its existing history.
+
+Continuation handoff: MyEve companion verified at `64c40fe6d14f99205978bcd6c94bb668dff6a163`. All continuation source changes are committed locally. The feature branch is ahead of the published checkpoint; post-push parity above refers to the approved publication, not these unpublished commits. The task-created PostgreSQL 55447 server was stopped and its disposable cluster and wire-check script removed. No hosted resource or live credential existed to revoke. Both working trees are clean, with dependency symlinks excluded locally. Final changed-file hygiene scan and source review found no committed credential or temporary artifact.
