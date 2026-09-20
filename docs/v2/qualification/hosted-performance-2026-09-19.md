@@ -1,10 +1,10 @@
 # Relay V2 hosted performance root-cause and remediation — 2026-09-19
 
-Status: `PASSED_WITH_EXACT_DEPLOYMENT_RECHECK_BLOCKED`
+Status: `PASSED`
 
 Performance verdict: `PASS`
 
-Owner-preview verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`
+Owner-preview verdict: `OWNER PREVIEW QUALIFIED`
 
 This record is limited to the hosted performance investigation. It does not qualify WO-22, authorize a release, start Telegram or V2.1/V3 work, or change V1.
 
@@ -135,3 +135,7 @@ Performance verdict: `PASS`. An authenticated, protected, post-fix `iad1` previe
 Owner-preview verdict: `OWNER PREVIEW QUALIFICATION INCOMPLETE`. The final exact deployment is correctly configured and Ready, but Vercel's external Security Checkpoint prevented the required final normal-auth browser recheck and complete-navigation capture. The prior owner-login, route, denial, logout, accessibility-smoke, and data-integrity evidence remains valid but is not silently promoted to an exact-final-deployment run.
 
 WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`. Remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 security-owner review, formal accessibility/comprehension, and all other previously recorded external gates remain open. No V1, Telegram, V2.1, or V3 work was performed.
+
+## 2026-09-20 exact-final replay closure
+
+The previously blocked normal-authenticated browser replay completed on corrected revision `de727a5`, protected deployment `dpl_8GCcV5W3tW6yUibicAE2xDKBqCoT`, Ready in `iad1`. The performance investigation was not reopened and all historical `sfo1` failure and `iad1` pass distributions above remain unchanged. The exact-final owner routes, session, denial, accessibility, logout, invalid-session, and signup checks passed; owner-preview verdict is now `OWNER PREVIEW QUALIFIED`.

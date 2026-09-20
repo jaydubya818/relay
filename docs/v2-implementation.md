@@ -360,3 +360,11 @@ Relay V2 is developed from the immutable V1 RC1 tag on a dedicated branch. This 
 - The final automatic preview `dpl_9pNSqSUQptf5armoorvys7pTzvjW` is Ready and verified in `iad1`, but Vercel Security Checkpoint Code 21 prevented the exact-final normal-auth browser rerun. No bypass was used.
 - Performance verdict is `PASS` for the defined warm authenticated-request metric. Owner preview remains `OWNER PREVIEW QUALIFICATION INCOMPLETE` pending that exact-final browser recheck. Evidence: `docs/v2/qualification/hosted-performance-2026-09-19.md`.
 - WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review and formal accessibility/comprehension remain pending. No V1, Telegram, V2.1, or V3 work was performed.
+
+### 2026-09-20 — exact-final owner-preview qualification
+
+- Completed normal Vercel Authentication through the owner's GitHub passkey and Relay owner login on exact application revision `de727a5`, protected deployment `dpl_8GCcV5W3tW6yUibicAE2xDKBqCoT`, Ready in `iad1`; no protection bypass was created.
+- Passed `/v2`, all ten V2 routes, all ten inherited owner routes, reload/navigation persistence, truthful empty states, zero Relay page/console errors, HTTP 503 runtime-action denial, logout/revocation, invalid-session rejection, and HTTP 403 signup denial. Approvals remain `NOT_RUN_NO_FIXTURE`.
+- The replay exposed one focused accessibility defect: the skip-link fragment did not transfer focus because `main#v2-content` was not focusable. Commit `de727a5` adds `tabIndex={-1}` and regression coverage. Exact-deployment verification confirmed first Tab selects the skip link and activation focuses `MAIN#v2-content`.
+- Typecheck, lint, focused dashboard tests 2/2, and production build passed. No Agent, approval, activity, account, credential, or signup session fixture was created.
+- Owner-preview verdict is `OWNER PREVIEW QUALIFIED`. Performance evidence and threshold are unchanged. WO-22 remains `BLOCKED_EXTERNAL_QUALIFICATION`; remote CI/deployment enforcement remains `BLOCKED_EXTERNAL_CONFIGURATION`; independent WO-02 review, formal accessibility/comprehension, and limited-beta readiness remain unchanged. No V1, Telegram, V2.1, V3, or provider work was performed.
