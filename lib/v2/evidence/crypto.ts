@@ -5,6 +5,8 @@ import type { SigningPurpose } from "./signing-provider";
 export interface AuditSigner {
   forPurpose?(purpose: SigningPurpose): AuditSigner;
   readonly keyId: string;
+  /** Immutable version identity; local/reference keys use their unique key ID. */
+  readonly keyVersion?: string;
   verificationKeys?(): Array<{ keyId: string; algorithm: "Ed25519"; publicKeyPem: string }>;
   sign(recordHash: string): Promise<string>;
   verify(recordHash: string, signature: string): Promise<boolean>;
@@ -20,6 +22,7 @@ export function createLocalEd25519Signer(keyId = "local-ed25519-1"): AuditSigner
   const pair = generateKeyPairSync("ed25519");
   return {
     keyId,
+    keyVersion: keyId,
     async sign(recordHash) { return sign(null, Buffer.from(recordHash), pair.privateKey).toString("base64url"); },
     async verify(recordHash, signature) { return verify(null, Buffer.from(recordHash), pair.publicKey, Buffer.from(signature, "base64url")); },
     async publicKeyPem() { return pair.publicKey.export({ type: "spki", format: "pem" }).toString(); },

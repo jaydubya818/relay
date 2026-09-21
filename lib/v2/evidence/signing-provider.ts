@@ -51,6 +51,7 @@ export class SigningKeyring {
     const thisProvider = this.provider;
     return {
       keyId: key.keyId,
+      keyVersion: key.keyVersion,
       verificationKeys: () => this.verificationKeys(purpose).map(({ keyId, algorithm, publicKeyPem }) => ({ keyId, algorithm, publicKeyPem })),
       forPurpose: (requested) => this.signer(requested),
       async sign(material) {

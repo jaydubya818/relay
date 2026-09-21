@@ -1,9 +1,11 @@
 import { purposeSigner } from "@/lib/v2/evidence/signing-provider";
+import { createPublicKey } from "node:crypto";
 import { z } from "zod";
 import { canonicalJson } from "@/lib/v2/contracts";
 import { decryptArtifact, encryptArtifact, verifyAuditSignature, type AuditSigner, type KeyWrapper } from "@/lib/v2/evidence/crypto";
 import { RelayError } from "@/lib/errors";
 import { submissionSchema } from "./contracts";
+import { decodeCanonicalSegment, federationSigningEnvelope, federationV2Header, federationV2HeaderSchema } from "./signing-envelope";
 
 export const MAX_FEDERATION_TOKEN_CHARS = 256 * 1024;
 // Ed25519 produces exactly 64 bytes, i.e. 86 unpadded base64url characters.
@@ -37,32 +39,51 @@ export async function unseal(ownerId: string, value: unknown, wrapper: KeyWrappe
   return JSON.parse(decryptArtifact({ ...encrypted, ciphertext: Buffer.from(encrypted.ciphertext, "base64url"), key: await wrapper.unwrap(ownerId, encrypted.wrappedKey) }).toString());
 }
 
-// Compact JWS (EdDSA). The existing signer/KMS boundary signs the JWS signing input.
+// Relay compact V2 assertion. Unlike legacy JWS, Ed25519 signs a small digest
+// envelope. Both local and remote providers receive exactly the same bytes.
 export async function signDelivery(envelope: Record<string, unknown>, audience: string, requestId: string, expiresAt: string, bindings: FederationBindings) {
   const signer = purposeSigner(bindings.signer, "federation-delivery");
-  const header = Buffer.from(canonicalJson({ alg: "EdDSA", typ: "relay-federation+jwt", kid: signer.keyId })).toString("base64url");
+  const keyVersion = signer.keyVersion ?? signer.keyId;
+  const header = Buffer.from(canonicalJson(federationV2Header(signer.keyId, keyVersion))).toString("base64url");
   const payload = Buffer.from(canonicalJson({ iss: bindings.issuer, aud: audience, jti: requestId, iat: Math.floor(Date.now() / 1000), exp: Math.min(Math.floor(Date.parse(expiresAt) / 1000), Math.floor(Date.now() / 1000) + 60), envelope })).toString("base64url");
   const material = `${header}.${payload}`;
   if (Buffer.byteLength(material, "utf8") > MAX_FEDERATION_SIGNING_BYTES) {
     throw new RelayError("INVALID_INPUT", "Federation delivery exceeds the canonical 256 KiB token limit.", undefined, 413);
   }
-  const signature = await signer.sign(material);
+  const signature = await signer.sign(federationSigningEnvelope(material, { id: signer.keyId, version: keyVersion }));
   if (!/^[A-Za-z0-9_-]{86}$/.test(signature)) throw new Error("Invalid Ed25519 signature encoding.");
   return `${material}.${signature}`;
 }
 export async function verifyDelivery(token: string, input: {
   issuer: string; audience: string;
-  trustedPublicKey(keyId: string): Promise<string | undefined>;
+  // Version-aware registries must resolve this exact immutable binding. Existing
+  // ID-only registries are valid only when every version has a distinct key ID.
+  trustedPublicKey(keyId: string, keyVersion?: string): Promise<string | undefined>;
   // MUST be atomic and durable, called only after signature and claims validation.
   claimRequest(requestId: string, expiresAt: number): Promise<boolean>;
 }) {
   if (token.length > MAX_FEDERATION_TOKEN_CHARS) throw new Error("Oversized federation delivery.");
   const parts = token.split(".");
   if (parts.length !== 3) throw new Error("Invalid JWS.");
-  const header = z.object({ alg: z.literal("EdDSA"), typ: z.literal("relay-federation+jwt"), kid: z.string().min(1).max(255) }).strict().parse(JSON.parse(Buffer.from(parts[0], "base64url").toString()));
-  const key = await input.trustedPublicKey(header.kid);
-  if (!key || !verifyAuditSignature(key, `${parts[0]}.${parts[1]}`, parts[2])) throw new Error("Invalid Relay signature.");
-  const claims = z.object({ iss: z.string(), aud: z.string(), jti: z.string(), iat: z.number().int(), exp: z.number().int(), envelope: z.record(z.unknown()) }).strict().parse(JSON.parse(Buffer.from(parts[1], "base64url").toString()));
+  const rawHeader = JSON.parse(Buffer.from(parts[0], "base64url").toString());
+  let signingMaterial = `${parts[0]}.${parts[1]}`;
+  let payload: unknown;
+  let key: string | undefined;
+  if (rawHeader?.typ === "relay-federation-v2") {
+    const header = federationV2HeaderSchema.parse(decodeCanonicalSegment(parts[0]));
+    payload = decodeCanonicalSegment(parts[1]);
+    key = await input.trustedPublicKey(header.kid, header.keyVersion);
+    signingMaterial = federationSigningEnvelope(signingMaterial, { id: header.kid, version: header.keyVersion });
+    if (!/^[A-Za-z0-9_-]{86}$/.test(parts[2]) || Buffer.from(parts[2], "base64url").toString("base64url") !== parts[2]) throw new Error("Invalid Ed25519 signature encoding.");
+    if (key && createPublicKey(key).asymmetricKeyType !== "ed25519") throw new Error("Invalid signing key algorithm.");
+  } else {
+    // Explicit legacy format only. A malformed V2 assertion never retries V1.
+    const header = z.object({ alg: z.literal("EdDSA"), typ: z.literal("relay-federation+jwt"), kid: z.string().min(1).max(255) }).strict().parse(rawHeader);
+    key = await input.trustedPublicKey(header.kid);
+    payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
+  }
+  if (!key || !verifyAuditSignature(key, signingMaterial, parts[2])) throw new Error("Invalid Relay signature.");
+  const claims = z.object({ iss: z.string(), aud: z.string(), jti: z.string(), iat: z.number().int(), exp: z.number().int(), envelope: z.record(z.unknown()) }).strict().parse(payload);
   const current = Math.floor(Date.now() / 1000);
   if (claims.iss !== input.issuer || claims.aud !== input.audience || claims.iat > current + 5 || claims.exp <= current || claims.exp - claims.iat > 60 || claims.envelope.id !== claims.jti) throw new Error("Relay claims are invalid or expired.");
   const envelope = envelopeSchema.parse(claims.envelope);
