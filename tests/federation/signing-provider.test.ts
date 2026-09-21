@@ -1,3 +1,4 @@
+import { deliverySignatureInput } from "@/lib/v2/federation/signature";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SigningKeyring, purposeSigner, type SigningKey, type SigningPurpose } from "@/lib/v2/evidence/signing-provider";
@@ -74,7 +75,7 @@ describe("Google KMS raw Ed25519 provider contract (local, not a live provider a
   const payload={body:"🙂".repeat(8000)};submissionSchema.parse({target,resource:"messages",idempotencyKey:id,expiresAt:expiry,capability:"message.send",payload});
   const envelope={id,protocol:"relay.federation",version:"1.0",caller:{ownerId:"owner-a",agentId:"agent-a"},target:{ownerId:"owner-b",agentId:"agent-b",address:target},capability:"message.send",resource:"messages",createdAt:new Date().toISOString(),expiresAt:expiry,idempotencyKey:id,payload,publication:null,authorizationContext:{grantId:"grant",policyDecisionId:"decision",localAuthorizationRequired:true}};
   const token=await signDelivery(envelope,target,id,expiry,{signer:ring.signer("federation-delivery"),issuer:"https://relay.synthetic.invalid",keyWrapper:{keyId:"unused",wrap:vi.fn(),unwrap:vi.fn()}});
-  expect(Buffer.from(captured[0]).toString()).toBe(token.split('.').slice(0,2).join('.'));
+  expect(Buffer.from(captured[0]).toString()).toBe(deliverySignatureInput(token.split('.').slice(0,2).join('.')));
   let claimed=false;const options={issuer:"https://relay.synthetic.invalid",audience:target,trustedPublicKey:async(id:string)=>ring.verificationKey(id,"federation-delivery")?.publicKeyPem,claimRequest:async()=>{if(claimed)return false;claimed=true;return true;}};
   expect((await verifyDelivery(token,options)).id).toBe(id);await expect(verifyDelivery(token,options)).rejects.toThrow("already claimed");
  });

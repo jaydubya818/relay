@@ -1,3 +1,4 @@
+import { deliverySignatureHeader, deliverySignatureInput, deliveryHeaderSchema, parseCanonicalSegment, DELIVERY_SIGNATURE_ALGORITHM } from "./signature";
 import { purposeSigner } from "@/lib/v2/evidence/signing-provider";
 import { z } from "zod";
 import { canonicalJson } from "@/lib/v2/contracts";
@@ -37,16 +38,16 @@ export async function unseal(ownerId: string, value: unknown, wrapper: KeyWrappe
   return JSON.parse(decryptArtifact({ ...encrypted, ciphertext: Buffer.from(encrypted.ciphertext, "base64url"), key: await wrapper.unwrap(ownerId, encrypted.wrappedKey) }).toString());
 }
 
-// Compact JWS (EdDSA). The existing signer/KMS boundary signs the JWS signing input.
+// Versioned Relay token. Only the v2 domain-separated commitment is newly signed.
 export async function signDelivery(envelope: Record<string, unknown>, audience: string, requestId: string, expiresAt: string, bindings: FederationBindings) {
   const signer = purposeSigner(bindings.signer, "federation-delivery");
-  const header = Buffer.from(canonicalJson({ alg: "EdDSA", typ: "relay-federation+jwt", kid: signer.keyId })).toString("base64url");
+  const header = Buffer.from(canonicalJson(deliverySignatureHeader(signer.keyId))).toString("base64url");
   const payload = Buffer.from(canonicalJson({ iss: bindings.issuer, aud: audience, jti: requestId, iat: Math.floor(Date.now() / 1000), exp: Math.min(Math.floor(Date.parse(expiresAt) / 1000), Math.floor(Date.now() / 1000) + 60), envelope })).toString("base64url");
   const material = `${header}.${payload}`;
   if (Buffer.byteLength(material, "utf8") > MAX_FEDERATION_SIGNING_BYTES) {
     throw new RelayError("INVALID_INPUT", "Federation delivery exceeds the canonical 256 KiB token limit.", undefined, 413);
   }
-  const signature = await signer.sign(material);
+  const signature = await signer.sign(deliverySignatureInput(material));
   if (!/^[A-Za-z0-9_-]{86}$/.test(signature)) throw new Error("Invalid Ed25519 signature encoding.");
   return `${material}.${signature}`;
 }
@@ -59,9 +60,16 @@ export async function verifyDelivery(token: string, input: {
   if (token.length > MAX_FEDERATION_TOKEN_CHARS) throw new Error("Oversized federation delivery.");
   const parts = token.split(".");
   if (parts.length !== 3) throw new Error("Invalid JWS.");
-  const header = z.object({ alg: z.literal("EdDSA"), typ: z.literal("relay-federation+jwt"), kid: z.string().min(1).max(255) }).strict().parse(JSON.parse(Buffer.from(parts[0], "base64url").toString()));
+  const header = deliveryHeaderSchema.parse(JSON.parse(Buffer.from(parts[0], "base64url").toString()));
+  const material = `${parts[0]}.${parts[1]}`;
+  const isDigest = header.alg === DELIVERY_SIGNATURE_ALGORITHM;
+  if (isDigest) {
+    parseCanonicalSegment(parts[0]);
+    parseCanonicalSegment(parts[1]);
+    if (!/^[A-Za-z0-9_-]{86}$/.test(parts[2]) || Buffer.from(parts[2], "base64url").toString("base64url") !== parts[2]) throw new Error("Invalid canonical signature encoding.");
+  }
   const key = await input.trustedPublicKey(header.kid);
-  if (!key || !verifyAuditSignature(key, `${parts[0]}.${parts[1]}`, parts[2])) throw new Error("Invalid Relay signature.");
+  if (!key || !verifyAuditSignature(key, isDigest ? deliverySignatureInput(material) : material, parts[2])) throw new Error("Invalid Relay signature.");
   const claims = z.object({ iss: z.string(), aud: z.string(), jti: z.string(), iat: z.number().int(), exp: z.number().int(), envelope: z.record(z.unknown()) }).strict().parse(JSON.parse(Buffer.from(parts[1], "base64url").toString()));
   const current = Math.floor(Date.now() / 1000);
   if (claims.iss !== input.issuer || claims.aud !== input.audience || claims.iat > current + 5 || claims.exp <= current || claims.exp - claims.iat > 60 || claims.envelope.id !== claims.jti) throw new Error("Relay claims are invalid or expired.");

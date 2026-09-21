@@ -54,6 +54,21 @@ const publishedRecord = { reference: "published-1", revision: "1", recordType: "
 
 describe("federation trust boundaries", () => {
   afterEach(cleanupDatabase);
+  it("terminally fails an oversized knowledge join, audits it and continues the inbox", async () => {
+    const f = await fixture(), long = "\u0001".repeat(255), topic = "\u0001".repeat(100);
+    await publishView(f.jay, { ...f.document, id: f.view.viewId, expectedVersion: 1, topics: ["verification", topic], recordTypes: ["Fact", long], entries: Array.from({ length: 6 }, (_, i) => ({ reference: String(i) + long.slice(1), revision: long, recordType: "Fact", eligibility: "OWNER_SELECTED", topics: ["verification", ...Array(29).fill(topic)] })) }, f.bindings.signer);
+    await revokeFederationGrant(f.jay, f.grant.grantId, f.bindings.signer);
+    await createFederationGrant(f.jay, { ...f.grantDocument, conditions: { ...f.grantDocument.conditions, allowedTopics: [] } }, f.bindings.signer);
+    const large = await submitFederationRequest(f.ava.credential, { ...f.submission, payload: { ...f.submission.payload, query: "\u0001".repeat(4000), requestedTypes: ["Fact", ...Array(29).fill(long)], topics: ["verification", ...Array(29).fill(topic)], maxRecords: 50 } }, f.bindings);
+    const small = await submitFederationRequest(f.ava.credential, { ...f.submission, idempotencyKey: "small-after-large", payload: { ...f.submission.payload, maxRecords: 1 } }, f.bindings);
+    const inbox = await pollFederationInbox(f.sofie.credential, f.bindings);
+    expect(inbox.deliveries.map((d) => d.requestId)).toEqual([small.requestId]);
+    expect(await getFederationRequest(f.ava.credential, large.requestId, f.bindings)).toMatchObject({ status: "FAILED" });
+    const [row] = await db().select().from(federationRequests).where(eq(federationRequests.id, large.requestId));
+    expect(row.encryptedPayload).toBeNull(); expect(row.attempts).toBe(0);
+    for (const owner of [f.jay, f.sarah]) expect((await listAuditRecords(owner.accountId)).filter((r) => r.eventType === "federation.delivery.failed")).toHaveLength(1);
+    expect((await pollFederationInbox(f.sofie.credential, f.bindings)).deliveries).toHaveLength(0);
+  });
   it("persists a metadata-only signed denial receipt after authorization rolls back", async () => {
     const f = await fixture();
     await revokeFederationGrant(f.jay, f.grant.grantId, f.bindings.signer);

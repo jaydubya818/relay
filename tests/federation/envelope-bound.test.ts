@@ -1,3 +1,4 @@
+import { deliverySignatureHeader } from "@/lib/v2/federation/signature";
 import { expect, it, vi } from 'vitest';
 import { createLocalEd25519Signer } from '@/lib/v2/evidence/crypto';
 import { submissionSchema, viewSchema } from '@/lib/v2/federation/contracts';
@@ -19,7 +20,7 @@ it('signs and verifies safely below the canonical limit',async()=>{expect((await
 it('accepts the exact maximum and rejects one signing character beyond before signing',async()=>{
  const e=fixture();let exact:{envelope:typeof e,keyId:string}|undefined;
  for(let k=1;k<=4;k++){
-  const keyId='k'.repeat(k),header=Buffer.from(canonicalJson({alg:'EdDSA',typ:'relay-federation+jwt',kid:keyId})).toString('base64url');
+  const keyId='k'.repeat(k),header=Buffer.from(canonicalJson(deliverySignatureHeader(keyId))).toString('base64url');
   const length=(n:number)=>{e.publication.padding='x'.repeat(n);return header.length+1+Buffer.from(canonicalJson({iss:'https://relay.synthetic.invalid',aud:audience,jti:e.id,iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+60,envelope:e})).toString('base64url').length;};
   let n=Math.floor(MAX_FEDERATION_SIGNING_BYTES*3/4)-1000;while(length(n)<MAX_FEDERATION_SIGNING_BYTES)n++;
   if(length(n)===MAX_FEDERATION_SIGNING_BYTES){exact={envelope:structuredClone(e),keyId};break;}
@@ -31,7 +32,7 @@ it('accepts the exact maximum and rejects one signing character beyond before si
  for(let k=1;k<=4&&!found;k++)for(let delta=-4;delta<=4&&!found;delta++){
   Object.assign(local,{keyId:'k'.repeat(k)});
   beyond.publication.padding='x'.repeat(exact!.envelope.publication.padding.length+delta);
-  const header=Buffer.from(canonicalJson({alg:'EdDSA',typ:'relay-federation+jwt',kid:local.keyId})).toString('base64url');
+  const header=Buffer.from(canonicalJson(deliverySignatureHeader(local.keyId))).toString('base64url');
   const length=header.length+1+Buffer.from(canonicalJson({iss:'https://relay.synthetic.invalid',aud:audience,jti:beyond.id,iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+60,envelope:beyond})).toString('base64url').length;
   found=length===MAX_FEDERATION_SIGNING_BYTES+1;
  }

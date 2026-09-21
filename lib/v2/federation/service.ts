@@ -255,7 +255,18 @@ export async function pollFederationInbox(secret: string, bindings: FederationBi
         if (balances.some((balance) => balance.balanceStatus !== "CURRENT" || balance.status !== "ACTIVE")) { await terminal(transaction, row, "DENIED"); return; }
       }
       const envelope = { id: row.id, protocol: "relay.federation", version: "1.0", caller: { ownerId: row.callerOwnerId, agentId: row.callerAgentId }, target: { ownerId: row.targetOwnerId, agentId: row.targetAgentId, address: recipient.address }, capability: submission.capability, resource: submission.resource, createdAt: new Date(row.createdAt).toISOString(), expiresAt: new Date(row.expiresAt).toISOString(), idempotencyKey: row.idempotencyKey, payload: submission.payload, publication: projection(submission, authorization.publication), authorizationContext: { grantId: row.grantId, policyDecisionId: decision.decisionId, localAuthorizationRequired: true }, ...(submission.conversationId ? { conversationId: submission.conversationId } : {}) };
-      const token = await signDelivery(envelope, recipient.address, row.id, row.expiresAt, bindings);
+      let token: string;
+      try { token = await signDelivery(envelope, recipient.address, row.id, row.expiresAt, bindings); }
+      catch (error) {
+        // A valid query/publication join can exceed the aggregate token limit.
+        // Persist failure so it cannot poison every subsequent inbox poll.
+        if (!(error instanceof RelayError) || error.status !== 413) throw error;
+        await terminal(transaction, row, "FAILED");
+        for (const ownerId of [row.callerOwnerId, row.targetOwnerId].sort()) {
+          await appendAuditRecordInTransaction(transaction, { accountId: ownerId, eventType: "federation.delivery.failed", outcome: "FAILED", details: { requestId: row.id, reasonCode: "ENVELOPE_TOO_LARGE" } }, bindings.signer);
+        }
+        return;
+      }
       const attempt = row.attempts + 1;
       await transaction.insert(federationAttempts).values({ accountId: row.targetOwnerId, requestId: row.id, attempt });
       await transaction.update(federationRequests).set({ status: "DELIVERED", inboxStatus: "READ", attempts: attempt, nextAttemptAt: new Date(Date.now() + 30000 * 2 ** (attempt - 1)).toISOString(), metadata, updatedAt: now() }).where(eq(federationRequests.id, row.id));
