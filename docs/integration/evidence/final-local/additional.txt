@@ -1,0 +1,278 @@
+fatal: Needed a single revision
+fatal: Needed a single revision
+{"status":"PASS","check":"v2_frontier","branch":"codex/relay-final-integration","baseTag":"relay-v1.0.0-rc.1","baseCommit":"43e0160eb2b9552f71154d18369e4626e0e79339","head":"31f878a6c420a1b9889bb4921bc8eefb4cb996ce","frozenBranches":["feat/relay-v1","codex/relay-v1-rc-soak"],"verifiedFrozenRefs":["refs/heads/feat/relay-v1","refs/remotes/origin/feat/relay-v1","refs/heads/codex/relay-v1-rc-soak"]}
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/private/tmp/relay-final-qualified/drizzle.config.ts'
+Everything's fine 🐶🔥
+
+ RUN  v3.2.4 /private/tmp/relay-final-qualified
+
+ ✓ tests/federation/federation.test.ts (17 tests) 7983ms
+   ✓ federation trust boundaries > persists a metadata-only signed denial receipt after authorization rolls back  429ms
+   ✓ federation trust boundaries > qualifies the two-owner golden path from publication through work and artifact sharing  556ms
+   ✓ federation trust boundaries > rejects caller spoofing, forged registration ownership, sibling agents, and unrelated result readers  401ms
+   ✓ federation trust boundaries > rechecks publication changes, blocks, credential rotation, and deletion before delivery  2011ms
+   ✓ federation trust boundaries > rejects unpublished records, hidden reasoning, and mismatched versions  414ms
+   ✓ federation trust boundaries > deduplicates concurrent admission, bounds redelivery, and separates offline delivery from acceptance  433ms
+   ✓ federation trust boundaries > keeps message authority separate and allows local refusal  310ms
+   ✓ federation trust boundaries > bounds work, rejects privilege escalation, and returns evidence  513ms
+   ✓ federation trust boundaries > uses shared approvals, denies default policy even with an approval floor, and resumes exact approved delivery  386ms
+   ✓ federation trust boundaries > shares expiring audience-bound artifacts and rejects forged work context  394ms
+   ✓ federation trust boundaries > enforces public query policy and excludes private metadata from discovery  364ms
+   ✓ federation trust boundaries > rejects expired requests and enforces durable rate limits  384ms
+   ✓ federation trust boundaries > preserves identity through credential rotation and applies owner grants without transferring Agent-specific grants  417ms
+   ✓ federation trust boundaries > keeps MCP semantics identical and completes authenticated messaging  508ms
+   ✓ federation trust boundaries > indexes only explicitly public profiles and view metadata  426ms
+ ✓ tests/federation/signing-lifecycle.test.ts (1 test) 396ms
+   ✓ exports historical receipts after rotation without access to the historical private key  396ms
+ ✓ tests/federation/signing-envelope-v2.test.ts (29 tests) 186ms
+ ✓ tests/federation/envelope-bound.test.ts (5 tests) 79ms
+ ✓ tests/federation/signing-provider.test.ts (21 tests) 66ms
+ ✓ tests/federation/production-crypto.test.ts (24 tests) 18ms
+ ✓ tests/federation/google-wrapper.test.ts (7 tests) 6ms
+ ✓ tests/federation/google-sts.test.ts (13 tests) 5ms
+
+ Test Files  8 passed (8)
+      Tests  117 passed (117)
+   Start at  22:53:54
+   Duration  10.97s (transform 175ms, setup 0ms, collect 919ms, tests 8.74s, environment 1ms, prepare 263ms)
+
+
+ RUN  v3.2.4 /private/tmp/relay-final-qualified
+
+stdout | tests/performance/dashboard.performance.test.ts > local dashboard qualification > keeps common local read models below the V1 p95 target
+{"benchmark":"overview-and-activity-read-models","medianMs":0.8087090000000217,"p95Ms":6.24716699999999,"samples":50}
+
+ ✓ tests/performance/dashboard.performance.test.ts (1 test) 485ms
+   ✓ local dashboard qualification > keeps common local read models below the V1 p95 target  484ms
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_740e72b5f5fb4d2c8eaf70c0601a8c18","agentId":"agt_544e9c452ee34f359f32fcbeeca9cc41","capability":"memory.read","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_63eeabf657c943f897e3154d21b964a9","agentId":"agt_18a8f51c42a3410899e8e5a68491f638","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_9808ab63000741fda949ef6a43a950d8","agentId":"agt_18a8f51c42a3410899e8e5a68491f638","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_2b2ee725253c4fecbc836d6239bf34e3","agentId":"agt_18a8f51c42a3410899e8e5a68491f638","capability":"agent.inbox.list","status":"SUCCESS","durationMs":13}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_cb5b1b846d0d40058747a4919ec2ede9","agentId":"agt_544e9c452ee34f359f32fcbeeca9cc41","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_f7401dc3f9b54c54b857242e2ad9fb50","agentId":"agt_544e9c452ee34f359f32fcbeeca9cc41","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_395648cdfdc647e1b817e6fba2b69a63","agentId":"agt_544e9c452ee34f359f32fcbeeca9cc41","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_eb161fc748e344b0ba1d7d7d9a02b06c","agentId":"agt_0f86ca4a73a444639ae344a2d5370f87","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_a858adc875b04487b4c73591bf5c6cc3","agentId":"agt_aaf512aefb904a68b652f977d8da2999","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_8b6d713791854672ae874c3947e8e1f7","agentId":"agt_aaf512aefb904a68b652f977d8da2999","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_38f9cf234f35487a82a1a76b4cbd8c3d","agentId":"agt_18a8f51c42a3410899e8e5a68491f638","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_60a20d81b4ef400196d49f37eb0cef68","agentId":"agt_0f86ca4a73a444639ae344a2d5370f87","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_5bc90470f6de4e1ead0e66e27dfcb079","agentId":"agt_0f86ca4a73a444639ae344a2d5370f87","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_25960dcd4e1a4ea59cb2da24bbd4bc6b","agentId":"agt_aaf512aefb904a68b652f977d8da2999","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_dfc6d62332264fba90e26100a6ad9741","agentId":"agt_0f86ca4a73a444639ae344a2d5370f87","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_0c088c27990f4149a345bd454e99e6b0","agentId":"agt_29223f6584b546aa9cec61d6634a5942","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_1143d44c6c574bc8bb658d3f35280228","agentId":"agt_aaf512aefb904a68b652f977d8da2999","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_f022ded4d81445edbe5efd2ae5726339","agentId":"agt_57018707d74f4622a5a9eb24cf41edac","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_943e717cdf30459999492a0983d08acb","agentId":"agt_57018707d74f4622a5a9eb24cf41edac","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_77d4b1a9f2a24521b28957ab5966f1e0","agentId":"agt_57018707d74f4622a5a9eb24cf41edac","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_372ad2e5d3a14304a8dc4a72a75e0e12","agentId":"agt_29223f6584b546aa9cec61d6634a5942","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_6f1cb49347a44e1a8b42844aa9019712","agentId":"agt_29223f6584b546aa9cec61d6634a5942","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_5849b0388d634cb88f583f2978ee89ca","agentId":"agt_29223f6584b546aa9cec61d6634a5942","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_9fb3ec843c6d4487b442180f2095ef83","agentId":"agt_aa7faed191d4404d902580008a985381","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_becd90ba3dd34be1990067beee0bac52","agentId":"agt_aa7faed191d4404d902580008a985381","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_7c47cec1ce0544a3800d996fa8d42541","agentId":"agt_aa7faed191d4404d902580008a985381","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_950eba3ac4ef4633858f352033ce5349","agentId":"agt_18a8f51c42a3410899e8e5a68491f638","capability":"memory.write","status":"SUCCESS","durationMs":15}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_642c317b234948499c13034ae2d7bfe5","agentId":"agt_7f02d36cf5564b13b37573c4f870be33","capability":"agent.inbox.list","status":"SUCCESS","durationMs":10}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_6df1be3e99dd472d915c5471cc6d6779","agentId":"agt_7f02d36cf5564b13b37573c4f870be33","capability":"memory.read","status":"SUCCESS","durationMs":10}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_f487016a0ce34b59aefd827dc4f75aee","agentId":"agt_57018707d74f4622a5a9eb24cf41edac","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_07fadd7dce1049558f91704c3821f5f8","agentId":"agt_7f02d36cf5564b13b37573c4f870be33","capability":"memory.read","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_30a63701efb44988aef10a5e945b365d","agentId":"agt_aa7faed191d4404d902580008a985381","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_42fffa61d6794c8591b58f8b2ac814c8","agentId":"agt_544e9c452ee34f359f32fcbeeca9cc41","capability":"memory.write","status":"SUCCESS","durationMs":13}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_75c36110a5a44449882a63c427f57cc9","agentId":"agt_0f86ca4a73a444639ae344a2d5370f87","capability":"memory.write","status":"SUCCESS","durationMs":13}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_b5281937beb04d7f867c36c98ceb7196","agentId":"agt_57018707d74f4622a5a9eb24cf41edac","capability":"memory.write","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_bf361ad437cd4e83a1275c6324009626","agentId":"agt_0f86ca4a73a444639ae344a2d5370f87","capability":"memory.write","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_c5a643b400ec4e4c992a06e527e66bf8","agentId":"agt_aaf512aefb904a68b652f977d8da2999","capability":"memory.write","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_022f5b978d8d4b8981c3e67de8e4d4ea","agentId":"agt_7f02d36cf5564b13b37573c4f870be33","capability":"agent.inbox.list","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_327cd04bf6c64da4be4d7169dee212d7","agentId":"agt_544e9c452ee34f359f32fcbeeca9cc41","capability":"memory.write","status":"SUCCESS","durationMs":14}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_ea75c3f56c1345f1b2e879ee26d2cfdd","agentId":"agt_29223f6584b546aa9cec61d6634a5942","capability":"memory.write","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_9070ff80cb6842f5972d86c5a4ec8f8d","agentId":"agt_7f02d36cf5564b13b37573c4f870be33","capability":"memory.write","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_a0a8e48238de4d3eaa2a1c44caa0dc8f","agentId":"agt_aaf512aefb904a68b652f977d8da2999","capability":"memory.write","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_0659f44fcdfc4bbab445909e4c38396a","agentId":"agt_aa7faed191d4404d902580008a985381","capability":"memory.write","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_7d6ab98c382a492a93b7b3806de9087d","agentId":"agt_aa7faed191d4404d902580008a985381","capability":"memory.write","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_cceba2aa032c45af8f236d0c5124893d","agentId":"agt_29223f6584b546aa9cec61d6634a5942","capability":"memory.write","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_16ef28005c9f40abb49f481a715cef66","agentId":"agt_18a8f51c42a3410899e8e5a68491f638","capability":"memory.write","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_13ea6f72ab544984b3985343263a7102","agentId":"agt_7f02d36cf5564b13b37573c4f870be33","capability":"memory.write","status":"SUCCESS","durationMs":11}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"level":"info","event":"capability_call","requestId":"ags_664d52b1d2f0452ca224481ce4da959c","agentId":"agt_57018707d74f4622a5a9eb24cf41edac","capability":"memory.write","status":"SUCCESS","durationMs":12}
+
+stdout | tests/performance/v1-load.performance.test.ts > V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+{"benchmark":"v1-concurrency","operations":64,"p50Ms":34.54049999999995,"p95Ms":36.22391600000003,"p99Ms":36.57400000000007,"errorRate":0,"pool":{"total":10,"idle":10,"waiting":0,"max":10}}
+
+ ✓ tests/performance/v1-load.performance.test.ts (1 test) 423ms
+   ✓ V1 modest concurrency > sustains concurrent Agent, MCP, Activity, event, and inbox work without leaks  422ms
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  22:54:05
+   Duration  1.19s (transform 111ms, setup 0ms, collect 835ms, tests 908ms, environment 0ms, prepare 60ms)
+
+{
+  "status": "LOCAL_QUALIFIED_LIVE_NOT_RUN",
+  "protocolTokenCharacters": 262144,
+  "cases": [
+    {
+      "name": "small",
+      "authenticatedMaterialBytes": 1291,
+      "tokenCharacters": 1378,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 406,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    },
+    {
+      "name": "intermediate",
+      "authenticatedMaterialBytes": 23193,
+      "tokenCharacters": 23280,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 406,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    },
+    {
+      "name": "64K-class",
+      "authenticatedMaterialBytes": 61925,
+      "tokenCharacters": 62012,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 406,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    },
+    {
+      "name": "132K-class",
+      "authenticatedMaterialBytes": 132893,
+      "tokenCharacters": 132980,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 406,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    },
+    {
+      "name": "260000",
+      "authenticatedMaterialBytes": 260000,
+      "tokenCharacters": 260087,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 407,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    },
+    {
+      "name": "262057",
+      "authenticatedMaterialBytes": 262057,
+      "tokenCharacters": 262144,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 406,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    }
+  ],
+  "maximumPlusOne": {
+    "tokenCharacters": 262145,
+    "result": "REJECT",
+    "providerCalls": 0
+  },
+  "kmsOperations": 0,
+  "cloudResourcesCreated": 0,
+  "federation": "DISABLED",
+  "independentSecurityReview": "NOT_RUN",
+  "productionPlatformQualification": "NOT_RUN"
+}
