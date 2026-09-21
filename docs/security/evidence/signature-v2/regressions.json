@@ -1,0 +1,56 @@
+{
+  "relay": {
+    "passed": 312,
+    "skipped": 5,
+    "passingFiles": 54,
+    "skippedFiles": 3,
+    "skips": [
+      "three external Playwright live-provider tests",
+      "one Docker sandbox live test",
+      "one Relay-managed provider live test"
+    ]
+  },
+  "performanceTests": 2,
+  "browserFunctionalTests": 2,
+  "browserProductionPerformanceTests": 1,
+  "browserRoutes": 9,
+  "maximumBrowserP95Ms": 162.81312500000013,
+  "myEveRelayTests": 71,
+  "controllerNodeTests": 61,
+  "controllerPythonTests": 15,
+  "localThreeWorkerChecks": 13,
+  "typecheck": "PASS",
+  "lint": "PASS",
+  "productionBuild": "PASS (production Playwright webServer build)",
+  "migrationConsistency": "PASS",
+  "freshMigrationApplication": "PASS (isolated DB suites and three-worker simulation)",
+  "v1v2Frontier": "PASS",
+  "peerTypecheck": "PASS",
+  "sourceRuntime": {
+    "relay": "c30250ef1ac154b80765c617c83ed371cc57391e",
+    "myeve": "6d8dd369eaf8f21ca7c8cab042c9ba429c0e54fa"
+  },
+  "logSha256": {
+    "full-tests": "a1b491be25d02c69c185ae5da02f91536e2afcc66812c98d67d997e100b36b88",
+    "performance": "7d09167b6a523acedab85ff13799e18f57fad25874779d4ad2c0d7c1960b1a22",
+    "typecheck": "84d5121e63069aaa9268f48291d74e9f00f9617bde22780fd712c43593fe5b82",
+    "lint": "e21ddfac8e8c3b544f9922d29050a184a91f793097e2cc74ac3347d6e3d46925",
+    "migrations": "60202fb1c89458642845299b392aa511cb38bd690d72864e3d00ad44c4a4155c",
+    "frontier": "f083d1a566580775ef51558249507ee206c2c148ff962ac54c2586899584c49d",
+    "peer-all": "8049888c78638b669fc95dcfb171f9ac8116dc10362c568a1fa9471aea868136",
+    "peer-typecheck": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "controls": "3fbd4bc6c27019058a96521ee93f45e1e248a1c0dbb0ee2489fd92ca71dec9d2",
+    "controls-python": "4fb44aa87a35cef2eefda68f4600eb7dad552fd03954cf27dbd022bc683b82ca",
+    "browser": "973159124037fe3bafd4e737928c3739dc35d2700297494db797352ec5e03ba3",
+    "browser-performance": "bc50da9204dcb0b3e854546016d6fce07d82ec532214d847d55525629b93bc7f"
+  },
+  "simulationDriverOverlay": {
+    "description": "Only parameterizes loopback PostgreSQL port (55432 here, default remains 55439); production controls unchanged. Raw report records controls HEAD at simulation start.",
+    "sha256": "8dfe1b1bac55fe2ab966b20684cf0a819dc0d14126e3f1501c1c3c6a414ca339"
+  },
+  "externalGates": {
+    "independentSecurity": "NOT_RUN",
+    "productionPlatform": "NOT_RUN"
+  },
+  "federationEnabled": false
+}

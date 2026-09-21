@@ -1,0 +1,78 @@
+{
+  "thresholdMs": 200,
+  "routes": [
+    {
+      "benchmark": "/",
+      "mode": "production",
+      "p50Ms": 115.62704100000019,
+      "p95Ms": 162.81312500000013,
+      "p99Ms": 169.36250000000018,
+      "samples": 20
+    },
+    {
+      "benchmark": "/agents",
+      "mode": "production",
+      "p50Ms": 6.183958000000075,
+      "p95Ms": 7.155874999999924,
+      "p99Ms": 8.405416999999943,
+      "samples": 20
+    },
+    {
+      "benchmark": "/memory",
+      "mode": "production",
+      "p50Ms": 5.39258400000017,
+      "p95Ms": 9.461207999999715,
+      "p99Ms": 61.835999999999785,
+      "samples": 20
+    },
+    {
+      "benchmark": "/connections",
+      "mode": "production",
+      "p50Ms": 5.346082999999908,
+      "p95Ms": 6.539124999999785,
+      "p99Ms": 7.036624999999731,
+      "samples": 20
+    },
+    {
+      "benchmark": "/sandboxes",
+      "mode": "production",
+      "p50Ms": 4.660624999999982,
+      "p95Ms": 5.209875000000011,
+      "p99Ms": 6.282790999999634,
+      "samples": 20
+    },
+    {
+      "benchmark": "/browsers",
+      "mode": "production",
+      "p50Ms": 4.5500419999998485,
+      "p95Ms": 5.125583000000006,
+      "p99Ms": 6.817666000000372,
+      "samples": 20
+    },
+    {
+      "benchmark": "/events",
+      "mode": "production",
+      "p50Ms": 5.2028339999997115,
+      "p95Ms": 10.993208999999752,
+      "p99Ms": 53.75429200000008,
+      "samples": 20
+    },
+    {
+      "benchmark": "/activity",
+      "mode": "production",
+      "p50Ms": 4.792625000000044,
+      "p95Ms": 6.497165999999652,
+      "p99Ms": 9.922499999999673,
+      "samples": 20
+    },
+    {
+      "benchmark": "/developer",
+      "mode": "production",
+      "p50Ms": 4.665791999999783,
+      "p95Ms": 5.359416999999667,
+      "p99Ms": 5.817583000000013,
+      "samples": 20
+    }
+  ],
+  "maximumP95Ms": 162.81312500000013
+}

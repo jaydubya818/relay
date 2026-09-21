@@ -1,0 +1,94 @@
+{
+  "status": "PASS",
+  "sources": {
+    "relay": "c30250ef1ac154b80765c617c83ed371cc57391e",
+    "myeve": "6d8dd369eaf8f21ca7c8cab042c9ba429c0e54fa",
+    "peer": "6d8dd369eaf8f21ca7c8cab042c9ba429c0e54fa",
+    "controls": "e4a4830e0fd5bb7180ede5ff90c58c4bd180ddc1"
+  },
+  "checks": [
+    {
+      "name": "three actual supervised worker entrypoints register exact source pins",
+      "status": "PASS"
+    },
+    {
+      "name": "both MyEve workers authenticate and register native Relay identities",
+      "status": "PASS"
+    },
+    {
+      "name": "A to Relay to B signed knowledge delivery preserves private-data isolation",
+      "status": "PASS"
+    },
+    {
+      "name": "native request idempotency does not create duplicate work",
+      "status": "PASS"
+    },
+    {
+      "name": "worker restart retains durable request and controller accounting",
+      "status": "PASS"
+    },
+    {
+      "name": "real signed artifact transfer supplies native work context",
+      "status": "PASS"
+    },
+    {
+      "name": "native local authority refuses prohibited email execution",
+      "status": "PASS"
+    },
+    {
+      "name": "actual MyEve worker executes bounded Haiku adapter with substituted provider",
+      "status": "PASS"
+    },
+    {
+      "name": "artifact transfer verifies source proof and stores through guarded storage origin",
+      "status": "PASS"
+    },
+    {
+      "name": "HTTP accounting equals observed federation plus substituted model attempts",
+      "status": "PASS",
+      "attempts": 89
+    },
+    {
+      "name": "admission closes and denies new work before credential revocation",
+      "status": "PASS"
+    },
+    {
+      "name": "assembled stop closes admission revokes authority stops all workers preserves evidence then freezes DB roles",
+      "status": "PASS",
+      "outcomes": {
+        "admission": "VERIFIED",
+        "revokeCredentials": "VERIFIED",
+        "revokeGrants": "VERIFIED",
+        "denyQueuedWork": "VERIFIED",
+        "disableModelCredentials": "VERIFIED",
+        "stopWorkers": "VERIFIED",
+        "preserveEvidence": "VERIFIED",
+        "freezeDatabaseLogins": "VERIFIED",
+        "complete": true
+      }
+    },
+    {
+      "name": "stopped session cannot restart or admit new provider attempts",
+      "status": "PASS"
+    }
+  ],
+  "session": "fq_806cf7ab4090b10a",
+  "accounting": {
+    "http": 94,
+    "modelCalls": {
+      "peer": 0,
+      "myeve": 2
+    },
+    "artifactCount": 4,
+    "artifactBytes": 364
+  },
+  "externalGates": "NOT_RUN",
+  "kms": "LOCAL_SIGNER_ONLY",
+  "completeGoldenPath": true,
+  "cleanup": {
+    "databasesDropped": true,
+    "rolesDropped": true,
+    "processesStopped": true,
+    "fixtureSecretsDestroyed": true
+  }
+}
