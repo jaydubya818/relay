@@ -60,3 +60,7 @@ The supplied work order §54 explicitly says the previous raw-input authorizatio
 Federation: **DISABLED**. Grants changed: NO. Published Knowledge boundary changed: NO. Local action authority changed: NO. New cloud infrastructure: NONE. Production changes: NONE. Live KMS operations in this V2 work: **0**. Actual incremental KMS cost: no operations performed; no billing lookup made. Independent security review: NOT_RUN. Production-platform qualification: NOT_RUN.
 
 No `KMS COMPATIBILITY QUALIFIED` claim is made until the separately authorized live V2 checkpoint succeeds. The prior raw-input incompatibility remains a distinct historical FAILED result.
+
+## Authorized live result
+
+The separately authorized probe completed: **KMS COMPATIBILITY QUALIFIED**. All four requested sizes passed on source `68c8d8c92b65f7acfd6993e1714f0d1c1204f6b2`, including the exact maximum token contract. See [live report](evidence/signing-envelope-v2/live-report.md) and [sanitized per-call evidence](evidence/signing-envelope-v2/live.json). Earlier `LIVE_NOT_RUN` statements describe the preauthorization checkpoint. No further infrastructure is authorized by this result.
