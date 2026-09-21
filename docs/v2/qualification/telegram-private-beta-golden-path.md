@@ -421,3 +421,36 @@ Installed OIDC behavior: request-context `x-vercel-oidc-token` takes precedence 
 The installed helper successfully resolved an unexpired **development** identity for project `prj_L6faw25wnFGUZtrLKBIccg8gIDLR`, team `team_p8z8exJRTGfOPk1GC9vUOpv3`, issuer `https://oidc.vercel.com/jaydubya818`, audience `https://vercel.com/jaydubya818`. Observed `iat=1789931141`, `exp=1789974341` (12-hour issued lifetime; about 8,511 seconds remaining when checked). Only non-secret claims were printed; this is local identity resolution, not yet provider acceptance or cryptographic verification of those claims.
 
 Qualification mechanism: use the canonical helper with explicit project/team and a two-minute expiry buffer; inject only its returned OIDC identity into the isolated runtime in memory. Do not load the owner's environment files, copy unrelated credentials, add a static key, or deploy to obtain identity. Provider acceptance, real Eve execution, accounting, private-context isolation and cancellation/recovery still require their own evidence. The earlier requested owner key-reference action is withdrawn.
+
+
+## Actual canonical OIDC runtime checkpoint — 2026-09-21 UTC
+
+MyEve implementation: **`36b2717bd23d3456c9644dc6b92b52dc4e10449e`**, branch `codex/telegram-owner-integration`. Authentication correction checkpoints: MyEve `cc20e08e3fd66085a5f089e7a04686da08aaf2c8`, Relay `cac194a6047e1f4dc92fa2bf9115e0afd5f744d1`. Earlier assumptions and component-only evidence remain historical; the static-key prerequisite is withdrawn.
+
+**The real bounded public-read path passed:** Relay's canonical signer/HTTP executor → verified loopback HTTPS → MyEve handoff/local Agent authority → durable reservation → **Eve 0.27.13** → canonical **Vercel OIDC** → Gateway → **Anthropic Claude Sonnet 5** → actual `web_fetch` of `https://example.com` → durable settlement → one canonical Outcome returned to Relay. No model/provider response was fabricated. Local Neon HTTP requests were bridged to real isolated PostgreSQL; Eve's existing local `justbash` backend avoided browser provisioning. The explicit local fixture admits only one synthetic mapping and `web.read`, rejects hosted environments and expires; public release gates remain false.
+
+Actual results:
+
+| Check | Evidence |
+|---|---|
+| Successful task | Page title/source returned; one canonical Run/session/Outcome |
+| Actual-model private canary | Seeded private Agent instructions absent from provider requests and output; Context Assembly has zero memory refs and only admitted work/Run refs |
+| Successful task cost | **$0.006378**, two calls: $0.002802 and $0.003576 |
+| Reservation before those calls | **$0.031241** and **$0.034900**; actual usage remained below each bound |
+| Provider identity | `anthropic/claude-sonnet-5`, final provider Anthropic, one attempt per completed call, no fallback, zero surcharge |
+| Model limits | 800 output tokens/call, 12,000 task tokens, 8 model steps, 12 tool calls, 60 seconds, **$0.10 task ceiling** |
+| Current maximum pricing envelope | Highest observed regional/cache-write cost $0.0396 before margin; adapter maximum reservation $0.072; 2× regional estimate $0.0792, below $0.10 |
+| Completed replay after Eve restart | Same outcome, **zero new model reservations** |
+| Actual in-flight cancellation | CANCELLED, Eve acknowledgement, unknown receipt retains full **$0.031241** |
+| Cancellation replay after Eve + PostgreSQL restart | Same terminal state/accounting; **zero new calls** |
+| Insufficient allowance | Actual Eve turn denied before provider invocation; zero new reservations |
+| Aggregate ledger | **$0.009480 spent + $0.031241 uncertain = $0.040721 liability**; **$4.959279 remaining** |
+| Cleanup | Zero active synthetic Runs; runtime/probe servers stopped; same budget database retained in ignored durable storage |
+
+Four real provider invocations occurred: three completed usage records (including a $0.003102 call that exposed a result-handling defect) and one cancelled call with unknown charge conservatively reserved. These are Gateway-reported costs, not an independently reconciled invoice. Current pricing and observed usage qualify this bounded fixture; future provider pricing/contract changes still require revalidation.
+
+Real runtime fixes: Eve session IDs now use its explicit session-state object rather than its string continuation-token shorthand; the external policy resolver avoids a `connection_search` dynamic-name collision while the provider allowlist still excludes connection tools; reasoning is accounted and stripped from public output/replay; a dated web-session fixture now uses current issuance time without changing production auth. MyEve's complete details and sanitized machine-readable evidence are in `apps/eve/docs/qualification/telegram-owner-channel.md` and `telegram-oidc-runtime-evidence.json` at the revision above.
+
+Fresh integration checks: **Relay 246 passed / 5 skipped**, **MyEve 643 passed / 86 files**; Relay performance **2 PASS**; both typechecks and production builds PASS; Relay lint PASS; MyEve **32 ordered migrations**; executor governance **528 classified / UNKNOWN=0**. Normal built MyEve execution endpoint returns **503 OWNER_EXECUTOR_NOT_QUALIFIED**. Historical UI evidence remains unchanged. No new dependency audit or nonexistent MyEve lint/performance result is claimed.
+
+Local pre-Telegram runtime readiness is green. No deployment, merge, tag, public Telegram enablement or live Telegram traffic occurred. Dedicated Telegram prerequisite inspection follows clean publication/parity. Hosted qualification enablement, consequential live approval scenarios and the complete Telegram matrix remain to be qualified. **Live Telegram scenarios: 0. The private-beta golden path remains INCOMPLETE; do not merge.**
