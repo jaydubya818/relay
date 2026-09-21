@@ -1,0 +1,219 @@
+{
+  "observedAt": "2026-09-21T05:28:04.856Z",
+  "relaySha": "d4fcf48ec4cf45e5721326e36251c81bf611b88b",
+  "keyVersion": "projects/relay-local-qualification/locations/us-east4/keyRings/fq-compatibility-probe/cryptoKeys/fq-ed25519-probe/cryptoKeyVersions/1",
+  "status": "PASSED_LIVE",
+  "federationEnabled": false,
+  "externalGates": {
+    "independentSecurity": "NOT_RUN",
+    "productionPlatform": "NOT_RUN"
+  },
+  "cases": [
+    {
+      "name": "representative",
+      "rawBytes": 1169,
+      "signingBytes": 179,
+      "base64Bytes": 240,
+      "localCanonicalVerification": true,
+      "kms": "SUCCESS",
+      "relayVerification": "PASS",
+      "signatureBytes": 64,
+      "crcVerified": true,
+      "publicKeyVerified": true,
+      "myEveVerification": "PASS",
+      "mutationRejections": {
+        "payload-bit": "DENY_BOTH_VERIFIERS",
+        "purpose": "DENY_BOTH_VERIFIERS",
+        "version": "DENY_BOTH_VERIFIERS",
+        "key-id": "DENY_BOTH_VERIFIERS"
+      },
+      "protocol": "Relay-Ed25519-SHA256-v2",
+      "signedInputSha256": "0c91038bf9035b06d7d24ce4d34163d23554dc401cb3c79565e3cf16a2257db2",
+      "tokenBytes": 1256
+    },
+    {
+      "name": "intermediate",
+      "rawBytes": 23071,
+      "signingBytes": 179,
+      "base64Bytes": 240,
+      "localCanonicalVerification": true,
+      "kms": "SUCCESS",
+      "relayVerification": "PASS",
+      "signatureBytes": 64,
+      "crcVerified": true,
+      "publicKeyVerified": true,
+      "myEveVerification": "PASS",
+      "mutationRejections": {
+        "payload-bit": "DENY_BOTH_VERIFIERS",
+        "purpose": "DENY_BOTH_VERIFIERS",
+        "version": "DENY_BOTH_VERIFIERS",
+        "key-id": "DENY_BOTH_VERIFIERS"
+      },
+      "protocol": "Relay-Ed25519-SHA256-v2",
+      "signedInputSha256": "a94a275f5ed1bdea6ce1317a646976d9580b2428a6afa02b14d2f3046a77018e",
+      "tokenBytes": 23158
+    },
+    {
+      "name": "work_intermediate",
+      "rawBytes": 61803,
+      "signingBytes": 179,
+      "base64Bytes": 240,
+      "localCanonicalVerification": true,
+      "kms": "SUCCESS",
+      "relayVerification": "PASS",
+      "signatureBytes": 64,
+      "crcVerified": true,
+      "publicKeyVerified": true,
+      "myEveVerification": "PASS",
+      "mutationRejections": {
+        "payload-bit": "DENY_BOTH_VERIFIERS",
+        "purpose": "DENY_BOTH_VERIFIERS",
+        "version": "DENY_BOTH_VERIFIERS",
+        "key-id": "DENY_BOTH_VERIFIERS"
+      },
+      "protocol": "Relay-Ed25519-SHA256-v2",
+      "signedInputSha256": "df66fc17f10f78746b9854e01fac3984b4b6c3abc18c0ebbee399f495803edc9",
+      "tokenBytes": 61890
+    },
+    {
+      "name": "escaped_intermediate",
+      "rawBytes": 132771,
+      "signingBytes": 179,
+      "base64Bytes": 240,
+      "localCanonicalVerification": true,
+      "kms": "SUCCESS",
+      "relayVerification": "PASS",
+      "signatureBytes": 64,
+      "crcVerified": true,
+      "publicKeyVerified": true,
+      "myEveVerification": "PASS",
+      "mutationRejections": {
+        "payload-bit": "DENY_BOTH_VERIFIERS",
+        "purpose": "DENY_BOTH_VERIFIERS",
+        "version": "DENY_BOTH_VERIFIERS",
+        "key-id": "DENY_BOTH_VERIFIERS"
+      },
+      "protocol": "Relay-Ed25519-SHA256-v2",
+      "signedInputSha256": "8a700338b227df019bc6a46bc361a44adc6cfe58d342123d1d0d427a2a5d0b32",
+      "tokenBytes": 132858
+    },
+    {
+      "name": "near_limit",
+      "rawBytes": 260000,
+      "signingBytes": 179,
+      "base64Bytes": 240,
+      "localCanonicalVerification": true,
+      "kms": "SUCCESS",
+      "relayVerification": "PASS",
+      "signatureBytes": 64,
+      "crcVerified": true,
+      "publicKeyVerified": true,
+      "myEveVerification": "PASS",
+      "mutationRejections": {
+        "payload-bit": "DENY_BOTH_VERIFIERS",
+        "purpose": "DENY_BOTH_VERIFIERS",
+        "version": "DENY_BOTH_VERIFIERS",
+        "key-id": "DENY_BOTH_VERIFIERS"
+      },
+      "protocol": "Relay-Ed25519-SHA256-v2",
+      "signedInputSha256": "dfa98cd94a9a1cf96f1ec9484c0fc9b03a646c92efb5d5e6ad74e2681b7e0fc5",
+      "tokenBytes": 260087
+    },
+    {
+      "name": "canonical_limit",
+      "rawBytes": 262057,
+      "signingBytes": 179,
+      "base64Bytes": 240,
+      "localCanonicalVerification": true,
+      "kms": "SUCCESS",
+      "relayVerification": "PASS",
+      "signatureBytes": 64,
+      "crcVerified": true,
+      "publicKeyVerified": true,
+      "myEveVerification": "PASS",
+      "mutationRejections": {
+        "payload-bit": "DENY_BOTH_VERIFIERS",
+        "purpose": "DENY_BOTH_VERIFIERS",
+        "version": "DENY_BOTH_VERIFIERS",
+        "key-id": "DENY_BOTH_VERIFIERS"
+      },
+      "protocol": "Relay-Ed25519-SHA256-v2",
+      "signedInputSha256": "7b2dcc23517f7e7b65317366ff88e4e25b33cdc2fc7fe702678ae34e4f93aea0",
+      "tokenBytes": 262144
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "operation": "/publicKey",
+      "httpStatus": 200
+    },
+    {
+      "method": "GET",
+      "operation": "metadata",
+      "httpStatus": 200
+    },
+    {
+      "method": "POST",
+      "operation": ":asymmetricSign",
+      "httpStatus": 200
+    },
+    {
+      "method": "GET",
+      "operation": "metadata",
+      "httpStatus": 200
+    },
+    {
+      "method": "POST",
+      "operation": ":asymmetricSign",
+      "httpStatus": 200
+    },
+    {
+      "method": "GET",
+      "operation": "metadata",
+      "httpStatus": 200
+    },
+    {
+      "method": "POST",
+      "operation": ":asymmetricSign",
+      "httpStatus": 200
+    },
+    {
+      "method": "GET",
+      "operation": "metadata",
+      "httpStatus": 200
+    },
+    {
+      "method": "POST",
+      "operation": ":asymmetricSign",
+      "httpStatus": 200
+    },
+    {
+      "method": "GET",
+      "operation": "metadata",
+      "httpStatus": 200
+    },
+    {
+      "method": "POST",
+      "operation": ":asymmetricSign",
+      "httpStatus": 200
+    },
+    {
+      "method": "GET",
+      "operation": "metadata",
+      "httpStatus": 200
+    },
+    {
+      "method": "POST",
+      "operation": ":asymmetricSign",
+      "httpStatus": 200
+    }
+  ],
+  "publicKey": {
+    "algorithm": "EC_SIGN_ED25519",
+    "protectionLevel": "SOFTWARE",
+    "pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAB+iF4UrQrG5dX+HmRJbIe5e9MGTWuEJnBJIAYD+l33s=\n-----END PUBLIC KEY-----\n",
+    "sha256": "00daeee3bee0076681d1cd1927fa2a2d30786320e8e344341b0c981b976517e4",
+    "crcVerified": true
+  }
+}
