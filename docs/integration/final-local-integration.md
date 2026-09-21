@@ -1,6 +1,6 @@
 # Relay final local source integration
 
-Local integration gates: **RELAY FINAL INTEGRATION QUALIFIED**. Publication/main merge is pending resolution of the automatic-deployment boundary described below. This is not Production qualification.
+Local integration gates: **RELAY FINAL INTEGRATION QUALIFIED**. The owner subsequently authorized the scoped Git deployment guard and canonical publication. This is not Production qualification.
 
 ## Source and release scope
 
@@ -72,3 +72,9 @@ Remote MyEve main was checked and remains `e9984e4962151bffca1f6eb48c544b60bb643
 Cross-product verdict: **MYEVE + RELAY LOCAL E2E PENDING CANONICAL MYEVE INTEGRATION**. Identity, Knowledge, messaging, double authorization, reconnect and conversational results are NOT_RUN across the canonical pair. Relay-only deterministic results above must not be presented as MyEve E2E. Model credentials were not discovered or accessed.
 
 After publication is safely resolved, launch canonical Relay on its documented `http://localhost:3000`, with local PostgreSQL and Federation disabled, then preserve that owner development environment. Source defaults remain Federation DISABLED. No external communication, KMS operation, cloud sandbox, new cloud resource, Production mutation or real owner data is part of this qualification.
+
+## Authorized deployment guard
+
+The owner authorized the exact two-branch `git.deploymentEnabled` guard. It is committed in `vercel.json`: automatic Git deployment is disabled for `main` and `codex/relay-final-integration`; unrelated branches retain their prior behavior. Existing hosted deployments and environment variables are untouched. **Do not remove this guard automatically. Production release requires an explicit re-enable/release decision.**
+
+Post-guard qualification: 33 signing/deployment tests PASS; production build PASS. Product source and cryptographic behavior are unchanged. The earlier publication-blocker section records the preauthorization checkpoint; it no longer requests approval. Before publication, the exact parsed configuration was checked against Vercel documented branch rules. GitHub deployment inventories are checked after each push.

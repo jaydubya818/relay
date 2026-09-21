@@ -1,0 +1,94 @@
+
+ RUN  v3.2.4 /private/tmp/relay-final-qualified
+
+ ✓ tests/federation/signing-envelope-v2.test.ts (29 tests) 125ms
+ ✓ tests/v2/deployment.test.ts (4 tests) 2ms
+
+ Test Files  2 passed (2)
+      Tests  33 passed (33)
+   Start at  23:04:20
+   Duration  509ms (transform 60ms, setup 0ms, collect 82ms, tests 127ms, environment 0ms, prepare 65ms)
+
+   ▲ Next.js 15.5.22
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 1522ms
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/29) ...
+   Generating static pages (7/29)
+   Generating static pages (14/29)
+   Generating static pages (21/29)
+ ✓ Generating static pages (29/29)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                        Size  First Load JS
+┌ ƒ /                                             168 B         106 kB
+├ ○ /_not-found                                    1 kB         103 kB
+├ ƒ /.well-known/oauth-protected-resource         239 B         103 kB
+├ ƒ /activity                                     239 B         103 kB
+├ ƒ /agents                                       174 B         110 kB
+├ ƒ /agents/[id]                                  162 B         106 kB
+├ ƒ /api/activity                                 239 B         103 kB
+├ ƒ /api/agents                                   239 B         103 kB
+├ ƒ /api/agents/[id]                              239 B         103 kB
+├ ƒ /api/agents/[id]/capabilities/[capability]    239 B         103 kB
+├ ƒ /api/agents/[id]/credentials                  239 B         103 kB
+├ ƒ /api/auth/login                               239 B         103 kB
+├ ƒ /api/auth/logout                              239 B         103 kB
+├ ƒ /api/auth/signup                              239 B         103 kB
+├ ƒ /api/browsers                                 239 B         103 kB
+├ ƒ /api/browsers/screenshot                      239 B         103 kB
+├ ƒ /api/connections/github                       239 B         103 kB
+├ ƒ /api/connections/github/oauth/callback        239 B         103 kB
+├ ƒ /api/connections/github/oauth/start           239 B         103 kB
+├ ƒ /api/connections/google                       239 B         103 kB
+├ ƒ /api/connections/google/oauth/callback        239 B         103 kB
+├ ƒ /api/connections/google/oauth/start           239 B         103 kB
+├ ƒ /api/events/inbox/ack                         239 B         103 kB
+├ ƒ /api/health                                   239 B         103 kB
+├ ƒ /api/health/providers                         239 B         103 kB
+├ ƒ /api/health/ready                             239 B         103 kB
+├ ƒ /api/memories                                 239 B         103 kB
+├ ƒ /api/memories/[id]                            239 B         103 kB
+├ ƒ /api/sandboxes                                239 B         103 kB
+├ ƒ /api/v2/federation                            239 B         103 kB
+├ ƒ /api/v2/federation/mcp                        239 B         103 kB
+├ ƒ /api/v2/mcp                                   239 B         103 kB
+├ ƒ /api/v2/operator/approvals                    239 B         103 kB
+├ ƒ /api/v2/operator/computers                    239 B         103 kB
+├ ƒ /api/v2/operator/federation                   239 B         103 kB
+├ ƒ /api/v2/operator/runners                      239 B         103 kB
+├ ƒ /api/v2/operator/tasks                        239 B         103 kB
+├ ƒ /api/v2/qualification/performance             239 B         103 kB
+├ ƒ /api/v2/runtime/actions                       239 B         103 kB
+├ ƒ /api/v2/runtime/actions/[commandId]           239 B         103 kB
+├ ƒ /browsers                                     162 B         106 kB
+├ ƒ /connections                                  158 B         106 kB
+├ ƒ /developer                                    163 B         106 kB
+├ ƒ /events                                       161 B         106 kB
+├ ƒ /login                                        175 B         110 kB
+├ ƒ /mcp                                          239 B         103 kB
+├ ƒ /memory                                       163 B         106 kB
+├ ƒ /sandboxes                                    162 B         106 kB
+├ ƒ /settings                                     239 B         103 kB
+├ ƒ /signup                                       173 B         110 kB
+├ ƒ /v2                                           168 B         106 kB
+├ ƒ /v2/activity                                  239 B         103 kB
+├ ƒ /v2/agents                                    239 B         103 kB
+├ ƒ /v2/approvals                               1.28 kB         104 kB
+├ ƒ /v2/computers                               1.29 kB         104 kB
+├ ƒ /v2/connections                               239 B         103 kB
+├ ƒ /v2/governance                                239 B         103 kB
+├ ƒ /v2/infrastructure                          1.29 kB         104 kB
+├ ƒ /v2/settings                                  239 B         103 kB
+└ ƒ /v2/tasks                                   1.29 kB         104 kB
++ First Load JS shared by all                    102 kB
+  ├ chunks/3267-146f6682973c2aa2.js             46.3 kB
+  ├ chunks/e6e5a259-fedd04bd04c64bdc.js         54.2 kB
+  └ other shared chunks (total)                 1.93 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
