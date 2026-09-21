@@ -1,3 +1,4 @@
+import { consumeApplicationSigningAdmission } from './qualification-admission';
 import type { RemoteSigningProvider, SigningKey } from "./signing-provider";
 
 export function crc32c(bytes: Uint8Array): number {
@@ -14,6 +15,7 @@ export class GoogleKmsEd25519Provider implements RemoteSigningProvider {
   constructor(private readonly versions: ReadonlySet<string>, private readonly workloadToken: () => Promise<string>, private readonly request: typeof fetch = fetch) {}
   async sign(key: Readonly<SigningKey>, material: Uint8Array): Promise<Uint8Array> {
     try {
+      consumeApplicationSigningAdmission(key,material);
       if (key.algorithm !== "Ed25519" || key.state !== "ACTIVE" || !this.versions.has(key.keyVersion) || !/^projects\/[a-z0-9-]+\/locations\/[a-z0-9-]+\/keyRings\/[A-Za-z0-9_-]+\/cryptoKeys\/[A-Za-z0-9_-]+\/cryptoKeyVersions\/[1-9][0-9]*$/.test(key.keyVersion)) throw new Error();
       const token = await this.workloadToken();
       if (!token || /\s/.test(token)) throw new Error();

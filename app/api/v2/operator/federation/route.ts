@@ -1,3 +1,4 @@
+import { withQualificationSigningAuthority } from "@/lib/v2/evidence/qualification-admission";
 import { z } from "zod";
 import { errorResponse, requireApiUser, verifySameOrigin } from "@/lib/api";
 import { RelayError } from "@/lib/errors";
@@ -13,6 +14,7 @@ export async function POST(request: Request) {
     const actor = { accountId: user.accountId, principalId: operator.principalId };
     const { signer } = federationBindings();
     const command = schema.parse(await boundedBody(request));
+    const result=await withQualificationSigningAuthority({rootOperation:request.headers.get('x-fq-operation')??'',requestId:command.id??request.headers.get('x-fq-operation')??'',accountId:actor.accountId,agentId:null,operation:command.operation},async()=>{
     let result: unknown;
     switch (command.operation) {
       case "register": result = await registerFederationAgent(actor, command.input, signer); break;
@@ -24,6 +26,8 @@ export async function POST(request: Request) {
       case "invalidate-reference": result = await invalidatePublicationReference(actor, command.id ?? "", signer); break;
       case "relationship": result = await setRelationship(actor, command.id ?? "", command.input, signer); break;
     }
+    return result;
+    });
     return Response.json(result ?? { success: true }, { headers: { "cache-control": "no-store" } });
   } catch (error) { if (error instanceof z.ZodError) return Response.json({ code: "INVALID_INPUT" }, { status: 400 }); return errorResponse(error); }
 }
