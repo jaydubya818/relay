@@ -114,7 +114,7 @@ async function persistDecision(input: { accountId: string; action: ActionIntent;
   return { decisionId, expiresAt, ...input.result };
 }
 
-export async function evaluatePolicy(input: { accountId: string; action: ActionIntent; resourceResolver: PolicyResourceResolver; factResolvers?: PolicyFactResolver[] }, signer: AuditSigner) {
+export async function evaluatePolicy(input: { accountId: string; action: ActionIntent; resourceResolver: PolicyResourceResolver; factResolvers?: PolicyFactResolver[]; requiredApprovalClass?: string }, signer: AuditSigner) {
   const action = actionIntentSchema.parse(input.action);
   if (action.accountId !== input.accountId || canonicalHash(actionMaterial(action)) !== action.canonicalHash) throw new RelayError("INVALID_INPUT", "Action intent account or canonical hash is invalid.");
   const loaded = await loadEvaluationInputs(input.accountId, action);
@@ -127,7 +127,15 @@ export async function evaluatePolicy(input: { accountId: string; action: ActionI
   const facts = redactForEvidence([...(parsedOwnership ? [parsedOwnership] : []), ...resolved.facts]) as ResolvedFact[];
   const failure = ownershipFailure ?? resolved.failure;
   const snapshot: PolicyEvaluationSnapshot = { action, capability: loaded.capability, passport: loaded.passport, bundles: loaded.bundles, facts, evaluatedAt, ...(failure ? { factResolutionFailure: failure } : {}) };
-  const result = evaluatePolicySnapshot(snapshot);
+  let result = evaluatePolicySnapshot(snapshot);
+  // A trusted caller may strengthen a permitted action with an approval floor.
+  // Evaluate first so a missing allow rule cannot become an approval opportunity.
+  if (input.requiredApprovalClass && result.outcome !== "DENY") {
+    const floor = policyBundleDocumentSchema.parse({ schemaVersion: "relay.policy-bundle.v1", name: "required-approval", layer: "RESOURCE", version: 1, accountId: input.accountId, rules: [{ id: "required-approval", effect: "REQUIRE_APPROVAL", match: { capability: action.capability }, reasonCode: "APPROVAL_REQUIRED", approval: { class: input.requiredApprovalClass, allowedScopes: ["once"] } }] });
+    snapshot.bundles.push(floor);
+    loaded.bundleHashes.push(canonicalHash(floor));
+    result = evaluatePolicySnapshot(snapshot);
+  }
   return await persistDecision({ accountId: input.accountId, action, capabilityHash: loaded.capabilityHash, bundleHashes: loaded.bundleHashes, snapshot, result, signer });
 }
 

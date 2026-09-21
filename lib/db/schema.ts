@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -1065,3 +1066,70 @@ export const agentWakeRequests = pgTable("agent_wake_requests", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [index("agent_wake_account_status_idx").on(table.accountId, table.status, table.createdAt)]);
+
+// Federation extends existing account and Agent identities; it stores no canonical knowledge.
+export const federationAgents = pgTable("federation_agents", {
+  agentId: text("agent_id").primaryKey().references(() => agents.id, { onDelete: "restrict" }),
+  ownerId: text("account_id").notNull().references(() => accounts.id, { onDelete: "restrict" }),
+  address: text("address").notNull(),
+  registration: jsonb("registration").notNull(),
+  availability: text("availability").notNull().default("UNKNOWN"),
+  primary: boolean("primary_agent").notNull().default(false),
+  ...timestamps,
+}, (table) => [uniqueIndex("federation_address_idx").on(table.address), uniqueIndex("federation_primary_idx").on(table.ownerId).where(sql`${table.primary} = true`)]);
+
+export const federationGrants = pgTable("federation_grants", {
+  id: text("id").primaryKey(), ownerId: text("account_id").notNull().references(() => accounts.id),
+  granteeOwnerId: text("grantee_account_id").notNull().references(() => accounts.id),
+  capability: text("capability").notNull(), resource: text("resource").notNull(),
+  document: jsonb("document").notNull(), status: text("status").notNull().default("ACTIVE"),
+  ...timestamps,
+}, (table) => [index("federation_grants_scope_idx").on(table.ownerId, table.granteeOwnerId, table.capability, table.resource)]);
+
+export const publishedViews = pgTable("published_views", {
+  id: text("id").primaryKey(), ownerId: text("account_id").notNull().references(() => accounts.id),
+  publisherAgentId: text("publisher_agent_id").notNull().references(() => agents.id),
+  version: integer("version").notNull(), document: jsonb("document").notNull(),
+  status: text("status").notNull().default("ACTIVE"), ...timestamps,
+}, (table) => [index("published_views_owner_idx").on(table.ownerId, table.publisherAgentId)]);
+
+export const publicationVersions = pgTable("publication_versions", {
+  viewId: text("view_id").notNull().references(() => publishedViews.id), version: integer("version").notNull(),
+  ownerId: text("account_id").notNull().references(() => accounts.id),
+  // Only projection metadata/references; no record contents or canonical private state.
+  document: jsonb("document").notNull(), publisherPrincipalId: text("publisher_principal_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+}, (table) => [primaryKey({ columns: [table.viewId, table.version] })]);
+
+export const federationRelationships = pgTable("federation_relationships", {
+  ownerId: text("account_id").notNull().references(() => accounts.id), subject: text("subject").notNull(),
+  trust: text("trust").notNull(), ...timestamps,
+}, (table) => [primaryKey({ columns: [table.ownerId, table.subject] })]);
+
+export const federationRequests = pgTable("federation_requests", {
+  id: text("id").primaryKey(), callerOwnerId: text("account_id").notNull().references(() => accounts.id),
+  callerAgentId: text("caller_agent_id").notNull().references(() => agents.id), callerCredentialId: text("caller_credential_id").notNull(),
+  targetOwnerId: text("target_account_id").notNull().references(() => accounts.id), targetAgentId: text("target_agent_id").notNull().references(() => agents.id),
+  capability: text("capability").notNull(), resource: text("resource").notNull(),
+  idempotencyKey: text("idempotency_key").notNull(), submissionHash: text("submission_hash").notNull(),
+  status: text("status").notNull(), inboxStatus: text("inbox_status").notNull().default("UNREAD"),
+  grantId: text("grant_id"), publicationVersion: integer("publication_version"),
+  policyDecisionId: text("policy_decision_id"), approvalId: text("approval_id"),
+  encryptedPayload: jsonb("encrypted_payload"), encryptedResult: jsonb("encrypted_result"),
+  metadata: jsonb("metadata").notNull().default({}),
+  attempts: integer("attempts").notNull().default(0), nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  ...timestamps,
+}, (table) => [uniqueIndex("federation_request_idempotency_idx").on(table.callerAgentId, table.idempotencyKey), index("federation_request_inbox_idx").on(table.targetAgentId, table.status, table.nextAttemptAt)]);
+
+export const federationAttempts = pgTable("federation_attempts", {
+  accountId: text("account_id").notNull().references(() => accounts.id),
+  requestId: text("request_id").notNull().references(() => federationRequests.id), attempt: integer("attempt").notNull(),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true, mode: "string" }),
+}, (table) => [primaryKey({ columns: [table.requestId, table.attempt] })]);
+
+export const federationRateWindows = pgTable("federation_rate_windows", {
+  accountId: text("account_id").notNull().references(() => accounts.id),
+  key: text("key").notNull(), count: integer("count").notNull(), resetAt: timestamp("reset_at", { withTimezone: true, mode: "string" }).notNull(),
+}, (table) => [primaryKey({ columns: [table.accountId, table.key] })]);

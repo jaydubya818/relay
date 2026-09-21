@@ -1,3 +1,4 @@
+import { purposeSigner } from "@/lib/v2/evidence/signing-provider";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
 import { agentPassports, agents, capabilityGrants, passportImports } from "@/lib/db/schema";
@@ -48,11 +49,12 @@ export async function issueAgentPassport(input: { accountId: string; agentId: st
     const revocationEpoch = previous?.revocationEpoch ?? 0;
     const passport = agentPassportSchema.parse({ schemaVersion: "relay.agent-passport.v1", issuer: relayIssuer(), passportId, agentId: input.agentId, owner: { accountId: input.accountId, principalId: input.ownerPrincipalId }, version, ...input.policy, validFrom: now(), revocationEpoch });
     const payloadHash = canonicalHash(passport);
-    const signature = await signer.sign(payloadHash);
+    const passportSigner = purposeSigner(signer, "passport");
+    const signature = await passportSigner.sign(payloadHash);
     if (previous) await transaction.update(agentPassports).set({ status: "SUPERSEDED", revokedAt: now() }).where(and(eq(agentPassports.accountId, input.accountId), eq(agentPassports.id, previous.id)));
-    await transaction.insert(agentPassports).values({ id: passportId, accountId: input.accountId, agentId: input.agentId, version, trustTier: passport.trustTier, revocationEpoch, payload: passport, payloadHash, signature, signingKeyId: signer.keyId, validFrom: passport.validFrom, expiresAt: passport.expiresAt });
+    await transaction.insert(agentPassports).values({ id: passportId, accountId: input.accountId, agentId: input.agentId, version, trustTier: passport.trustTier, revocationEpoch, payload: passport, payloadHash, signature, signingKeyId: passportSigner.keyId, validFrom: passport.validFrom, expiresAt: passport.expiresAt });
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.ownerPrincipalId, agentId: input.agentId, eventType: "passport.issued", outcome: "SUCCESS", details: { passportId, version, trustTier: passport.trustTier, payloadHash } }, signer);
-    return { passport, payloadHash, signature, signingKeyId: signer.keyId } satisfies SignedAgentPassport;
+    return { passport, payloadHash, signature, signingKeyId: passportSigner.keyId } satisfies SignedAgentPassport;
   });
 }
 

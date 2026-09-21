@@ -1,0 +1,213 @@
+{
+  "startedAt": "2026-09-19T15:12:35.269Z",
+  "baselineCommit": "194b3a074e85e8300d9d510b3016fb00290378cb",
+  "testedCommit": "194b3a074e85e8300d9d510b3016fb00290378cb",
+  "branch": "codex/relay-federation",
+  "hosting": "Qualification HTTPS host imports production REST/MCP handlers; isolated generic platform containers; deterministic extractive synthesis and architecture checker, no external model",
+  "checks": [
+    {
+      "name": "independent owners, Agents, credentials, processes and private storage",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "no-grant query denied before publisher invocation or private-store access",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "signed denial receipt exists without request-body content",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "caller spoofing and cross-owner enrollment rejected",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "query grant does not grant messages, work or artifacts",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "authorized retrieval includes only published records with provenance and identity",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "private knowledge attack 1 remains within publication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "private knowledge attack 2 remains within publication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "private knowledge attack 3 remains within publication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "private knowledge attack 4 remains within publication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "private knowledge attack 5 remains within publication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "answer synthesis uses only publication references and labels citations",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "both owners receive signed metadata-only disclosure receipts",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "grant revocation denies future and cached reads before delivery; history retained",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "restoring query authority does not restore messaging",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "network delivery rejects forged signature and wrong audience",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "message delivery, acknowledgement, conversation and durable replay deduplication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "changed body cannot reuse idempotency key",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "offline recipient queues without claiming local processing",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "offline request expires without execution",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "Relay and publisher restart preserve identity, queue, keys and execution ledger",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "crash after execution resumes persisted receipt exactly once across both restarts",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "source-owned artifact retrieved with signed audience proof and verified checksum; unauthenticated and expired denied",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "Ava independently refuses Relay-authorized safe work",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "Ava rejects unsupported email work despite Relay authority",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "bounded architecture work returns summary, artifact reference, evidence and measured usage; local Run stays local",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "publication correction increments version; old receipts remain unchanged",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "publication revocation denies future queries and prior result access",
+      "status": "PASSED_LIVE"
+    }
+  ],
+  "identities": {
+    "sofie": {
+      "accountId": "acct_0868e2f731f54721ad4ea47edad18f7d",
+      "principalId": "prn_3a64629f586d4c5b942a33ca766dd1d0",
+      "agentId": "agt_ee24771296b54d068a377312d7dc3839",
+      "address": "relay://acct_0868e2f731f54721ad4ea47edad18f7d/agt_ee24771296b54d068a377312d7dc3839"
+    },
+    "ava": {
+      "accountId": "acct_a18c92f0aafb47ecac445cdaac532e6a",
+      "principalId": "prn_dbeaf03f1f63416590585d4cf066f162",
+      "agentId": "agt_5ddf3bcfbd424391a13b618dd32edc2d",
+      "address": "relay://acct_a18c92f0aafb47ecac445cdaac532e6a/agt_5ddf3bcfbd424391a13b618dd32edc2d"
+    }
+  },
+  "containers": [
+    {
+      "name": "sofie",
+      "containerId": "81263a59fc0784ceb963f0543c1d3c1bb5d583436a0d6f39f68fae85c16ded52",
+      "imageId": "sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d",
+      "pid": 3086,
+      "mounts": [
+        {
+          "sourceDomain": "sofie-config",
+          "destination": "/config",
+          "writable": false
+        },
+        {
+          "sourceDomain": "sofie-store",
+          "destination": "/state",
+          "writable": true
+        },
+        {
+          "sourceDomain": "public-adapter-code",
+          "destination": "/app",
+          "writable": false
+        }
+      ],
+      "readOnlyRoot": true,
+      "droppedCapabilities": [
+        "ALL"
+      ]
+    },
+    {
+      "name": "ava",
+      "containerId": "9c372058c7b96a4e98163ea0e04305b1785dc93197992f72719f09883eb16369",
+      "imageId": "sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d",
+      "pid": 3150,
+      "mounts": [
+        {
+          "sourceDomain": "public-adapter-code",
+          "destination": "/app",
+          "writable": false
+        },
+        {
+          "sourceDomain": "ava-config",
+          "destination": "/config",
+          "writable": false
+        },
+        {
+          "sourceDomain": "ava-store",
+          "destination": "/state",
+          "writable": true
+        }
+      ],
+      "readOnlyRoot": true,
+      "droppedCapabilities": [
+        "ALL"
+      ]
+    }
+  ],
+  "failure": {
+    "message": "Federation resource or authority is unavailable.",
+    "stack": [
+      "RelayError: Federation resource or authority is unavailable.",
+      "    at denied (/Users/jaywest/Documents/ChatGPT/New project/relay-federation/lib/v2/federation/registry.ts:13:41)",
+      "    at <anonymous> (/Users/jaywest/Documents/ChatGPT/New project/relay-federation/lib/v2/federation/registry.ts:76:45)",
+      "    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+      "    at async NodePgSession.transaction (/Users/jaywest/relay/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.23.1_pg@8.23.0/node_modules/src/node-postgres/session.ts:259:19)"
+    ]
+  },
+  "verdict": "FEDERATION QUALIFICATION INCOMPLETE",
+  "cleanup": {
+    "containersCreated": 3,
+    "containersRemoved": 3,
+    "containerNames": [
+      "relay-qual-ava-bd82872a",
+      "relay-qual-sofie-bd82872a",
+      "relay-qual-db-bd82872a"
+    ],
+    "credentialsAndKeysDestroyed": true
+  },
+  "finishedAt": "2026-09-19T15:13:47.925Z"
+}

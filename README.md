@@ -84,7 +84,7 @@ The following remain outside the V2 release boundary:
 - live certification of every named runtime, provider, connector, and communications channel;
 - multi-region production failover and general-availability commitments.
 
-No V2.1 or V3 implementation has started. Deferred capabilities must not be presented as part of the current release.
+Federation is implemented as an additive, disabled-by-default extension on this branch. It is not part of the qualified V2 release and does not change the existing release gates. See the [federation architecture reconciliation](docs/federation/architecture.md), [platform adapter contract](docs/federation/platform-contract.md), and [local qualification record](docs/federation/qualification.md).
 
 ## Security invariants
 

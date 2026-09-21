@@ -1,0 +1,40 @@
+{
+  "ordering": "PASS",
+  "duplicates": "NONE",
+  "historicalRewrites": "NONE",
+  "finalMigration": "0021_violet_captain_stacy",
+  "results": [
+    {
+      "path": "fresh",
+      "startingMigrations": 0,
+      "finalMigrations": 22,
+      "migrate": "PASS",
+      "repeat": "PASS",
+      "sentinel": "NOT_APPLICABLE"
+    },
+    {
+      "path": "canonical_main",
+      "startingMigrations": 21,
+      "finalMigrations": 22,
+      "migrate": "PASS",
+      "repeat": "PASS",
+      "sentinel": "PRESERVED"
+    },
+    {
+      "path": "qualified_v1",
+      "startingMigrations": 6,
+      "finalMigrations": 22,
+      "migrate": "PASS",
+      "repeat": "PASS",
+      "sentinel": "PRESERVED"
+    },
+    {
+      "path": "qualified_federation_v2",
+      "startingMigrations": 22,
+      "finalMigrations": 22,
+      "migrate": "PASS",
+      "repeat": "PASS",
+      "sentinel": "PRESERVED"
+    }
+  ]
+}

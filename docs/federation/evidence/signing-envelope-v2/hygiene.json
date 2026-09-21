@@ -1,0 +1,10 @@
+{
+  "diffCheck": "PASS",
+  "secretScan": "PASS",
+  "scope": "changed source, public vectors and retained qualification evidence; pattern scan, no credential discovery",
+  "findings": [],
+  "filesScanned": 22,
+  "cloudOperations": 0,
+  "federationEnabled": false,
+  "evidenceNormalization": "ANSI escapes and trailing whitespace removed; substantive output unchanged"
+}

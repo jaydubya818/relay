@@ -85,10 +85,13 @@ export async function createBudget(input: { accountId: string; actorPrincipalId:
 }
 
 export async function reserveBudget(input: { accountId: string; leafBudgetId: string; agentId: string; taskId: string; actionIntentId: string; delegationId?: string; amount: string; idempotencyKey: string; expiresAt: string }, signer: AuditSigner) {
+  return withTransaction((transaction) => reserveBudgetInTransaction(transaction, input, signer));
+}
+
+export async function reserveBudgetInTransaction(transaction: RelayDatabase, input: Parameters<typeof reserveBudget>[0], signer: AuditSigner) {
   const amount = positiveAmountSchema.parse(input.amount);
   const expiresAt = z.string().datetime({ offset: true }).parse(input.expiresAt);
   if (Date.parse(expiresAt) <= Date.now()) throw new RelayError("INVALID_INPUT", "Budget reservation expiry must be in the future.");
-  return await withTransaction(async (transaction) => {
     await lockAccount(transaction, input.accountId);
     const [existing] = await transaction.select().from(budgetReservations).where(and(eq(budgetReservations.accountId, input.accountId), eq(budgetReservations.idempotencyKey, input.idempotencyKey))).limit(1);
     if (existing) {
@@ -117,7 +120,6 @@ export async function reserveBudget(input: { accountId: string; leafBudgetId: st
     await transaction.insert(budgetReservations).values({ id: reservationId, accountId: input.accountId, leafBudgetId: leaf.id, appliedBudgetIds: chain.map((budget) => budget.id), agentId: input.agentId, taskId: input.taskId, actionIntentId: input.actionIntentId, dimension: leaf.dimension, unit: leaf.unit, currency: leaf.currency, amount, idempotencyKey: input.idempotencyKey, expiresAt });
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, agentId: input.agentId, taskId: input.taskId, actionIntentId: input.actionIntentId, eventType: "budget.reserved", outcome: "SUCCESS", details: { reservationId, leafBudgetId: leaf.id, appliedBudgetIds: chain.map((budget) => budget.id), dimension: leaf.dimension, amount } }, signer);
     return { reservationId, status: "RESERVED" as const, idempotentReplay: false };
-  });
 }
 
 async function releaseReservation(transaction: RelayDatabase, reservation: typeof budgetReservations.$inferSelect, status: "RELEASED" | "EXPIRED", signer: AuditSigner) {
