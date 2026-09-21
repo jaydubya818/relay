@@ -5,7 +5,7 @@ import type { RemoteSigningProvider, SigningKey } from './signing-provider';
 
 type SigningAuthority = { rootOperation: string; requestId: string; accountId: string; agentId: string | null; operation: string };
 const authority = new AsyncLocalStorage<SigningAuthority>();
-const admitted = new AsyncLocalStorage<{purpose:string; payloadHash:string; consumed:boolean}>();
+const admitted = new AsyncLocalStorage<{purpose:string; keyVersion:string; payloadHash:string; consumed:boolean}>();
 const digest = (bytes: Uint8Array | string) => createHash('sha256').update(bytes).digest('hex');
 
 /** Called only after native Relay authentication. Canonical federation policy,
@@ -27,14 +27,14 @@ export class AdmittedSigningProvider implements RemoteSigningProvider {
     const permit = await qualificationRpc('signing-admit',binding);
     const result = await qualificationRpc('signing-claim',{...binding,...permit});
     if(result.admitted!==true)throw new Error('Qualification signing permit denied.');
-    return admitted.run({purpose:key.purpose,payloadHash:binding.payloadHash,consumed:false},()=>this.provider.sign(key,material));
+    return admitted.run({purpose:key.purpose,keyVersion:key.keyVersion,payloadHash:binding.payloadHash,consumed:false},()=>this.provider.sign(key,material));
   }
 }
 
 export function consumeApplicationSigningAdmission(key: Readonly<SigningKey>, material: Uint8Array): void {
   if(!qualificationEnabled())return;
   const permit=admitted.getStore();
-  if(!permit||permit.consumed||permit.purpose!==key.purpose||permit.payloadHash!==digest(material))throw new Error('Application signing permit required.');
+  if(!permit||permit.consumed||permit.purpose!==key.purpose||permit.keyVersion!==key.keyVersion||permit.payloadHash!==digest(material))throw new Error('Application signing permit required.');
   permit.consumed=true;
 }
 
@@ -44,7 +44,8 @@ export function consumeApplicationSigningAdmission(key: Readonly<SigningKey>, ma
  * Redirects are rejected, never followed as an unmetered second request. */
 export function providerAttempt(url: string, init: RequestInit, route: string, request: typeof fetch = fetch) {
   const operation=randomUUID(), method=init.method??'GET';
-  const body=init.body===undefined?'':String(init.body);
+  if(init.body!==undefined&&typeof init.body!=='string')throw new Error('Canonical provider body required.');
+  const body=init.body??'';
   const context=authority.getStore();
   const binding={operation,route,url,method,bodyHash:digest(body),rootOperation:context?.rootOperation};
   let pending:Promise<{status:number;headers:Headers;body:Buffer}>|undefined;
