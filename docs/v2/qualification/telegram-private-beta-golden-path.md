@@ -408,3 +408,16 @@ No Relay production code changed. Previous Relay typecheck/lint/build/performanc
 No Telegram prerequisite inspection was performed in this continuation: it remains behind actual-runtime readiness. Bot existence/configuration is unconfirmed. No bot was created, no live traffic occurred, and both immutable execution gates remain false. No merge or tag. The disposable loopback PostgreSQL fixture was stopped and removed; no credential file was created. Source hygiene review found no newly committed secrets, private data, environment files or temporary artifacts.
 
 Smallest owner action: provide the non-secret variable ID/reference for the approved qualification `AI_GATEWAY_API_KEY`. Continue actual runtime/provider/private-canary/cancellation tests after scoped retrieval and liability validation. **TELEGRAM PRIVATE-BETA GOLDEN PATH INCOMPLETE. Do not merge.**
+
+
+## Correction: canonical Gateway OIDC authentication — 2026-09-21 UTC
+
+The earlier claim that this qualification requires a standalone `AI_GATEWAY_API_KEY` was incorrect. The prior entries are retained as historical evidence, but their key-ID prerequisite is **superseded**. No static key is requested or being introduced.
+
+Independent source verification: MyEve `apps/eve/.env.example` explicitly documents `VERCEL_OIDC_TOKEN` for Eve's Gateway access. Installed `@ai-sdk/gateway/src/gateway-provider.ts` uses `getVercelOidcToken()` when no explicit/static API key is supplied; `vercel-environment.ts` imports the helper from `@vercel/oidc`. This installed source supports OIDC locally despite the generic Eve self-hosting guide's API-key recommendation.
+
+Installed OIDC behavior: request-context `x-vercel-oidc-token` takes precedence over `process.env.VERCEL_OIDC_TOKEN`. Missing/expired identity invokes the SDK refresh path, resolving the project/team from explicit options or `.vercel/project.json`. It reuses a valid project-specific SDK cache or obtains a new project token using the existing Vercel CLI login. It sets the process environment and maintains its standard SDK cache; no full environment pull is necessary. Token expiry is checked from `exp`, with an optional buffer. An expired token copied from a previous environment pull is not a durable credential. Hosted request identity and local development refresh are distinct supported sources.
+
+The installed helper successfully resolved an unexpired **development** identity for project `prj_L6faw25wnFGUZtrLKBIccg8gIDLR`, team `team_p8z8exJRTGfOPk1GC9vUOpv3`, issuer `https://oidc.vercel.com/jaydubya818`, audience `https://vercel.com/jaydubya818`. Observed `iat=1789931141`, `exp=1789974341` (12-hour issued lifetime; about 8,511 seconds remaining when checked). Only non-secret claims were printed; this is local identity resolution, not yet provider acceptance or cryptographic verification of those claims.
+
+Qualification mechanism: use the canonical helper with explicit project/team and a two-minute expiry buffer; inject only its returned OIDC identity into the isolated runtime in memory. Do not load the owner's environment files, copy unrelated credentials, add a static key, or deploy to obtain identity. Provider acceptance, real Eve execution, accounting, private-context isolation and cancellation/recovery still require their own evidence. The earlier requested owner key-reference action is withdrawn.
