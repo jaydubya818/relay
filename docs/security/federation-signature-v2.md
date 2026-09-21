@@ -42,3 +42,9 @@ Submission and publication documents remain <=128 KiB canonical UTF-8 each. An i
 5. Full regression and sanitized evidence, pushed with parity. Keep NO-GO and both gates NOT_RUN. Independent assessor receives frozen source and vectors after implementation; implementation tests cannot pass that gate.
 
 Sources: RFC 8032 (ordinary Ed25519 vs Ed25519ph), https://www.rfc-editor.org/rfc/rfc8032; canonicalization reference RFC 8785, https://www.rfc-editor.org/rfc/rfc8785 (Relay's existing implementation remains the normative contract, not a new JCS claim); Google algorithm contract https://docs.cloud.google.com/kms/docs/algorithms. Live failure, not a mock, establishes this provider's message limit.
+
+## Migration and adversarial checkpoint
+
+Implementation tests cover both contracts, signatures mislabeled as the other contract, unknown algorithms/versions, bit mutation, purpose/preimage-version/commitment substitution, a changed key ID even when the resolver returns the same public key, canonical JSON/base64url ambiguity, Unicode normalization, replay admission, retired/disabled versus revoked keys, and exact KMS version/algorithm/CRC/public-key validation. The key ID maps immutably to an exact version in the trusted registry; never repoint an old ID at another version. KMS metadata and signing response must both name that exact configured version. Controller permits continue binding the SHA-256 of the actual provider preimage and exact key version.
+
+Existing evidence/Passport formats and their public-key historical verification are unchanged. Upgrade each recipient to the dual verifier before any opt-in hosted launch. MyEve peer verifier migration is a separate commit in its existing readiness branch. No negotiation/fallback endpoint is added. Rejecting an old peer's inability to read v2 is an intentional deployment prerequisite, never a reason to sign legacy deliveries.
