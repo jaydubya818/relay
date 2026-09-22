@@ -2,7 +2,7 @@ import { z } from "zod";
 import { RelayError } from "@/lib/errors";
 import { requireRuntimeActionsEnabled } from "@/lib/v2/deployment";
 import { requireV2PlatformBindings } from "@/lib/v2/platform-bindings";
-import { acknowledgeFederationResult, getFederationRequest, pollFederationInbox, respondToFederationRequest, submitFederationRequest } from "./service";
+import { acknowledgeFederationResult, getFederationRequest, inspectFederationAuthority, pollFederationInbox, respondToFederationRequest, submitFederationRequest } from "./service";
 import { discoverFederationAgents } from "./discovery";
 import type { FederationBindings } from "./transport";
 
@@ -33,6 +33,7 @@ export async function boundedBody(request: Request) {
   try { return JSON.parse(Buffer.concat(chunks).toString()); } catch { throw new RelayError("INVALID_INPUT", "Invalid JSON."); }
 }
 const commandSchema = z.discriminatedUnion("operation", [
+  z.object({ operation: z.literal("authority.inspect"), input: z.unknown() }).strict(),
   z.object({ operation: z.literal("submit"), input: z.unknown() }).strict(),
   z.object({ operation: z.literal("poll") }).strict(),
   z.object({ operation: z.literal("get"), requestId: z.string().max(255) }).strict(),
@@ -43,6 +44,7 @@ const commandSchema = z.discriminatedUnion("operation", [
 export async function executeFederationCommand(secret: string, value: unknown, bindings: FederationBindings) {
   const command = commandSchema.parse(value);
   switch (command.operation) {
+    case "authority.inspect": return inspectFederationAuthority(secret, command.input);
     case "submit": return submitFederationRequest(secret, command.input, bindings);
     case "poll": return pollFederationInbox(secret, bindings);
     case "get": return getFederationRequest(secret, command.requestId, bindings);

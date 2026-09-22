@@ -7,7 +7,7 @@ import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
 import { appendAuditRecord, appendAuditRecordInTransaction } from "@/lib/v2/evidence/audit";
-import { evaluatePolicy } from "@/lib/v2/policy";
+import { evaluatePolicy, inspectPolicy } from "@/lib/v2/policy";
 import { consumeApprovalInTransaction, createApprovalRequest } from "@/lib/v2/approvals";
 import { expireBudgetReservations, reconcileBudgetReservation, reserveBudgetInTransaction } from "@/lib/v2/budgets";
 import { grantSchema, knowledgeResponseSchema, registrationSchema, submissionSchema, viewSchema, type Submission } from "./contracts";
@@ -116,14 +116,17 @@ function policyAction(row: Pick<RequestRow, "id" | "targetOwnerId" | "targetAgen
   // Correlation IDs only, not a local platform Run or an execution workload/lease.
   return { schemaVersion: "relay.action-intent.v2", id: `act_${suffix}`, accountId: row.targetOwnerId, agentId: row.targetAgentId, runtimeClientId: `rtc_${suffix}`, taskId: `tsk_${suffix}`, ...material, idempotencyKey: row.id, createdAt: now(), canonicalHash: canonicalHash(material) };
 }
-async function policy(row: RequestRow, action: ActionIntent, approvalRequired: boolean, bindings: FederationBindings) {
+async function policyInput(row: RequestRow, action: ActionIntent, approvalRequired: boolean) {
   const relationships = await db().select().from(federationRelationships).where(and(eq(federationRelationships.ownerId, row.targetOwnerId), inArray(federationRelationships.subject, [row.callerOwnerId, row.callerAgentId])));
   const known = relationships.some((relationship) => ["CONTACT", "TRUSTED"].includes(relationship.trust));
   const facts = { "recipient.relationship": known ? "known" : "new", "federation.caller_owner": row.callerOwnerId, "federation.caller_agent": row.callerAgentId, "federation.capability": row.capability };
-  const decision = await evaluatePolicy({ accountId: row.targetOwnerId, action, requiredApprovalClass: approvalRequired ? "federation.disclosure" : undefined,
+  return { accountId: row.targetOwnerId, action, requiredApprovalClass: approvalRequired ? "federation.disclosure" : undefined,
     factResolvers: Object.entries(facts).map(([name, value]) => ({ name, resolve: async () => ({ name, value, authoritative: true, observedAt: now(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: canonicalHash({ name, value }) }) })),
     resourceResolver: { resolveOwnership: async () => ({ name: "resource.account_id", value: row.targetOwnerId, authoritative: true, observedAt: now(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: row.publicationVersion?.toString() ?? row.id }) },
-  }, bindings.signer);
+  };
+}
+async function policy(row: RequestRow, action: ActionIntent, approvalRequired: boolean, bindings: FederationBindings) {
+  const decision = await evaluatePolicy(await policyInput(row, action, approvalRequired), bindings.signer);
   const [record] = await db().select().from(policyDecisions).where(eq(policyDecisions.id, decision.decisionId));
   const authorityRevision = canonicalHash({ capability: record.capabilityDefinitionHash, bundles: record.policyBundleHashes, facts: (record.materialFacts as Array<{ name: string; value: unknown; sourceRevision: string }>).map(({ name, value, sourceRevision }) => ({ name, value, sourceRevision })) });
   return { ...decision, authorityRevision };
@@ -134,9 +137,7 @@ async function continuedApproval(transaction: RelayDatabase, row: RequestRow, me
   const [approval] = await transaction.select().from(approvalRequests).where(and(eq(approvalRequests.id, row.approvalId), eq(approvalRequests.accountId, row.targetOwnerId), eq(approvalRequests.status, "APPROVED")));
   if (!approval) denied();
 }
-export async function submitFederationRequest(secret: string, value: unknown, bindings: FederationBindings) {
-  const caller = await authenticateFederationAgent(secret);
-  const submission = submissionSchema.parse(value);
+function validateSubmissionLifetime(submission: Submission) {
   if (Date.parse(submission.expiresAt) <= Date.now() || Date.parse(submission.expiresAt) > Date.now() + 86400000) throw new RelayError("INVALID_INPUT", "Request expiry must be within 24 hours.");
   if (submission.capability === "work.request" && (Date.parse(submission.payload.deadline) > Date.parse(submission.expiresAt) || Date.parse(submission.payload.deadline) <= Date.now())) throw new RelayError("INVALID_INPUT", "Work deadline must be within request lifetime.");
   if (submission.capability === "artifact.share") {
@@ -144,6 +145,11 @@ export async function submitFederationRequest(secret: string, value: unknown, bi
     const url = new URL(access.url);
     if (access.audience !== submission.target || url.protocol !== "https:" || url.username || url.password || Date.parse(access.expiresAt) <= Date.now() || Date.parse(access.expiresAt) > Math.min(Date.now() + 300000, Date.parse(submission.payload.expiresAt), Date.parse(submission.expiresAt))) denied();
   }
+}
+export async function submitFederationRequest(secret: string, value: unknown, bindings: FederationBindings) {
+  const caller = await authenticateFederationAgent(secret);
+  const submission = submissionSchema.parse(value);
+  validateSubmissionLifetime(submission);
   await chargeRates([{ accountId: caller.ownerId, key: `owner:${caller.ownerId}`, limit: 120, seconds: 60 }, { accountId: caller.ownerId, key: `agent:${caller.agentId}`, limit: 60, seconds: 60 }]);
   const [target] = await db().select().from(federationAgents).where(eq(federationAgents.address, submission.target));
   if (!target || target.ownerId === caller.ownerId) denied();
@@ -361,6 +367,83 @@ export async function acknowledgeFederationResult(secret: string, requestId: str
   const caller = await authenticateFederationAgent(secret);
   await db().update(federationRequests).set({ encryptedPayload: null, encryptedResult: null, updatedAt: now() }).where(and(eq(federationRequests.id, requestId), eq(federationRequests.callerAgentId, caller.agentId), eq(federationRequests.status, "COMPLETED")));
   return { requestId, acknowledged: true };
+}
+
+type InspectionStatus = "ACTIVE" | "MISSING" | "EXPIRED" | "REVOKED" | "NOT_YET_ACTIVE" | "PEER_UNAVAILABLE" | "RESOURCE_NOT_AUTHORIZED" | "CAPABILITY_NOT_AUTHORIZED" | "DENIED";
+
+/** Observes the exact proposed request. Never admits it or returns reusable authority. */
+export async function inspectFederationAuthority(secret: string, value: unknown) {
+  const caller = await authenticateFederationAgent(secret);
+  const submission = submissionSchema.parse(value);
+  validateSubmissionLifetime(submission);
+  await chargeRates([
+    { accountId: caller.ownerId, key: `inspect-owner:${caller.ownerId}`, limit: 120, seconds: 60 },
+    { accountId: caller.ownerId, key: `inspect-agent:${caller.agentId}`, limit: 60, seconds: 60 },
+  ]);
+  const result = (status: InspectionStatus, expiresAt: string | null = null, approvalRequired = false) => ({
+    authorized: status === "ACTIVE", status, expiresAt, approvalRequired,
+    observedAt: now(), executionRecheckRequired: true as const,
+  });
+  const [target] = await db().select().from(federationAgents).where(eq(federationAgents.address, submission.target));
+  if (!target || target.ownerId === caller.ownerId) return result("MISSING");
+  return withTransaction(async (transaction) => {
+    await lockOwners(transaction, [caller.ownerId, target.ownerId]);
+    // Only grants relevant to this credential's own account and Agent may inform diagnostics.
+    const rows = await transaction.select().from(federationGrants).where(and(
+      eq(federationGrants.ownerId, target.ownerId), eq(federationGrants.granteeOwnerId, caller.ownerId),
+    ));
+    const scoped = rows.map(row => ({ ...row, document: grantSchema.parse(row.document) })).filter(({ document }) =>
+      (!document.granteeAgentId || document.granteeAgentId === caller.agentId) &&
+      (!document.grantorAgentId || document.grantorAgentId === target.agentId));
+    const exact = scoped.filter(row => row.capability === submission.capability && row.resource === submission.resource);
+    // Private, unpublished, and inaccessible views are indistinguishable from nonexistent resources.
+    if (submission.capability === "knowledge.query") {
+      const [view] = await transaction.select().from(publishedViews).where(and(
+        eq(publishedViews.id, submission.resource), eq(publishedViews.ownerId, target.ownerId),
+        eq(publishedViews.publisherAgentId, target.agentId), eq(publishedViews.status, "ACTIVE"),
+      ));
+      if (!view) return result("MISSING");
+      const document = viewSchema.parse(view.document);
+      if (document.visibility === "PRIVATE" || Date.parse(document.expiresAt) <= Date.now() ||
+        (document.visibility === "SHARED" && !document.allowedAudience.some(a => a.ownerId === caller.ownerId && (!a.agentId || a.agentId === caller.agentId))) ||
+        (!exact.length && !(document.visibility === "PUBLIC" && document.publicQueryPolicy))) return result("MISSING");
+    }
+    try { await assertNotBlocked(transaction, caller, target); }
+    catch (error) { if (error instanceof RelayError && error.code === "CAPABILITY_DENIED") return result("MISSING"); throw error; }
+    const [peer] = await transaction.select().from(agents).where(and(eq(agents.id, target.agentId), eq(agents.accountId, target.ownerId)));
+    const [profile] = await transaction.select().from(federationAgents).where(eq(federationAgents.agentId, target.agentId));
+    if (!peer || peer.status !== "ACTIVE" || !profile || ["REVOKED", "PAUSED"].includes(profile.availability))
+      return result(exact.length ? "PEER_UNAVAILABLE" : "MISSING");
+    const requestId = id("frq");
+    const row: RequestRow = {
+      id: requestId, callerOwnerId: caller.ownerId, callerAgentId: caller.agentId, callerCredentialId: caller.credentialId,
+      targetOwnerId: target.ownerId, targetAgentId: target.agentId, capability: submission.capability, resource: submission.resource,
+      idempotencyKey: submission.idempotencyKey, submissionHash: canonicalHash(submission), status: "CREATED", inboxStatus: "UNREAD",
+      grantId: null, publicationVersion: null, policyDecisionId: null, approvalId: null, encryptedPayload: null, encryptedResult: null,
+      metadata: {}, attempts: 0, nextAttemptAt: now(), expiresAt: submission.expiresAt, createdAt: now(), updatedAt: now(),
+    };
+    try {
+      const access = await authority(transaction, row, submission);
+      row.publicationVersion = access.publication?.version ?? null;
+      const decision = await inspectPolicy(await policyInput(row, policyAction(row), access.grant.document.conditions.approvalRequired));
+      if (["DENY", "ESCALATE"].includes(decision.outcome) || Object.keys(decision.obligations.limits).length) return result("DENIED");
+      return result("ACTIVE", access.grant.document.conditions.expiresAt, decision.outcome === "REQUIRE_APPROVAL");
+    } catch (error) {
+      if (!(error instanceof RelayError) || error.code !== "CAPABILITY_DENIED") throw error;
+      // Diagnostics never replace execution's canonical grant selection or public fallback.
+      const active = exact.filter(row => row.status === "ACTIVE");
+      if (active.some(row => Date.parse(row.document.conditions.expiresAt) > Date.now() &&
+        (!row.document.conditions.notBefore || Date.parse(row.document.conditions.notBefore) <= Date.now()))) return result("DENIED");
+      if (exact.some(row => row.status === "REVOKED")) return result("REVOKED");
+      if (active.some(row => Date.parse(row.document.conditions.expiresAt) > Date.now())) return result("NOT_YET_ACTIVE");
+      if (active.length) return result("EXPIRED", active.map(row => row.document.conditions.expiresAt).sort().at(-1)!);
+      if (submission.capability !== "knowledge.query") {
+        if (scoped.some(row => row.resource === submission.resource)) return result("CAPABILITY_NOT_AUTHORIZED");
+        if (scoped.some(row => row.capability === submission.capability)) return result("RESOURCE_NOT_AUTHORIZED");
+      }
+      return result("MISSING");
+    }
+  });
 }
 export async function expireFederationContent(bindings?: FederationBindings) {
   if (bindings) {
