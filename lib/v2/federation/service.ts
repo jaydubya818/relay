@@ -75,7 +75,7 @@ async function authority(transaction: RelayDatabase, row: RequestRow, submission
     const conditions = document.conditions;
     return (!row.grantId || grantId === row.grantId) && (!document.granteeAgentId || document.granteeAgentId === row.callerAgentId)
       && (!document.grantorAgentId || document.grantorAgentId === row.targetAgentId)
-      && Date.parse(conditions.expiresAt) > Date.now() && (!conditions.notBefore || Date.parse(conditions.notBefore) <= Date.now())
+      && (conditions.expiresAt === null || Date.parse(conditions.expiresAt) > Date.now()) && (!conditions.notBefore || Date.parse(conditions.notBefore) <= Date.now())
       && (submission.capability !== "knowledge.query" || !conditions.allowedTopics.length || (submission.payload.topics.length > 0 && submission.payload.topics.every((topic) => conditions.allowedTopics.includes(topic))));
   });
   let grant = matching.sort((a, b) => a.id.localeCompare(b.id))[0];
@@ -432,9 +432,9 @@ export async function inspectFederationAuthority(secret: string, value: unknown)
       if (!(error instanceof RelayError) || error.code !== "CAPABILITY_DENIED") throw error;
       // Diagnostics never replace execution's canonical grant selection or public fallback.
       const active = exact.filter(row => row.status === "ACTIVE");
-      if (active.some(row => Date.parse(row.document.conditions.expiresAt) > Date.now() &&
+      if (active.some(row => (row.document.conditions.expiresAt === null || Date.parse(row.document.conditions.expiresAt) > Date.now()) &&
         (!row.document.conditions.notBefore || Date.parse(row.document.conditions.notBefore) <= Date.now()))) return result("DENIED");
-      if (active.some(row => Date.parse(row.document.conditions.expiresAt) > Date.now())) return result("NOT_YET_ACTIVE");
+      if (active.some(row => (row.document.conditions.expiresAt === null || Date.parse(row.document.conditions.expiresAt) > Date.now()))) return result("NOT_YET_ACTIVE");
       if (active.length) return result("EXPIRED", active.map(row => row.document.conditions.expiresAt).sort().at(-1)!);
       // Historical revocations must not mask a replacement grant's current
       // timing state. Execution still uses the canonical authority check above.

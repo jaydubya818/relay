@@ -45,6 +45,24 @@ afterEach(async () => { vi.restoreAllMocks(); await cleanupDatabase(); });
 const inspect = (f: Awaited<ReturnType<typeof fixture>>, changes = {}) => inspectFederationAuthority(f.ava.credential, { ...f.submission, ...changes });
 
 describe("authenticated authority inspection", () => {
+  it("supports explicit no-expiry grants while rechecking revocation at execution", async () => {
+    const f = await fixture();
+    await revokeFederationGrant(f.jay, f.grant.grantId, f.bindings.signer);
+    const grant = await createFederationGrant(f.jay, { ...f.grantDocument, conditions: { ...f.grantDocument.conditions, expiresAt: null } }, f.bindings.signer);
+    expect(await inspect(f)).toMatchObject({ status: "ACTIVE", authorized: true, expiresAt: null });
+    await expect(submitFederationRequest(f.ava.credential, f.submission, f.bindings)).resolves.toBeDefined();
+    await revokeFederationGrant(f.jay, grant.grantId, f.bindings.signer);
+    expect(await inspect(f)).toMatchObject({ status: "REVOKED", authorized: false });
+    await expect(submitFederationRequest(f.ava.credential, { ...f.submission, idempotencyKey: "after-revoke-no-expiry" }, f.bindings)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" });
+  });
+  it("does not grant no-expiry access to private Knowledge or future grants", async () => {
+    const f = await fixture();
+    await revokeFederationGrant(f.jay, f.grant.grantId, f.bindings.signer);
+    await createFederationGrant(f.jay, { ...f.grantDocument, conditions: { ...f.grantDocument.conditions, expiresAt: null, notBefore: future() } }, f.bindings.signer);
+    expect(await inspect(f)).toMatchObject({ status: "NOT_YET_ACTIVE", authorized: false });
+    await db().update(publishedViews).set({ document: { ...f.document, visibility: "PRIVATE" } }).where(eq(publishedViews.id, f.view.viewId));
+    expect(await inspect(f)).toMatchObject({ status: "MISSING", authorized: false });
+  });
   it("uses the additive command and creates no durable execution authority or signature", async () => {
     const f = await fixture();
     const snapshot = async () => {

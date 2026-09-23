@@ -36,7 +36,7 @@ export const viewSchema = z.object({
   }
 });
 export const conditionsSchema = z.object({
-  notBefore: timestamp.optional(), expiresAt: timestamp,
+  notBefore: timestamp.optional(), expiresAt: timestamp.nullable(),
   rateLimit: z.object({ calls: z.number().int().min(1).max(120), windowSeconds: z.number().int().min(60).max(86400) }).strict(),
   allowedTopics: topics, approvalRequired: z.boolean(),
   maxCost: z.string().regex(/^\d{1,9}(\.\d{1,9})?$/).optional(),
