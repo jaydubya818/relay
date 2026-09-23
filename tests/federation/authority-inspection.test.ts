@@ -69,6 +69,20 @@ describe("authenticated authority inspection", () => {
     expect(await inspect(f)).toMatchObject({ authorized: false, status: mode === "expired" ? "EXPIRED" : mode === "revoked" ? "REVOKED" : "NOT_YET_ACTIVE" });
     expect(await db().select().from(federationRequests)).toHaveLength(0);
   });
+  it.each(["expired", "future", "active"])("reports a %s replacement rather than a historical revocation", async mode => {
+    const f = await fixture();
+    await revokeFederationGrant(f.jay, f.grant.grantId, f.bindings.signer);
+    const replacement = await createFederationGrant(f.jay, f.grantDocument, f.bindings.signer);
+    const expiresAt = mode === "expired" ? new Date(Date.now() - 1).toISOString() : future();
+    await db().update(federationGrants).set({ document: { ...f.grantDocument, conditions: {
+      ...f.grantDocument.conditions, expiresAt, ...(mode === "future" ? { notBefore: future() } : {}),
+    } } }).where(eq(federationGrants.id, replacement.grantId));
+    expect(await inspect(f)).toMatchObject({ authorized: mode === "active", status:
+      mode === "expired" ? "EXPIRED" : mode === "future" ? "NOT_YET_ACTIVE" : "ACTIVE" });
+    expect(await db().select().from(federationRequests)).toHaveLength(0);
+    await revokeFederationGrant(f.jay, replacement.grantId, f.bindings.signer);
+    expect(await inspect(f)).toMatchObject({ authorized: false, status: "REVOKED" });
+  });
   it("keeps missing and private Knowledge indistinguishable even when a grant names it", async () => {
     const f = await fixture();
     expect(await inspect(f, { resource: "nonexistent" })).toMatchObject({ status: "MISSING", authorized: false });

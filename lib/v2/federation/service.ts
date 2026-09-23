@@ -434,9 +434,11 @@ export async function inspectFederationAuthority(secret: string, value: unknown)
       const active = exact.filter(row => row.status === "ACTIVE");
       if (active.some(row => Date.parse(row.document.conditions.expiresAt) > Date.now() &&
         (!row.document.conditions.notBefore || Date.parse(row.document.conditions.notBefore) <= Date.now()))) return result("DENIED");
-      if (exact.some(row => row.status === "REVOKED")) return result("REVOKED");
       if (active.some(row => Date.parse(row.document.conditions.expiresAt) > Date.now())) return result("NOT_YET_ACTIVE");
       if (active.length) return result("EXPIRED", active.map(row => row.document.conditions.expiresAt).sort().at(-1)!);
+      // Historical revocations must not mask a replacement grant's current
+      // timing state. Execution still uses the canonical authority check above.
+      if (exact.some(row => row.status === "REVOKED")) return result("REVOKED");
       if (submission.capability !== "knowledge.query") {
         if (scoped.some(row => row.resource === submission.resource)) return result("CAPABILITY_NOT_AUTHORIZED");
         if (scoped.some(row => row.capability === submission.capability)) return result("RESOURCE_NOT_AUTHORIZED");
