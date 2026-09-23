@@ -27,3 +27,5 @@ Inspection is advisory current-state information for authenticated callers. It g
 Missing, private, unpublished, inaccessible, and blocked resources use privacy-preserving results. Safe detailed diagnostics are restricted to grants relevant to the authenticated caller account and Agent and the exact peer. No other grant contents, policy expressions, credentials, or resource lists are returned.
 
 Inspection writes only ordinary rate counters (60 calls per Agent and 120 per owner per minute). It creates no grant, request, outbox delivery, policy decision, approval, budget reservation, audit signature, or signing-provider call. Existing request and signing contracts are unchanged. No migration is required.
+
+When exact grants have replacement history, an unrevoked replacement’s timing state takes precedence over older revoked records in diagnostics. An expired replacement reports EXPIRED; a future replacement reports NOT_YET_ACTIVE. REVOKED is reported when no unrevoked exact grant remains. This changes diagnostic selection only: canonical admission, execution-time rechecks, public fallback restrictions and private-view nondisclosure are unchanged.
