@@ -87,3 +87,11 @@ export type PublishedView = z.infer<typeof viewSchema>;
 export type Grant = z.infer<typeof grantSchema>;
 export type KnowledgeResponse = z.infer<typeof knowledgeResponseSchema>;
 export type Capability = z.infer<typeof capabilitySchema>;
+
+// An optional answer is the bounded result of the same authorized message.
+// It does not create a new outbound request or change delivery signing.
+export const messageResponseSchema = z.object({
+  acknowledged: z.literal(true),
+  reply: z.object({ body: z.string().trim().min(1).max(4000), replyTo: reference }).strict().optional(),
+  replyStatus: z.literal("unavailable").optional(),
+}).strict().refine(value => !(value.reply && value.replyStatus), "A reply cannot also be unavailable.");
