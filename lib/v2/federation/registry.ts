@@ -98,7 +98,7 @@ export async function invalidatePublicationReference(actor: OwnerActor, referenc
 export async function createFederationGrant(actor: OwnerActor, value: unknown, signer: AuditSigner) {
   await requireOwner(actor);
   const document = grantSchema.parse(value);
-  if (document.granteeOwnerId === actor.accountId || Date.parse(document.conditions.expiresAt) <= Date.now()) throw new RelayError("INVALID_INPUT", "A cross-owner grant with future expiry is required.");
+  if (document.granteeOwnerId === actor.accountId || (document.conditions.expiresAt !== null && Date.parse(document.conditions.expiresAt) <= Date.now())) throw new RelayError("INVALID_INPUT", "A cross-owner grant with future expiry or explicit no expiry is required.");
   return withTransaction(async (transaction) => {
     await lockOwners(transaction, [actor.accountId, document.granteeOwnerId]);
     if (document.grantorAgentId) await ownedAgent(transaction, actor.accountId, document.grantorAgentId);
