@@ -1,3 +1,4 @@
+import { messageResponseSchema } from "./contracts";
 import { and, asc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, withTransaction, type RelayDatabase } from "@/lib/db";
@@ -326,6 +327,10 @@ export async function respondToFederationRequest(secret: string, requestId: stri
       result = workResultSchema.parse(response.result);
       const work = result as z.infer<typeof workResultSchema>;
       if (work.runtimeSeconds > submission.payload.budget.runtimeSeconds || work.modelSteps > submission.payload.budget.modelSteps || amountUnits(work.cost) > amountUnits(submission.payload.budget.cost)) denied();
+    } else if (submission.capability === "message.send") {
+      const message = messageResponseSchema.parse(response.result);
+      if (message.reply && message.reply.replyTo !== row.id) denied();
+      result = message.reply ? { ...message, reply: { ...message.reply, peer: `relay://${row.targetOwnerId}/${row.targetAgentId}` } } : message;
     } else result = z.object({ acknowledged: z.literal(true) }).strict().parse(response.result);
     const encryptedResult = await seal(row.callerOwnerId, result, bindings.keyWrapper);
     if (submission.capability === "work.request") {

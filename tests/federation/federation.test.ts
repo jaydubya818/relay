@@ -157,6 +157,21 @@ describe("federation trust boundaries", () => {
     expect((await pollFederationInbox(f.sofie.credential, f.bindings)).deliveries).toEqual([]);
     expect(await db().select().from(federationAttempts)).toHaveLength(3);
   });
+  it("returns written answers only for the exact authorized request and receiving peer", async () => {
+    const f = await fixture();
+    const grant = await createFederationGrant(f.jay, { ...f.grantDocument, capability: "message.send", resource: "inbox" }, f.bindings.signer);
+    const request = await submitFederationRequest(f.ava.credential, { ...f.submission, capability: "message.send", resource: "inbox", idempotencyKey: "written-answer", conversationId: "conversation-1", payload: { body: "What can you summarize?" } }, f.bindings);
+    await pollFederationInbox(f.sofie.credential, f.bindings);
+    await respondToFederationRequest(f.sofie.credential, request.requestId, { status: "ACCEPTED" }, f.bindings);
+    const reply = { acknowledged: true, reply: { body: "I summarize text you supply.", replyTo: request.requestId } };
+    await expect(respondToFederationRequest(f.sofie.credential, request.requestId, { status: "COMPLETED", result: { ...reply, reply: { ...reply.reply, replyTo: "other-request" } } }, f.bindings)).rejects.toBeDefined();
+    await expect(respondToFederationRequest(f.sofie.credential, request.requestId, { status: "COMPLETED", result: { ...reply, reply: { ...reply.reply, peer: "relay://forged/agent" } } }, f.bindings)).rejects.toBeDefined();
+    await respondToFederationRequest(f.sofie.credential, request.requestId, { status: "COMPLETED", result: reply }, f.bindings);
+    expect(await getFederationRequest(f.ava.credential, request.requestId, f.bindings)).toMatchObject({ status: "COMPLETED", result: { ...reply, reply: { ...reply.reply, peer: f.submission.target } } });
+    await expect(getFederationRequest(f.sofie.credential, request.requestId, f.bindings)).rejects.toBeDefined();
+    await revokeFederationGrant(f.jay, grant.grantId, f.bindings.signer);
+    await expect(getFederationRequest(f.ava.credential, request.requestId, f.bindings)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" });
+  });
   it("keeps message authority separate and allows local refusal", async () => {
     const f = await fixture();
     const message = { ...f.submission, capability: "message.send", resource: "inbox", idempotencyKey: "message-first", payload: { body: "Hello" } };
