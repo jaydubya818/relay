@@ -5,6 +5,14 @@ import { parseInput, submitHostedRequest, getHostedRequest } from "./myfactory-p
 export async function factoryRequest(accountId: string, operation: "create" | "read", input: unknown) {
   const value = (name: string) => { const v = process.env[name]?.trim(); if (!v) throw new RelayError("INVALID_INPUT", "MyFactory routing is not configured.", undefined, 503); return v; };
   if (accountId !== value("MYFACTORY_RELAY_ACCOUNT_ID")) throw new RelayError("CAPABILITY_DENIED", "MyFactory is not connected to this account.", undefined, 403);
+  let parsed: ReturnType<typeof parseInput> | string;
+  try {
+    if (operation === "create") parsed = parseInput(input);
+    else {
+      parsed = String((input as {requestId?: unknown})?.requestId ?? "");
+      if (!/^[a-f0-9-]{36}$/.test(parsed)) throw new Error("Invalid request ID");
+    }
+  } catch { throw new RelayError("INVALID_INPUT", "MyFactory request fields are invalid."); }
   const config = { clientId: "relay", repository: value("MYFACTORY_REPOSITORY"), teamId: value("MYFACTORY_LINEAR_TEAM_ID"),
     token: value("MYFACTORY_CLIENT_TOKEN"), receiptPublicKey: value("MYFACTORY_RECEIPT_PUBLIC_KEY") };
   const graphql = async (query: string, variables: Record<string, unknown>) => {
@@ -17,6 +25,6 @@ export async function factoryRequest(accountId: string, operation: "create" | "r
   };
   const identity = await graphql("query($team:String!){viewer{organization{id}} team(id:$team){id}}", {team:config.teamId});
   if (identity.viewer.organization.id !== value("MYFACTORY_LINEAR_WORKSPACE_ID") || identity.team.id !== config.teamId) throw new RelayError("CAPABILITY_DENIED", "MyFactory provider destination mismatch.", undefined, 403);
-  return operation === "create" ? submitHostedRequest(config, parseInput(input), graphql)
-    : getHostedRequest(config, String((input as {requestId?: unknown})?.requestId ?? ""), graphql);
+  return operation === "create" ? submitHostedRequest(config, parsed, graphql)
+    : getHostedRequest(config, parsed as string, graphql);
 }

@@ -25,6 +25,9 @@ export async function executeCapability(input: {
   let status: ActivityStatus = "SUCCESS";
   try {
     await authorize(input.principal, input.capability);
+    if (input.action.startsWith("factory.workorder.") && input.capability !== input.action) {
+      throw new RelayError("CAPABILITY_DENIED", "The factory operation must match the authorized capability.", input.capability, 403);
+    }
     let result: unknown;
     switch (input.action) {
       case "factory.workorder.create":

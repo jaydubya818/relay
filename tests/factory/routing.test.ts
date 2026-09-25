@@ -15,11 +15,11 @@ it("denies another account before connector access",async()=>{
 });
 it("denies a connector destination mismatch before creating an issue",async()=>{
  const fetcher=vi.fn().mockResolvedValue(Response.json({data:{viewer:{organization:{id:"other"}},team:{id:"LINEAR_TEAM_ID"}}}));vi.stubGlobal("fetch",fetcher);
- await expect(factoryRequest("owner-account","create",{})).rejects.toMatchObject({code:"CAPABILITY_DENIED"});
+ await expect(factoryRequest("owner-account","read",{requestId:"11111111-1111-4111-a111-111111111111"})).rejects.toMatchObject({code:"CAPABILITY_DENIED"});
  expect(fetcher).toHaveBeenCalledTimes(1);
 });
 it("does not send malformed work to Linear",async()=>{
  const fetcher=vi.fn().mockResolvedValue(Response.json({data:{viewer:{organization:{id:"LINEAR_WORKSPACE_ID"}},team:{id:"LINEAR_TEAM_ID"}}}));vi.stubGlobal("fetch",fetcher);
- await expect(factoryRequest("owner-account","create",{command:"execute"})).rejects.toThrow("Unsupported");
- expect(fetcher).toHaveBeenCalledTimes(1);
+ await expect(factoryRequest("owner-account","create",{command:"execute"})).rejects.toMatchObject({code:"INVALID_INPUT"});
+ expect(fetcher).not.toHaveBeenCalled();
 });
