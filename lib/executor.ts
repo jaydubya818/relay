@@ -1,4 +1,5 @@
 import { performance } from "node:perf_hooks";
+import { factoryRequest } from "@/lib/myfactory";
 import { recordActivity } from "@/lib/activity";
 import { authorize } from "@/lib/authorization";
 import { githubProvider } from "@/lib/connectors/github";
@@ -26,6 +27,12 @@ export async function executeCapability(input: {
     await authorize(input.principal, input.capability);
     let result: unknown;
     switch (input.action) {
+      case "factory.workorder.create":
+        result = await factoryRequest(input.principal.accountId, "create", input.arguments);
+        break;
+      case "factory.workorder.read":
+        result = await factoryRequest(input.principal.accountId, "read", input.arguments);
+        break;
       case "memory.add":
         result = await addMemory(input.principal, {
           content: String(input.arguments.content ?? ""),
