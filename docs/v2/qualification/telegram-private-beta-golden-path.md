@@ -485,3 +485,29 @@ Owner input remains pending: dedicated Telegram bot @username and non-secret sec
 Integrated feature checkpoints were pushed with exact SHA parity: Relay `56bc256e2a2f7647c547cb46b68e3a05f286256c`; MyEve `f5db7ee0d4fe57258f3cc06a1a0f2ab9bb3abb03`. New changes relative to canonical main passed focused credential-pattern and environment/runtime-artifact checks. Earlier main history and its retained evidence were preserved.
 
 A bounded retry started the preserved PostgreSQL server, but a five-second connection probe still timed out; the budget query and attempted backup did not complete. The incomplete dump is not a verified backup. Fast shutdown was requested and the backup process stopped. No compatibility migration or new provider call was attempted. Recovery of access to the original campaign ledger remains required; the prior $5 allowance must not be reset. The cause of the filesystem/database delays is not established.
+
+
+## Eve 0.66.3 actual-runtime requalification — 2026-09-25 UTC
+
+Continues the published Relay `90bbc498fd4071d396ebece0fea4f68549de2306` / MyEve `f1a741152a723d621463588f3c61a4c6d333f957` integration checkpoint. Historical results above remain historical; this entry does not qualify live Telegram.
+
+Recovered the existing campaign database after confirming cloud-evicted, dataless files in its Documents directory. Materialized all 1,748 files; the stopped database copy matched every file by SHA-256 (72,930,372 bytes). A verified full backup preceded fixture compatibility work. Canonical main migrations 0031–0035 were applied only to this synthetic fixture; existing approval-generation and owner migration semantics were preserved. This is not evidence of a production migration-ledger upgrade. Before/after compatibility accounting remained $0.009480 spent + $0.031241 reserved; the $5 allowance was never reset.
+
+Runtime fixes: custom budgeted model selection supplies the same 200,000-token context metadata as canonical model selection, while the provider boundary continues enforcing the separate 12,000-token task ceiling. The policy resolver no longer redefines Eve-owned `workflow` and `ask_question` names. Provider tool allowlisting and returned-tool validation still deny these capabilities to external work. Five setup attempts failed closed before provider calls (missing model metadata, tool-name collisions, and protected unreserved compaction); no guard was relaxed.
+
+A linked-dependency checkout also produced intermittent Next.js `after` request-scope failures: one newly admitted request remained queued, and two completed-request replay attempts failed. Isolated dependency copies and fresh generated artifacts resolved the observed local failure. No production scheduling workaround was added. The queued request was subsequently cancelled through canonical signed control. Use a local dependency installation for qualification; do not rely on cross-checkout node_modules links. This local result does not qualify hosted Next.js behavior.
+
+Actual canonical Vercel OIDC refresh → AI Gateway → `anthropic/claude-sonnet-5`, using installed Eve 0.66.3:
+
+- Public example.com research and seeded private-canary isolation PASS. Two calls returned 1,101 and 1,323 used tokens, billed $0.003034 and $0.003798; conservative reservations were $0.030980 and $0.034641. Total task spend $0.006832, below $0.10. Every provider invocation had durable prior reservation, scoped context and allowed tools. No private memory references or canary appeared in provider input/output.
+- Runtime restart/replay PASS: identical completed outcome, zero additional calls/reservations.
+- Real provider cancellation and cancellation replay PASS. The interrupted call retains its full $0.030980 reservation as unknown usage; cancellation does not refund it.
+- Insufficient task budget PASS: failed before any provider reservation or call.
+- Cleanup PASS: zero active synthetic Runs and zero new provider reservations. The harness now exposes `cleanup` for canonical cancellation of this fixture's remaining active work.
+- Database restart preserved the same outcome, seven historical/new call records, zero active Runs, and exact accounting: **$0.016312 spent + $0.062221 reserved = $0.078533 liability; $4.921467 remaining**. Unknown amounts are conservative liabilities, not claimed actual charges.
+
+The active campaign ledger is now stopped at `~/Library/Application Support/RelayQualification/telegram-private-beta/postgres`, with verified before/after dumps alongside it. The older Documents copy is a retired frozen backup and must never become the active campaign again or reset the allowance. No database, dump, token, local environment or runtime log is committed. The sanitized machine-readable evidence is MyEve `apps/eve/docs/qualification/telegram-eve066-runtime-evidence.json`.
+
+Fresh checks: Relay **398 passed / 5 skipped** including cross-repository approval/duplicate/revocation tests; MyEve **1,063 passed / 1 skipped**; provider-boundary subset **25 passed**; MyEve production build/typecheck PASS; governance **570 classified / UNKNOWN=0**. Earlier integration lint, migrations, Relay build/typecheck and performance results remain the preceding checkpoint; no fresh UI or dependency-audit result is implied.
+
+Both release gates remain false. No deployment, public enablement, merge into main, release tag or `PASSED_LIVE` claim. Live Telegram scenarios: **0**. Local actual-runtime prerequisites are ready for the next qualification stage, but hosted and consequential Telegram scenarios remain pending. Smallest owner input: dedicated qualification bot @username and non-secret secure token reference, or create that dedicated bot through BotFather and securely store its token. Never paste the token. **TELEGRAM PRIVATE-BETA GOLDEN PATH INCOMPLETE; not ready to merge into main.**
