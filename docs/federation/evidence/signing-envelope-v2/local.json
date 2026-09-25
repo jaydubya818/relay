@@ -1,0 +1,76 @@
+{
+  "status": "LOCAL_QUALIFIED_LIVE_NOT_RUN",
+  "protocolTokenCharacters": 262144,
+  "cases": [
+    {
+      "name": "small",
+      "authenticatedMaterialBytes": 1291,
+      "tokenCharacters": 1378,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 406,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    },
+    {
+      "name": "intermediate",
+      "authenticatedMaterialBytes": 23193,
+      "tokenCharacters": 23280,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 406,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    },
+    {
+      "name": "64K-class",
+      "authenticatedMaterialBytes": 61925,
+      "tokenCharacters": 62012,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 406,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    },
+    {
+      "name": "132K-class",
+      "authenticatedMaterialBytes": 132893,
+      "tokenCharacters": 132980,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 406,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    },
+    {
+      "name": "260000",
+      "authenticatedMaterialBytes": 260000,
+      "tokenCharacters": 260087,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 407,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    },
+    {
+      "name": "262057",
+      "authenticatedMaterialBytes": 262057,
+      "tokenCharacters": 262144,
+      "digestBytes": 32,
+      "canonicalEnvelopeBytes": 406,
+      "signatureBytes": 64,
+      "localSigner": "PASS",
+      "canonicalVerifier": "PASS"
+    }
+  ],
+  "maximumPlusOne": {
+    "tokenCharacters": 262145,
+    "result": "REJECT",
+    "providerCalls": 0
+  },
+  "kmsOperations": 0,
+  "cloudResourcesCreated": 0,
+  "federation": "DISABLED",
+  "independentSecurityReview": "NOT_RUN",
+  "productionPlatformQualification": "NOT_RUN"
+}

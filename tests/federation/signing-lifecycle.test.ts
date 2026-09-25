@@ -1,0 +1,26 @@
+import { generateKeyPairSync, sign } from 'node:crypto';
+import { afterEach, expect, it } from 'vitest';
+import { appendAuditRecord, exportAuditBundle, verifyAuditBundle, verifyAuditBundleWithLifecycle } from '@/lib/v2/evidence/audit';
+import { SigningKeyring, type SigningKey } from '@/lib/v2/evidence/signing-provider';
+import { cleanupDatabase, freshDatabase } from '../helpers';
+afterEach(cleanupDatabase);
+it('exports historical receipts after rotation without access to the historical private key',async()=>{
+ const {accountId}=await freshDatabase();const oldPair=generateKeyPairSync('ed25519'),newPair=generateKeyPairSync('ed25519');
+ const old:SigningKey={keyId:'evidence-v1',keyVersion:'synthetic-v1',purpose:'evidence',algorithm:'Ed25519',publicKeyPem:oldPair.publicKey.export({type:'spki',format:'pem'}).toString(),state:'ACTIVE',activatedAt:'2026-01-01T00:00:00Z'};
+ const first=new SigningKeyring([old],{async sign(_key,bytes){return sign(null,bytes,oldPair.privateKey);}});
+ await appendAuditRecord({accountId,eventType:'synthetic.before_rotation',outcome:'SUCCESS',occurredAt:'2026-05-01T00:00:00Z'},first.signer('evidence'));
+ const current:SigningKey={...old,keyId:'evidence-v2',keyVersion:'synthetic-v2',publicKeyPem:newPair.publicKey.export({type:'spki',format:'pem'}).toString(),activatedAt:'2026-06-01T00:00:00Z'};
+ const historical:SigningKey={...old,state:'DISABLED',retiredAt:'2026-06-01T00:00:00Z'};
+ const used:string[]=[];
+ const rotated=new SigningKeyring([historical,current],{async sign(key,bytes){used.push(key.keyId);expect(key.keyId).toBe(current.keyId);return sign(null,bytes,newPair.privateKey);}});
+ await appendAuditRecord({accountId,eventType:'synthetic.after_rotation',outcome:'SUCCESS'},rotated.signer('evidence'));
+ const bundle=await exportAuditBundle(accountId,rotated.signer('evidence'));
+ expect(used).toEqual(['evidence-v2','evidence-v2']);expect(bundle.exportSigningKeyId).toBe('evidence-v2');expect(bundle.signingKeys).toHaveLength(2);
+ expect(verifyAuditBundle(bundle)).toBe(true);expect(verifyAuditBundleWithLifecycle(bundle,rotated)).toBe(true);
+ const revoked=new SigningKeyring([{...historical,state:'REVOKED',revokedAt:'2026-09-01T00:00:00Z'},current],{async sign(){throw Error('must not sign');}});
+ expect(verifyAuditBundleWithLifecycle(bundle,revoked)).toBe(false);
+ const missing=new SigningKeyring([current],{async sign(){throw Error('must not sign');}});
+ expect(verifyAuditBundleWithLifecycle(bundle,missing)).toBe(false);
+ const wrongPurpose=new SigningKeyring([{...historical,purpose:'passport'},current],{async sign(){throw Error('must not sign');}});
+ expect(verifyAuditBundleWithLifecycle(bundle,wrongPurpose)).toBe(false);
+});

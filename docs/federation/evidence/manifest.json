@@ -1,0 +1,13 @@
+{
+  "algorithm": "SHA-256",
+  "files": {
+    "baseline-live-defect/report.json": "39250aab522aa2f87d17ca0c5ddfe62c8067fa72e5f75dbe59aa8d298727a7e1",
+    "disposable-live/ava-audit.json": "3371d718f451860c00b62db3775f4a674cc25682de649c1c6d5eb898a91f4bc8",
+    "disposable-live/platform-receipts.json": "3cb3cadaa91419a411886c78fd36d47ffea5e0a7ea50e27d4a273c996682faab",
+    "disposable-live/report.json": "1cb6d32c4ed9cfa5de9a2beb7579fe0dbc6c38c1942d696b91cf5913c7c86441",
+    "disposable-live/sofie-audit.json": "6ceb6eb690083453ca8ba25ac4714411d8f539e856cd74662f18ede8397130ae",
+    "harness-attempt-01.json": "7753f7828c559f5efc66cf126a0208c78a8958b4712dee70d027e4ee0413b5ef",
+    "harness-attempt-02.json": "f421a0fbcad1c79fef5f759c6844c8273e11839862c0277b1e1f0180139ed9f8",
+    "regression-summary.json": "d5293b2944bae8e8c1637ba848157f587d9542c69b31554328740252e6529b08"
+  }
+}

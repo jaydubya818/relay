@@ -1,3 +1,4 @@
+import { purposeSigner, type SigningKeyring } from "@/lib/v2/evidence/signing-provider";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { db, withTransaction, type RelayDatabase } from "@/lib/db";
 import { auditChainHeads, auditRecords } from "@/lib/db/schema";
@@ -32,6 +33,7 @@ export async function appendAuditRecord(input: AuditRecordInput, signer: AuditSi
 }
 
 export async function appendAuditRecordInTransaction(transaction: RelayDatabase, input: AuditRecordInput, signer: AuditSigner) {
+    signer = purposeSigner(signer, "evidence");
     const occurredAt = input.occurredAt ?? now();
     await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${input.accountId}, 0))`);
     await transaction.insert(auditChainHeads).values({ accountId: input.accountId, sequence: 0, updatedAt: occurredAt }).onConflictDoNothing();
@@ -77,12 +79,12 @@ export type AuditExportBundle = {
 };
 
 export async function exportAuditBundle(accountId: string, signers: AuditSigner | AuditSigner[]): Promise<AuditExportBundle> {
-  const availableSigners = Array.isArray(signers) ? signers : [signers];
+  const availableSigners = (Array.isArray(signers) ? signers : [signers]).map((signer) => purposeSigner(signer, "evidence"));
   const records = await listAuditRecords(accountId);
   const [head] = await db().select().from(auditChainHeads).where(eq(auditChainHeads.accountId, accountId)).limit(1);
   const finalSequence = head?.sequence ?? 0;
   const finalHash = head?.lastHash ?? null;
-  const exportSigner = availableSigners.find((signer) => signer.keyId === records.at(-1)?.signingKeyId) ?? availableSigners[0];
+  const exportSigner = availableSigners[0];
   if (!exportSigner) throw new Error("At least one audit signer is required.");
   const exportedAt = now();
   const manifestHash = canonicalHash({ schemaVersion: "relay.audit-export.v1", accountId, exportedAt, finalSequence, finalHash });
@@ -94,20 +96,24 @@ export async function exportAuditBundle(accountId: string, signers: AuditSigner 
     finalHash,
     exportSigningKeyId: exportSigner.keyId,
     exportSignature: await exportSigner.sign(manifestHash),
-    signingKeys: await Promise.all(availableSigners.map(async (signer) => ({ keyId: signer.keyId, algorithm: "Ed25519" as const, publicKeyPem: await signer.publicKeyPem() }))),
+    signingKeys: [...new Map((await Promise.all(availableSigners.map(async (signer) => signer.verificationKeys?.() ?? [{ keyId: signer.keyId, algorithm: "Ed25519" as const, publicKeyPem: await signer.publicKeyPem() }]))).flat().map((key) => [key.keyId, key])).values()],
     records,
   };
 }
 
-export function verifyAuditBundle(bundle: AuditExportBundle) {
+export function verifyAuditBundle(bundle: AuditExportBundle) { return verifyAuditBundleWithLifecycle(bundle); }
+
+export function verifyAuditBundleWithLifecycle(bundle: AuditExportBundle, lifecycle?: SigningKeyring) {
   if (bundle.schemaVersion !== "relay.audit-export.v1" || bundle.records.some((record) => record.accountId !== bundle.accountId)) return false;
   const keys = new Map(bundle.signingKeys.map((key) => [key.keyId, key]));
   const exportKey = keys.get(bundle.exportSigningKeyId);
   const manifestHash = canonicalHash({ schemaVersion: bundle.schemaVersion, accountId: bundle.accountId, exportedAt: bundle.exportedAt, finalSequence: bundle.finalSequence, finalHash: bundle.finalHash });
-  if (!exportKey || !verifyAuditSignature(exportKey.publicKeyPem, manifestHash, bundle.exportSignature)) return false;
+  if (lifecycle && lifecycle.verificationKey(bundle.exportSigningKeyId, "evidence", bundle.exportedAt)?.publicKeyPem !== exportKey?.publicKeyPem) return false;
+  if (!exportKey || exportKey.algorithm !== "Ed25519" || !verifyAuditSignature(exportKey.publicKeyPem, manifestHash, bundle.exportSignature)) return false;
   let previousHash: string | null = null;
   for (const [index, record] of bundle.records.entries()) {
     const key = keys.get(record.signingKeyId);
+    if (lifecycle && lifecycle.verificationKey(record.signingKeyId, "evidence", record.occurredAt)?.publicKeyPem !== key?.publicKeyPem) return false;
     if (!key || key.algorithm !== "Ed25519" || record.sequence !== index + 1 || record.previousHash !== previousHash) return false;
     if (canonicalHash(recordMaterial(record)) !== record.recordHash || !verifyAuditSignature(key.publicKeyPem, record.recordHash, record.signature)) return false;
     previousHash = record.recordHash;

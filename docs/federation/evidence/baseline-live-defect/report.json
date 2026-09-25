@@ -1,0 +1,105 @@
+{
+  "startedAt": "2026-09-19T06:05:08.500Z",
+  "baselineCommit": "194b3a074e85e8300d9d510b3016fb00290378cb",
+  "testedCommit": "194b3a074e85e8300d9d510b3016fb00290378cb",
+  "branch": "codex/relay-federation",
+  "hosting": "Qualification HTTPS host imports production REST/MCP handlers; isolated generic platform containers; deterministic extractive synthesis and architecture checker, no external model",
+  "checks": [
+    {
+      "name": "independent owners, Agents, credentials, processes and private storage",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "no-grant query denied before publisher invocation or private-store access",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "signed denial receipt exists",
+      "status": "FAILED",
+      "observedDenialReceiptCount": 0,
+      "observedHTTPStatus": 403
+    }
+  ],
+  "identities": {
+    "sofie": {
+      "accountId": "acct_9ee632591c114915b1f50779c5fdd5e5",
+      "principalId": "prn_5bdc5e5930464cdab90426aad6df43e4",
+      "agentId": "agt_37d7c118d1254b8ab15e98fa6dd890e9",
+      "address": "relay://acct_9ee632591c114915b1f50779c5fdd5e5/agt_37d7c118d1254b8ab15e98fa6dd890e9"
+    },
+    "ava": {
+      "accountId": "acct_a5ff173468b9400db3b5a2434fa5e4f7",
+      "principalId": "prn_7173e24605d041bb9af7e98be7179a9d",
+      "agentId": "agt_2e8e30823bd7465ca1ab1ba1cdbeba0b",
+      "address": "relay://acct_a5ff173468b9400db3b5a2434fa5e4f7/agt_2e8e30823bd7465ca1ab1ba1cdbeba0b"
+    }
+  },
+  "containers": [
+    {
+      "name": "sofie",
+      "containerId": "038f510525bf3843daa187ff4e604f74c835e0153f8428c4e6c3d5293a0d7b29",
+      "imageId": "sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d",
+      "pid": 767,
+      "mounts": [
+        {
+          "sourceDomain": "public-adapter-code",
+          "destination": "/app",
+          "writable": false
+        },
+        {
+          "sourceDomain": "sofie-config",
+          "destination": "/config",
+          "writable": false
+        },
+        {
+          "sourceDomain": "sofie-store",
+          "destination": "/state",
+          "writable": true
+        }
+      ],
+      "readOnlyRoot": true,
+      "droppedCapabilities": [
+        "ALL"
+      ]
+    },
+    {
+      "name": "ava",
+      "containerId": "3d1e241cf94e692161f9726efc6483fda244e5f507824e6be3e002062fd30012",
+      "imageId": "sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d",
+      "pid": 830,
+      "mounts": [
+        {
+          "sourceDomain": "public-adapter-code",
+          "destination": "/app",
+          "writable": false
+        },
+        {
+          "sourceDomain": "ava-config",
+          "destination": "/config",
+          "writable": false
+        },
+        {
+          "sourceDomain": "ava-store",
+          "destination": "/state",
+          "writable": true
+        }
+      ],
+      "readOnlyRoot": true,
+      "droppedCapabilities": [
+        "ALL"
+      ]
+    }
+  ],
+  "verdict": "REPRODUCED_MISSING_DENIAL_RECEIPT",
+  "cleanup": {
+    "containersCreated": 3,
+    "containersRemoved": 3,
+    "containerNames": [
+      "relay-qual-ava-fbe9cba5",
+      "relay-qual-sofie-fbe9cba5",
+      "relay-qual-db-fbe9cba5"
+    ],
+    "credentialsAndKeysDestroyed": true
+  },
+  "finishedAt": "2026-09-19T06:05:11.745Z"
+}

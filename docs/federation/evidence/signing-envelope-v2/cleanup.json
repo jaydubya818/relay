@@ -1,0 +1,7 @@
+{
+  "testDatabaseCountAfterRegression": 0,
+  "postgresqlStopped": true,
+  "disposableDataDirectoryRemoved": true,
+  "sharedDatabaseAccess": false,
+  "kmsOperations": 0
+}

@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { expect, it } from "vitest";
 
-it.each([20,21])("upgrades schema %s to channel execution and permits repeated migration", async (prior) => {
+it.each([20,21,22])("upgrades schema %s to channel execution and permits repeated migration", async (prior) => {
   const adminUrl = process.env.RELAY_TEST_DATABASE_URL ?? "postgresql://127.0.0.1:55432/postgres";
   const databaseName = `relay_telegram_upgrade_${process.pid}_${Date.now()}`;
   const admin = new Client({ connectionString: adminUrl });

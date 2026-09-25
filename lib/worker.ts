@@ -1,9 +1,11 @@
 import { cleanupExpiredBrowserSessions } from "@/lib/browsers";
 import { cleanupExpiredSandboxes } from "@/lib/sandboxes";
+import { expireFederationContent } from "@/lib/v2/federation/service";
 
 export async function runMaintenanceCycle() {
   const started = Date.now();
   const [sandboxes, browsers] = await Promise.all([cleanupExpiredSandboxes(), cleanupExpiredBrowserSessions()]);
+  if (process.env.RELAY_FEDERATION_ENABLED === "true") await expireFederationContent();
   const result = { sandboxes, browsers, durationMs: Date.now() - started };
   console.info(JSON.stringify({ level: "info", event: "maintenance_cycle", ...result }));
   return result;

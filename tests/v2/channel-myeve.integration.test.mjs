@@ -55,6 +55,7 @@ suite('Relay to canonical MyEve component golden path',()=>{
     const [run]=await query('SELECT status FROM task_runs WHERE id=$1',[accepted.runId]);
     if(run.status==='queued'){
      await transition('myeve-owner',accepted.runId,'running','agent','Synthetic model fixture');research++;draft++;
+    await query("INSERT INTO task_run_sessions(task_id,session_id,role) VALUES($1,'synthetic-session','orchestrator')",[accepted.runId]);
      await expect(new Gateway(database).execute({ownerId:'myeve-owner',runId:accepted.runId,actionKey:'synthetic-draft',capabilityId:'files.write',actionClass:'write',executor:{kind:'primary-agent',agentId:'myeve-agent'},trigger:{kind:'owner_chat',id:'synthetic-session'},parameters:{path:'/workspace/qualification.txt',content:'Synthetic private draft'}},adapter)).rejects.toMatchObject({status:'awaiting_approval'});
     }
    }

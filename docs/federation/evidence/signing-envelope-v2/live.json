@@ -1,0 +1,176 @@
+{
+  "observedAt": "2026-09-21T05:32:17.192Z",
+  "source": {
+    "branch": "codex/relay-signing-envelope-v2",
+    "head": "68c8d8c92b65f7acfd6993e1714f0d1c1204f6b2",
+    "remoteHead": "68c8d8c92b65f7acfd6993e1714f0d1c1204f6b2",
+    "worktree": "CLEAN"
+  },
+  "keyVersion": "projects/relay-local-qualification/locations/us-east4/keyRings/fq-compatibility-probe/cryptoKeys/fq-ed25519-probe/cryptoKeyVersions/1",
+  "algorithm": "EC_SIGN_ED25519",
+  "protection": "SOFTWARE",
+  "status": "KMS COMPATIBILITY QUALIFIED",
+  "requests": [
+    {
+      "operation": "publicKey",
+      "caseBytes": null,
+      "httpStatus": 200
+    },
+    {
+      "operation": "metadata",
+      "caseBytes": 1291,
+      "httpStatus": 200
+    },
+    {
+      "operation": "signing",
+      "caseBytes": 1291,
+      "httpStatus": 200
+    },
+    {
+      "operation": "metadata",
+      "caseBytes": 132893,
+      "httpStatus": 200
+    },
+    {
+      "operation": "signing",
+      "caseBytes": 132893,
+      "httpStatus": 200
+    },
+    {
+      "operation": "metadata",
+      "caseBytes": 260000,
+      "httpStatus": 200
+    },
+    {
+      "operation": "signing",
+      "caseBytes": 260000,
+      "httpStatus": 200
+    },
+    {
+      "operation": "metadata",
+      "caseBytes": 262057,
+      "httpStatus": 200
+    },
+    {
+      "operation": "signing",
+      "caseBytes": 262057,
+      "httpStatus": 200
+    }
+  ],
+  "cases": [
+    {
+      "payloadBytes": 1291,
+      "payloadDigestAlgorithm": "SHA-256",
+      "envelopeVersion": 2,
+      "keyId": "fq-delivery-v2",
+      "keyVersion": "projects/relay-local-qualification/locations/us-east4/keyRings/fq-compatibility-probe/cryptoKeys/fq-ed25519-probe/cryptoKeyVersions/1",
+      "status": "PASS",
+      "envelopeBytes": 406,
+      "payloadDigest": "c4a4904504721b8e48fa35da07aacfd52eebef987d8280f30d69429f37a1510b",
+      "metadata": "PASS",
+      "kmsInputBytes": 406,
+      "requestCrc32c": "PASS",
+      "responseCrc32c": "PASS",
+      "googleApiAcceptance": "PASS",
+      "returnedVersion": "projects/relay-local-qualification/locations/us-east4/keyRings/fq-compatibility-probe/cryptoKeys/fq-ed25519-probe/cryptoKeyVersions/1",
+      "signatureBytes": 64,
+      "publicKeyVerification": "PASS",
+      "rawInputSemantics": "PASS",
+      "tokenCharacters": 1378,
+      "relayV2Verification": "PASS",
+      "tamperRejection": "PASS"
+    },
+    {
+      "payloadBytes": 132893,
+      "payloadDigestAlgorithm": "SHA-256",
+      "envelopeVersion": 2,
+      "keyId": "fq-delivery-v2",
+      "keyVersion": "projects/relay-local-qualification/locations/us-east4/keyRings/fq-compatibility-probe/cryptoKeys/fq-ed25519-probe/cryptoKeyVersions/1",
+      "status": "PASS",
+      "envelopeBytes": 406,
+      "payloadDigest": "4cb427d1a6e36bcfa2d4789c97441cd4612aba1629a88e3160492fee5adce91e",
+      "metadata": "PASS",
+      "kmsInputBytes": 406,
+      "requestCrc32c": "PASS",
+      "responseCrc32c": "PASS",
+      "googleApiAcceptance": "PASS",
+      "returnedVersion": "projects/relay-local-qualification/locations/us-east4/keyRings/fq-compatibility-probe/cryptoKeys/fq-ed25519-probe/cryptoKeyVersions/1",
+      "signatureBytes": 64,
+      "publicKeyVerification": "PASS",
+      "rawInputSemantics": "PASS",
+      "tokenCharacters": 132980,
+      "relayV2Verification": "PASS",
+      "tamperRejection": "PASS"
+    },
+    {
+      "payloadBytes": 260000,
+      "payloadDigestAlgorithm": "SHA-256",
+      "envelopeVersion": 2,
+      "keyId": "fq-delivery-v2x",
+      "keyVersion": "projects/relay-local-qualification/locations/us-east4/keyRings/fq-compatibility-probe/cryptoKeys/fq-ed25519-probe/cryptoKeyVersions/1",
+      "status": "PASS",
+      "envelopeBytes": 407,
+      "payloadDigest": "c0a3b6c7b766f0944b68cb929ce96bfe30224027c0c537d501c32d5ece855a8f",
+      "metadata": "PASS",
+      "kmsInputBytes": 407,
+      "requestCrc32c": "PASS",
+      "responseCrc32c": "PASS",
+      "googleApiAcceptance": "PASS",
+      "returnedVersion": "projects/relay-local-qualification/locations/us-east4/keyRings/fq-compatibility-probe/cryptoKeys/fq-ed25519-probe/cryptoKeyVersions/1",
+      "signatureBytes": 64,
+      "publicKeyVerification": "PASS",
+      "rawInputSemantics": "PASS",
+      "tokenCharacters": 260087,
+      "relayV2Verification": "PASS",
+      "tamperRejection": "PASS"
+    },
+    {
+      "payloadBytes": 262057,
+      "payloadDigestAlgorithm": "SHA-256",
+      "envelopeVersion": 2,
+      "keyId": "fq-delivery-v2",
+      "keyVersion": "projects/relay-local-qualification/locations/us-east4/keyRings/fq-compatibility-probe/cryptoKeys/fq-ed25519-probe/cryptoKeyVersions/1",
+      "status": "PASS",
+      "envelopeBytes": 406,
+      "payloadDigest": "a94c24a36b3fc78fb40c93c3200186e4d8d491c9aa7f75ead6ef7748995e00a5",
+      "metadata": "PASS",
+      "kmsInputBytes": 406,
+      "requestCrc32c": "PASS",
+      "responseCrc32c": "PASS",
+      "googleApiAcceptance": "PASS",
+      "returnedVersion": "projects/relay-local-qualification/locations/us-east4/keyRings/fq-compatibility-probe/cryptoKeys/fq-ed25519-probe/cryptoKeyVersions/1",
+      "signatureBytes": 64,
+      "publicKeyVerification": "PASS",
+      "rawInputSemantics": "PASS",
+      "tokenCharacters": 262144,
+      "relayV2Verification": "PASS",
+      "tamperRejection": "PASS"
+    }
+  ],
+  "operations": {
+    "signing": 4,
+    "metadata": 4,
+    "publicKey": 1,
+    "retries": 0,
+    "newResources": 0
+  },
+  "tokenContract": 262144,
+  "federation": "DISABLED",
+  "authorityChanges": false,
+  "productionOperations": 0,
+  "independentSecurityReview": "NOT_RUN",
+  "productionPlatformQualification": "NOT_RUN",
+  "actualOperationCost": "UNAVAILABLE",
+  "estimatedOperationCostUSD": 0.000015,
+  "credentialPrinted": false,
+  "credentialPersisted": false,
+  "publicKey": {
+    "name": "projects/relay-local-qualification/locations/us-east4/keyRings/fq-compatibility-probe/cryptoKeys/fq-ed25519-probe/cryptoKeyVersions/1",
+    "pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAB+iF4UrQrG5dX+HmRJbIe5e9MGTWuEJnBJIAYD+l33s=\n-----END PUBLIC KEY-----\n",
+    "sha256": "00daeee3bee0076681d1cd1927fa2a2d30786320e8e344341b0c981b976517e4",
+    "crc32c": "PASS",
+    "algorithm": "EC_SIGN_ED25519",
+    "protection": "SOFTWARE"
+  },
+  "sourceAfterProbe": "UNCHANGED_CLEAN"
+}

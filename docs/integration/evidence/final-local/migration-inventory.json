@@ -1,0 +1,178 @@
+[
+  {
+    "number": 0,
+    "name": "0000_flashy_onslaught",
+    "purpose": "create accounts, activities, agent_credentials, agent_inbox, agent_sessions, agent_wake_requests, agents, browser_session_grants, browser_sessions, capabilities, capability_grants, connection_credentials, connections, events, memories, sandbox_grants, sandboxes, user_sessions, users",
+    "origin": "a913fc29e6079586ecd349c568299b1713bafe6b",
+    "dependency": "none",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 1,
+    "name": "0001_lively_shooting_star",
+    "purpose": "additive registry or schema update",
+    "origin": "1d61f4883ca9aab4b2cc21f3e43d45a91c7a7b93",
+    "dependency": "0000_flashy_onslaught",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 2,
+    "name": "0002_silent_speed",
+    "purpose": "create oauth_states",
+    "origin": "501cffe8b99b28db2358b646161cfd2180d44b85",
+    "dependency": "0001_lively_shooting_star",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 3,
+    "name": "0003_absent_inhumans",
+    "purpose": "additive registry or schema update",
+    "origin": "9e21c58a42bbee07df855afb73fc925dec60e0dd",
+    "dependency": "0002_silent_speed",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 4,
+    "name": "0004_v1_capability_registry",
+    "purpose": "additive registry or schema update",
+    "origin": "86e46b44dc34a34595798b2f09d705bb0144cdf5",
+    "dependency": "0003_absent_inhumans",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 5,
+    "name": "0005_google_read_capabilities",
+    "purpose": "additive registry or schema update",
+    "origin": "17262d051f743b1b9d8d535035c9be4a1d2878a0",
+    "dependency": "0004_v1_capability_registry",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 6,
+    "name": "0006_square_odin",
+    "purpose": "create account_memberships, principals, service_clients, step_up_challenges",
+    "origin": "b5400fd56241cbd12c15e9068f9dbd25275c34b8",
+    "dependency": "0005_google_read_capabilities",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 7,
+    "name": "0007_left_puppet_master",
+    "purpose": "create audit_chain_heads, audit_records, evidence_artifacts",
+    "origin": "b37cdba19434bbb31342042345f380b32d1e933e",
+    "dependency": "0006_square_odin",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 8,
+    "name": "0008_cuddly_steel_serpent",
+    "purpose": "create agent_passports, passport_imports, runtime_clients",
+    "origin": "85412d124c25503b65cdc3e40344be989cdaa02f",
+    "dependency": "0007_left_puppet_master",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 9,
+    "name": "0009_eminent_kylun",
+    "purpose": "create capability_definitions, policy_bundles, policy_decisions",
+    "origin": "caaf8ddb13d1fa52ce11f5f19663273af7e30269",
+    "dependency": "0008_cuddly_steel_serpent",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 10,
+    "name": "0010_public_madame_masque",
+    "purpose": "create approval_consumptions, approval_decisions, approval_notifications, approval_requests",
+    "origin": "aaeeb1bfe9ee9c587841aa6f91199ccdb7213ae5",
+    "dependency": "0009_eminent_kylun",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 11,
+    "name": "0011_wonderful_dragon_lord",
+    "purpose": "create agent_revocation_epochs, capability_leases, lease_call_receipts, workload_bootstraps, workloads",
+    "origin": "897be3e7cc96eefa7942d7f86d72c4a7d5a4725b",
+    "dependency": "0010_public_madame_masque",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 12,
+    "name": "0012_petite_maria_hill",
+    "purpose": "create budget_events, budget_reservations, budget_usage_records, budgets",
+    "origin": "a4cb4468c19dda3eec93aa1cc289adbd7423fbf8",
+    "dependency": "0011_wonderful_dragon_lord",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 13,
+    "name": "0013_cuddly_dragon_lord",
+    "purpose": "create control_outbox, dead_letter_entries, event_routes, event_source_cursors, task_commands, task_state_history, v2_events, v2_tasks",
+    "origin": "34ac699ea1d0223f0be8dea9392152a3c3025b69",
+    "dependency": "0012_petite_maria_hill",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 14,
+    "name": "0014_thankful_paibok",
+    "purpose": "create execution_attempts, execution_placements, execution_provider_definitions, provider_circuit_states",
+    "origin": "49a99c7435fa360a24c005bded17741507da6151",
+    "dependency": "0013_cuddly_dragon_lord",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 15,
+    "name": "0015_friendly_wilson_fisk",
+    "purpose": "create private_gateway_receipts, private_gateway_resources, runner_assignments, runner_enrollments, runner_evidence_receipts, runners",
+    "origin": "dd0c2af7f8b3edd557632515e1d99b9f49269c1f",
+    "dependency": "0014_thankful_paibok",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 16,
+    "name": "0016_careless_maximus",
+    "purpose": "create computer_control_events, computer_control_sessions, computer_viewer_grants",
+    "origin": "656e0af5fed40eff0c96e4d7434c642071b760eb",
+    "dependency": "0015_friendly_wilson_fisk",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 17,
+    "name": "0017_crazy_purifiers",
+    "purpose": "create communication_connections, communication_messages, communication_threads",
+    "origin": "c7e545aaf5eb91db7e7e8b2f6a6f7242b9cf6d3a",
+    "dependency": "0016_careless_maximus",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 18,
+    "name": "0018_ambiguous_hellion",
+    "purpose": "create connector_connections, connector_definitions, connector_oauth_flows, connector_operations, connector_resources",
+    "origin": "67faf40f8cfdc14736aa444853a64d040edeb87a",
+    "dependency": "0017_crazy_purifiers",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 19,
+    "name": "0019_cloudy_xorn",
+    "purpose": "create financial_accounts, financial_transactions, payment_credential_references, purchase_checkout_permits, purchase_intents, purchase_receipts",
+    "origin": "e8eaa886b4ef5d4b84c119d3c4ce2dfd9573a365",
+    "dependency": "0018_ambiguous_hellion",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 20,
+    "name": "0020_tiny_silver_surfer",
+    "purpose": "create agent_delegations, delegated_authorities, delegation_budget_allocations, delegation_context_entries, delegation_results",
+    "origin": "eb00d61e2446e7eeda22da65323e37a60020a0f2",
+    "dependency": "0019_cloudy_xorn",
+    "release": "ALREADY_IN_MAIN"
+  },
+  {
+    "number": 21,
+    "name": "0021_violet_captain_stacy",
+    "purpose": "create federation_agents, federation_attempts, federation_grants, federation_rate_windows, federation_relationships, federation_requests, publication_versions, published_views",
+    "origin": "f6eda12c309abdbb25b39486a679c1ff72b6510e",
+    "dependency": "0020_tiny_silver_surfer",
+    "release": "QUALIFIED_AND_INTENDED"
+  }
+]

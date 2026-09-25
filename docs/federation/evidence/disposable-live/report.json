@@ -1,0 +1,313 @@
+{
+  "startedAt": "2026-09-19T15:17:59.565Z",
+  "baselineCommit": "194b3a074e85e8300d9d510b3016fb00290378cb",
+  "testedCommit": "b81a95cf61752c6279321f6fdded7122647988e5",
+  "branch": "codex/relay-federation",
+  "hosting": "Qualification HTTPS host imports production REST/MCP handlers; isolated generic platform containers; deterministic extractive synthesis and architecture checker, no external model",
+  "checks": [
+    {
+      "name": "independent owners, Agents, credentials, processes and private storage",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "no-grant query denied before publisher invocation or private-store access",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "signed denial receipt exists without request-body content",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "caller spoofing and cross-owner enrollment rejected",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "query grant does not grant messages, work or artifacts",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "authorized retrieval includes only published records with provenance and identity",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "private knowledge attack 1 remains within publication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "private knowledge attack 2 remains within publication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "private knowledge attack 3 remains within publication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "private knowledge attack 4 remains within publication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "private knowledge attack 5 remains within publication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "answer synthesis uses only publication references and labels citations",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "both owners receive signed metadata-only disclosure receipts",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "grant revocation denies future and cached reads before delivery; history retained",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "restoring query authority does not restore messaging",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "network delivery rejects forged signature and wrong audience",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "network delivery rejects untrusted issuer despite a valid signature",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "network delivery rejects expired assertion despite a valid signature",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "network delivery rejects future assertion despite a valid signature",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "message delivery, acknowledgement, conversation and durable replay deduplication",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "changed body cannot reuse idempotency key",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "offline recipient queues without claiming local processing",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "offline request expires without execution",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "Relay and publisher restart preserve identity, queue, keys and execution ledger",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "crash after execution resumes persisted receipt exactly once across both restarts",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "source-owned artifact retrieved with signed audience proof and verified checksum; unauthenticated and expired denied",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "Ava independently refuses Relay-authorized safe work",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "Ava rejects unsupported email work despite Relay authority",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "bounded architecture work returns summary, artifact reference, evidence and measured usage; local Run stays local",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "publication correction increments version; old receipts remain unchanged",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "owner block denies query, message and work across both directions",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "old credential is invalid after rotation",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "new credential retains immutable Agent address and operation",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "replacement Agent does not inherit Agent-specific grants",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "discovery contains only explicit profiles, hides replacement and private views",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "live REST and MCP share authorization, result, version and receipt semantics",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "publisher cannot read the caller result through caller-only API",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "result acknowledgement purges bounded Relay payload and result ciphertext",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "publication revocation denies future queries and prior result access",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "oversized network body rejected",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "discovery scraping rate limited",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "denied-request flood consumes durable rate limits",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "all external knowledge reads used the projection; no canonical private reads",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "all three persistence domains inspected; Relay has neither canonical private store nor local Run bodies",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "sofie full audit chain verifies",
+      "status": "PASSED_LIVE"
+    },
+    {
+      "name": "ava full audit chain verifies",
+      "status": "PASSED_LIVE"
+    }
+  ],
+  "identities": {
+    "sofie": {
+      "accountId": "acct_cd7af5ed9ab04f21aa9bff2bbb4cda10",
+      "principalId": "prn_ba74ee12d6e440269bcdf77344b9cbe6",
+      "agentId": "agt_e560d6eafcc8432b8e3dc56854bb66ac",
+      "address": "relay://acct_cd7af5ed9ab04f21aa9bff2bbb4cda10/agt_e560d6eafcc8432b8e3dc56854bb66ac"
+    },
+    "ava": {
+      "accountId": "acct_2492c3c9f45a4537af96f6b55770a774",
+      "principalId": "prn_51811cd73a8544e4b06c23445a2d9241",
+      "agentId": "agt_5f2ca71a8733449aa84e1e73ad88274b",
+      "address": "relay://acct_2492c3c9f45a4537af96f6b55770a774/agt_5f2ca71a8733449aa84e1e73ad88274b"
+    }
+  },
+  "containers": [
+    {
+      "name": "sofie",
+      "containerId": "4cf9c6e63789c5cac81a59261a8151cafa355bcd22f26342e844cdfe3364bed0",
+      "imageId": "sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d",
+      "pid": 4830,
+      "mounts": [
+        {
+          "sourceDomain": "public-adapter-code",
+          "destination": "/app",
+          "writable": false
+        },
+        {
+          "sourceDomain": "sofie-config",
+          "destination": "/config",
+          "writable": false
+        },
+        {
+          "sourceDomain": "sofie-store",
+          "destination": "/state",
+          "writable": true
+        }
+      ],
+      "readOnlyRoot": true,
+      "droppedCapabilities": [
+        "ALL"
+      ]
+    },
+    {
+      "name": "ava",
+      "containerId": "5c7f80744dcba3e4f6494e32fa2b04c354fb386dc79044cebc9c13e0b618c3bf",
+      "imageId": "sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d",
+      "pid": 4896,
+      "mounts": [
+        {
+          "sourceDomain": "ava-config",
+          "destination": "/config",
+          "writable": false
+        },
+        {
+          "sourceDomain": "ava-store",
+          "destination": "/state",
+          "writable": true
+        },
+        {
+          "sourceDomain": "public-adapter-code",
+          "destination": "/app",
+          "writable": false
+        }
+      ],
+      "readOnlyRoot": true,
+      "droppedCapabilities": [
+        "ALL"
+      ]
+    }
+  ],
+  "persistence": {
+    "relayTablesInspected": 94,
+    "encryptedPayloadsAndResultsDecryptedForInspection": 28,
+    "privateMarkersAbsentFromAllRelayTables": true,
+    "privateStoreDomains": {
+      "sofie": {
+        "ownPrivatePresent": true,
+        "otherOwnerPrivateAbsent": true,
+        "privateSha256": "8c466ccc68593f2c4a8680d634880b0505d90a3c4ba972964ae6a2f03b6f5e93",
+        "files": [
+          "canonical-private.json",
+          "canonical-public-shared.json",
+          "errors.log",
+          "ledger.json",
+          "private-monitor-ready",
+          "projection.json",
+          "source-artifact.txt"
+        ]
+      },
+      "ava": {
+        "ownPrivatePresent": true,
+        "otherOwnerPrivateAbsent": true,
+        "privateSha256": "dffc2a61f9dd177f4da9add27a340fb301df144fccefaf0f68aaca3858aeb370",
+        "files": [
+          "artifact-frq_3b4cb92eb015417d89dd1fb158861f28.txt",
+          "canonical-private.json",
+          "canonical-public-shared.json",
+          "errors.log",
+          "ledger.json",
+          "local-run-40f7d57d-8c0c-4414-93aa-7a5ccf4449a0.json",
+          "private-monitor-ready",
+          "projection.json",
+          "source-artifact.txt"
+        ]
+      }
+    },
+    "relayStores": "Publication metadata/references; encrypted bounded authorized payload/results until acknowledgement/expiry; signed metadata receipts; identities, grants, policy and budget state"
+  },
+  "verdict": "FEDERATION PROTOCOL PASSED_LIVE",
+  "cleanup": {
+    "containersCreated": 3,
+    "containersRemoved": 3,
+    "containerNames": [
+      "relay-qual-ava-c51e5c67",
+      "relay-qual-sofie-c51e5c67",
+      "relay-qual-db-c51e5c67"
+    ],
+    "credentialsAndKeysDestroyed": true
+  },
+  "finishedAt": "2026-09-19T15:19:13.295Z"
+}

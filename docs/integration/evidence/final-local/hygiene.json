@@ -1,0 +1,7 @@
+{
+  "targetedSecretScan": "PASS",
+  "machineArtifactScan": "PASS",
+  "reviewedChangedFiles": 88,
+  "cryptographicDiffFromQualifiedImplementation": "NONE",
+  "kmsCalls": 0
+}

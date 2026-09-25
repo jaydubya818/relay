@@ -1,0 +1,32 @@
+
+ RUN  v3.2.4 /private/tmp/relay-kms-probe-20260920
+
+ ✓ tests/federation/federation.test.ts (17 tests) 7583ms
+   ✓ federation trust boundaries > persists a metadata-only signed denial receipt after authorization rolls back  389ms
+   ✓ federation trust boundaries > qualifies the two-owner golden path from publication through work and artifact sharing  555ms
+   ✓ federation trust boundaries > rejects caller spoofing, forged registration ownership, sibling agents, and unrelated result readers  370ms
+   ✓ federation trust boundaries > rechecks publication changes, blocks, credential rotation, and deletion before delivery  2080ms
+   ✓ federation trust boundaries > rejects unpublished records, hidden reasoning, and mismatched versions  345ms
+   ✓ federation trust boundaries > deduplicates concurrent admission, bounds redelivery, and separates offline delivery from acceptance  327ms
+   ✓ federation trust boundaries > keeps message authority separate and allows local refusal  352ms
+   ✓ federation trust boundaries > bounds work, rejects privilege escalation, and returns evidence  362ms
+   ✓ federation trust boundaries > uses shared approvals, denies default policy even with an approval floor, and resumes exact approved delivery  424ms
+   ✓ federation trust boundaries > shares expiring audience-bound artifacts and rejects forged work context  442ms
+   ✓ federation trust boundaries > enforces public query policy and excludes private metadata from discovery  355ms
+   ✓ federation trust boundaries > rejects expired requests and enforces durable rate limits  424ms
+   ✓ federation trust boundaries > preserves identity through credential rotation and applies owner grants without transferring Agent-specific grants  386ms
+   ✓ federation trust boundaries > keeps MCP semantics identical and completes authenticated messaging  362ms
+   ✓ federation trust boundaries > indexes only explicitly public profiles and view metadata  403ms
+ ✓ tests/federation/signing-lifecycle.test.ts (1 test) 323ms
+   ✓ exports historical receipts after rotation without access to the historical private key  322ms
+ ✓ tests/federation/signing-envelope-v2.test.ts (29 tests) 124ms
+ ✓ tests/federation/envelope-bound.test.ts (5 tests) 76ms
+ ✓ tests/federation/signing-provider.test.ts (21 tests) 68ms
+ ✓ tests/federation/production-crypto.test.ts (24 tests) 14ms
+ ✓ tests/federation/google-wrapper.test.ts (7 tests) 7ms
+ ✓ tests/federation/google-sts.test.ts (13 tests) 5ms
+
+ Test Files  8 passed (8)
+      Tests  117 passed (117)
+   Start at  22:14:37
+   Duration  10.04s (transform 167ms, setup 0ms, collect 711ms, tests 8.20s, environment 1ms, prepare 208ms)
