@@ -12,7 +12,13 @@ async function main(){
   const sender=new TelegramOwnerSender(config.botToken);let stopped=false;
   process.once("SIGTERM",()=>{stopped=true;});process.once("SIGINT",()=>{stopped=true;});
   while(!stopped){
-    try{await runChannelCancellationCycle(config,executor,config.signer);await runChannelExecutionCycle(config,executor,config.signer);await runChannelDeliveryCycle(config,sender,config.signer);}
+    // Execution authority is time-dependent (local qualification expiry), so it is
+    // re-evaluated every cycle. A changed executor/identity binding stops the worker.
+    const current=channelConfiguration();
+    if(current.issues.length||!current.signer||current.endpoint!==config.endpoint||current.audience!==config.audience||current.environment!==config.environment||current.connectionId!==config.connectionId||current.accountId!==config.accountId){
+      console.error(JSON.stringify({event:"channel_worker_configuration_changed",code:"STOPPED"}));break;
+    }
+    try{await runChannelCancellationCycle(current,executor,current.signer);await runChannelExecutionCycle(current,executor,current.signer);await runChannelDeliveryCycle(current,sender,current.signer);}
     catch{console.error(JSON.stringify({event:"channel_worker_cycle_failed",code:"UNAVAILABLE"}));}
     await new Promise(resolve=>setTimeout(resolve,1000));
   }

@@ -45,5 +45,9 @@ export async function telegramReadiness(config=channelConfiguration()) {
     const binding=row&&await currentBinding(row.id);
     identityReady=Boolean(binding&&binding.agent_status==="ACTIVE"&&await channelGranted(binding,"channel.owner.receive")&&await channelGranted(binding,"channel.owner.reply"));
   }catch{ /* Unavailable storage never admits work. */ }
-  return {healthy:true,ready:config.enabled&&config.issues.length===0&&storage,executorQualified:OWNER_EXECUTOR_QUALIFIED,executionReady:OWNER_EXECUTOR_QUALIFIED&&config.enabled&&config.executionEnabled&&config.issues.length===0&&storage&&identityReady,issues:config.issues,storageAvailable:storage,identityReady};
+  // executorQualified reports the immutable release constant; a local window is reported separately.
+  const local=config.localQualification;
+  return {healthy:true,ready:config.enabled&&config.issues.length===0&&storage,executorQualified:OWNER_EXECUTOR_QUALIFIED,
+    localQualification:local?(local.active?{active:true,expiresAt:new Date(local.expiresAt).toISOString()}:{active:false,reason:local.reason}):null,
+    executionReady:config.enabled&&config.executionEnabled&&config.issues.length===0&&storage&&identityReady,issues:config.issues,storageAvailable:storage,identityReady};
 }
