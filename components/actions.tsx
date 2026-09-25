@@ -74,10 +74,15 @@ export function AgentCreateForm() {
     const form = event.currentTarget;
     const data = new FormData(form);
     try {
+      const profile = data.get("profile");
+      if (profile !== "memory" && profile !== "factory") throw new Error("Choose an available capability profile.");
+      const capabilities: CapabilityName[] = profile === "factory"
+        ? ["factory.workorder.create", "factory.workorder.read"]
+        : ["memory.read", "memory.write"];
       const result = await requestJson("/api/agents", { method: "POST", body: JSON.stringify({
         name: data.get("name"),
         description: data.get("description"),
-        capabilities: ["memory.read", "memory.write"],
+        capabilities,
       }) });
       setSecret(result.credential); form.reset(); router.refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Agent creation failed."); } finally { setBusy(false); }
@@ -87,7 +92,7 @@ export function AgentCreateForm() {
       <h2>Create agent</h2>
       <form className="form-grid" onSubmit={submit}>
         <div className="field"><label htmlFor="agent-name">Name</label><input id="agent-name" name="name" placeholder="Research Agent" minLength={2} required /></div>
-        <div className="field"><label>Capability profile</label><select disabled defaultValue="memory"><option value="memory">Memory read / write</option></select></div>
+        <div className="field"><label htmlFor="agent-profile">Capability profile</label><select id="agent-profile" name="profile" defaultValue="memory" disabled={busy}><option value="memory">Memory read / write</option><option value="factory">MyFactory — create and read WorkOrders</option></select><span className="subtle">MyFactory access permits bounded intake and receipt checks. Execution and publication require separate factory decisions.</span></div>
         <div className="field full"><label htmlFor="agent-description">Description</label><textarea id="agent-description" name="description" placeholder="What this agent is trusted to do" /></div>
         <div className="field full"><button className="button" disabled={busy}>{busy ? "Creating…" : "Create agent"}</button></div>
       </form>
