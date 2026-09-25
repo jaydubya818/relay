@@ -121,17 +121,15 @@ describe("federation trust boundaries", () => {
     const request = await submitFederationRequest(f.ava.credential, f.submission, f.bindings);
     await expect(getFederationRequest(sibling.credential, request.requestId, f.bindings)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" });
   });
-  it("rechecks publication changes, blocks, credential rotation, and deletion before delivery", async () => {
-    for (const change of ["revoke", "version", "delete", "block", "rotate"] as const) {
-      const f = await fixture();
-      await submitFederationRequest(f.ava.credential, f.submission, f.bindings);
-      if (change === "revoke") await setPublicationStatus(f.jay, f.view.viewId, "REVOKED", f.bindings.signer);
-      if (change === "version") await publishView(f.jay, { ...f.document, id: f.view.viewId, expectedVersion: 1, visibility: "PRIVATE" }, f.bindings.signer);
-      if (change === "delete") await invalidatePublicationReference(f.jay, "published-1", f.bindings.signer);
-      if (change === "block") await setRelationship(f.jay, f.sarah.accountId, "BLOCKED", f.bindings.signer);
-      if (change === "rotate") await rotateCredential(f.sarah.accountId, f.ava.agentId);
-      expect((await pollFederationInbox(f.sofie.credential, f.bindings)).deliveries).toEqual([]);
-    }
+  it.each(["revoke", "version", "delete", "block", "rotate"] as const)("rechecks %s before delivery", async (change) => {
+    const f = await fixture();
+    await submitFederationRequest(f.ava.credential, f.submission, f.bindings);
+    if (change === "revoke") await setPublicationStatus(f.jay, f.view.viewId, "REVOKED", f.bindings.signer);
+    if (change === "version") await publishView(f.jay, { ...f.document, id: f.view.viewId, expectedVersion: 1, visibility: "PRIVATE" }, f.bindings.signer);
+    if (change === "delete") await invalidatePublicationReference(f.jay, "published-1", f.bindings.signer);
+    if (change === "block") await setRelationship(f.jay, f.sarah.accountId, "BLOCKED", f.bindings.signer);
+    if (change === "rotate") await rotateCredential(f.sarah.accountId, f.ava.agentId);
+    expect((await pollFederationInbox(f.sofie.credential, f.bindings)).deliveries).toEqual([]);
   });
   it("rejects unpublished records, hidden reasoning, and mismatched versions", async () => {
     const f = await fixture(); const request = await receive(f);

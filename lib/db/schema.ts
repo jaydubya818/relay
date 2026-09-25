@@ -919,6 +919,35 @@ export const communicationThreads = pgTable("communication_threads", {
   id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }), connectionId: text("connection_id").notNull().references(() => communicationConnections.id, { onDelete: "cascade" }), externalConversationId: text("external_conversation_id").notNull(), externalThreadId: text("external_thread_id").notNull().default(""), recipientId: text("recipient_id").notNull(), knownRecipient: boolean("known_recipient").notNull().default(false), createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("communication_thread_external_idx").on(table.connectionId, table.externalConversationId, table.externalThreadId), index("communication_thread_account_idx").on(table.accountId, table.connectionId)]);
 
+export const telegramPairingChallenges = pgTable("telegram_pairing_challenges", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  connectionId: text("connection_id").notNull().references(() => communicationConnections.id, { onDelete: "cascade" }),
+  ownerPrincipalId: text("owner_principal_id").notNull().references(() => principals.id),
+  agentId: text("agent_id").notNull().references(() => agents.id),
+  secretHash: text("secret_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }),
+  ...timestamps,
+}, (table) => [uniqueIndex("telegram_pairing_secret_idx").on(table.secretHash), index("telegram_pairing_connection_idx").on(table.accountId, table.connectionId)]);
+
+export const telegramBindings = pgTable("telegram_bindings", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  connectionId: text("connection_id").notNull().references(() => communicationConnections.id, { onDelete: "cascade" }),
+  ownerPrincipalId: text("owner_principal_id").notNull().references(() => principals.id),
+  agentId: text("agent_id").notNull().references(() => agents.id),
+  telegramUserId: text("telegram_user_id").notNull(),
+  telegramChatId: text("telegram_chat_id").notNull(),
+  pairingChallengeId: text("pairing_challenge_id").notNull().references(() => telegramPairingChallenges.id),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+  ...timestamps,
+}, (table) => [
+  uniqueIndex("telegram_binding_active_connection_idx").on(table.connectionId).where(sql`${table.revokedAt} IS NULL`),
+  uniqueIndex("telegram_binding_challenge_idx").on(table.pairingChallengeId),
+  index("telegram_binding_account_idx").on(table.accountId, table.connectionId),
+]);
+
 export const communicationMessages = pgTable("communication_messages", {
   id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }), connectionId: text("connection_id").notNull().references(() => communicationConnections.id, { onDelete: "restrict" }), threadId: text("thread_id").notNull().references(() => communicationThreads.id, { onDelete: "restrict" }), direction: communicationDirection("direction").notNull(), providerMessageId: text("provider_message_id").notNull(), providerEventId: text("provider_event_id"), senderId: text("sender_id").notNull(), content: jsonb("content").notNull(), contentHash: text("content_hash").notNull(), classification: text("classification").notNull(), status: communicationMessageStatus("status").notNull(), taskId: text("task_id"), actionIntentId: text("action_intent_id"), leaseId: text("lease_id"), approvalDecisionId: text("approval_decision_id"), idempotencyKey: text("idempotency_key").notNull(), providerReceipt: jsonb("provider_receipt"), attemptCount: integer("attempt_count").notNull().default(0), retryAfter: timestamp("retry_after", { withTimezone: true, mode: "string" }), createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("communication_message_provider_idx").on(table.connectionId, table.threadId, table.providerMessageId, table.direction), uniqueIndex("communication_message_event_idx").on(table.connectionId, table.providerEventId), uniqueIndex("communication_message_idempotency_idx").on(table.accountId, table.idempotencyKey), index("communication_message_account_thread_idx").on(table.accountId, table.threadId, table.createdAt), index("communication_message_retry_idx").on(table.status, table.retryAfter)]);
@@ -1133,3 +1162,38 @@ export const federationRateWindows = pgTable("federation_rate_windows", {
   accountId: text("account_id").notNull().references(() => accounts.id),
   key: text("key").notNull(), count: integer("count").notNull(), resetAt: timestamp("reset_at", { withTimezone: true, mode: "string" }).notNull(),
 }, (table) => [primaryKey({ columns: [table.accountId, table.key] })]);
+// Correlation only: canonical tasks, messages, approvals and executor Runs remain authoritative.
+export const channelWorkLinks = pgTable("channel_work_links", {
+  taskId: text("task_id").primaryKey().references(() => v2Tasks.id, { onDelete: "cascade" }),
+  accountId: text("account_id").notNull().references(() => accounts.id),
+  bindingId: text("binding_id").notNull().references(() => telegramBindings.id),
+  messageId: text("message_id").notNull().references(() => communicationMessages.id),
+  runId: text("run_id"), resultId: text("result_id"), snapshotEncrypted: text("snapshot_encrypted"),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  ...timestamps,
+}, (t) => [uniqueIndex("channel_work_message_idx").on(t.messageId), index("channel_work_account_idx").on(t.accountId, t.createdAt)]);
+
+export const channelControls = pgTable("channel_controls", {
+  id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => accounts.id),
+  taskId: text("task_id").notNull().references(() => v2Tasks.id), bindingId: text("binding_id").notNull().references(() => telegramBindings.id),
+  reference: text("reference").notNull(), bindingHash: text("binding_hash").notNull(),
+  kind: text("kind").notNull(), choice: text("choice"),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }), ...timestamps,
+}, (t) => [uniqueIndex("channel_control_reference_idx").on(t.taskId, t.reference, t.bindingHash), index("channel_control_account_idx").on(t.accountId)]);
+
+export const channelDeliveryAttempts = pgTable("channel_delivery_attempts", {
+  id: text("id").primaryKey(), accountId: text("account_id").notNull().references(() => accounts.id),
+  messageId: text("message_id").notNull().references(() => communicationMessages.id), attempt: integer("attempt").notNull(),
+  outcome: text("outcome").notNull(), startedAt: timestamp("started_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+}, (t) => [uniqueIndex("channel_delivery_attempt_idx").on(t.messageId, t.attempt)]);
+
+export const channelExecutionNonces = pgTable("channel_execution_nonces", {
+  nonce: text("nonce").primaryKey(), accountId: text("account_id").notNull(), environment: text("environment").notNull(), expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+});
+export const channelExecutionReceipts = pgTable("channel_execution_receipts", {
+  commandId: text("command_id").primaryKey(), accountId: text("account_id").notNull(),
+  requestId: text("request_id").notNull(), payloadHash: text("payload_hash").notNull(),
+  responseEncrypted: text("response_encrypted"), ...timestamps,
+});

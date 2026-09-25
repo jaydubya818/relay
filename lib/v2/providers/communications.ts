@@ -43,10 +43,18 @@ export class SlackTelegramCommunicationSender implements CommunicationSender {
     try {
       response = await this.http.request({ url: `https://api.telegram.org/bot${encodeURIComponent(input.credential)}/sendMessage`, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: input.conversationId, text: input.text, ...(input.threadId ? { message_thread_id: input.threadId } : {}) }) });
     } catch { throw new CommunicationProviderError("Telegram send timed out.", "TIMEOUT"); }
-    const body = telegramResponse.parse(await response.json());
-    if (response.status === 429) throw new CommunicationProviderError("Telegram rate limit exceeded.", "RATE_LIMIT", retryAfterMs(response.headers, body.parameters?.retry_after));
     if (response.status >= 500) throw new CommunicationProviderError("Telegram server outcome is unknown.", "SERVER");
-    if (response.status >= 400 || !body.ok || !body.result) throw new CommunicationProviderError(body.description ?? "Telegram rejected the message.", "REJECTED");
+    let body: z.infer<typeof telegramResponse>;
+    try {
+      body = telegramResponse.parse(await response.json());
+    } catch {
+      // A missing receipt does not prove that sendMessage had no effect.
+      // Never propagate parser/provider text, which can contain private data.
+      throw new CommunicationProviderError("Telegram response outcome is unknown.", "SERVER");
+    }
+    if (response.status === 429) throw new CommunicationProviderError("Telegram rate limit exceeded.", "RATE_LIMIT", retryAfterMs(response.headers, body.parameters?.retry_after));
+    if (response.status >= 400 || !body.ok) throw new CommunicationProviderError("Telegram rejected the message.", "REJECTED");
+    if (!body.result) throw new CommunicationProviderError("Telegram response outcome is unknown.", "SERVER");
     return { providerMessageId: String(body.result.message_id), state: "SENT" as const, receipt: { telegramMessageId: body.result.message_id } };
   }
 }

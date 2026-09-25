@@ -24,4 +24,21 @@ describe("WO-16 communication provider adapters", () => {
     const server = new SlackTelegramCommunicationSender({ request: async () => response(503, { ok: false, error: "down" }) });
     await expect(server.send({ provider: "SLACK", credential: "x", conversationId: "C1", text: "hello", idempotencyKey: "key-12345" })).rejects.toMatchObject({ kind: "SERVER" });
   });
+
+  it("classifies Telegram non-JSON 5xx without parsing or exposing its body", async () => {
+    const json = vi.fn(async () => { throw new Error("canary-secret-in-proxy-body"); });
+    const sender = new SlackTelegramCommunicationSender({ request: async () => ({ status: 502, headers: {}, json }) });
+    await expect(sender.send({ provider: "TELEGRAM", credential: "x", conversationId: "1", text: "hello", idempotencyKey: "key" })).rejects.toMatchObject({ kind: "SERVER" });
+    expect(json).not.toHaveBeenCalled();
+  });
+
+  it("does not expose Telegram rejection descriptions in thrown errors", async () => {
+    const sender = new SlackTelegramCommunicationSender({ request: async () => response(400, { ok: false, description: "canary-private-payload" }) });
+    await expect(sender.send({ provider: "TELEGRAM", credential: "x", conversationId: "1", text: "hello", idempotencyKey: "key" })).rejects.toMatchObject({ kind: "REJECTED", message: "Telegram rejected the message." });
+  });
+
+  it("contains malformed Telegram success bodies as ambiguous outcomes", async () => {
+    const sender = new SlackTelegramCommunicationSender({ request: async () => ({ status: 200, headers: {}, json: async () => { throw new Error("canary-private-response"); } }) });
+    await expect(sender.send({ provider: "TELEGRAM", credential: "x", conversationId: "1", text: "hello", idempotencyKey: "key" })).rejects.toMatchObject({ kind: "SERVER", message: "Telegram response outcome is unknown." });
+  });
 });
