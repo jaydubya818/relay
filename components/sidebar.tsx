@@ -3,7 +3,7 @@ import Link from "next/link";
 const groups = [
   { label: "Plane", links: [["◫", "Overview", "/"], ["◉", "Agents", "/agents"], ["⌁", "Activity", "/activity"]] },
   { label: "Capabilities", links: [["◇", "Memory", "/memory"], ["⎋", "Connections", "/connections"], ["▣", "Sandboxes", "/sandboxes"], ["◎", "Browsers", "/browsers"], ["↳", "Events", "/events"]] },
-  { label: "Developer", links: [["⌘", "MCP", "/developer"]] },
+  { label: "Developer", links: [["⌘", "MCP", "/developer"], ["↗", "MyFactory", "/factory"]] },
   { label: "Control", links: [["⚙", "Settings", "/settings"]] },
 ];
 

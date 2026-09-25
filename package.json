@@ -42,6 +42,7 @@
     "qualify": "pnpm typecheck && pnpm lint && pnpm test:ci && pnpm test:performance && pnpm build"
   },
   "dependencies": {
+    "@vercel/connect": "0.8.0",
     "drizzle-orm": "^0.45.2",
     "next": "15.5.22",
     "pg": "^8.23.0",

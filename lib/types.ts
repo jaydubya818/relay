@@ -1,4 +1,6 @@
 export const CAPABILITIES = [
+  "factory.workorder.create",
+  "factory.workorder.read",
   "memory.read",
   "memory.write",
   "memory.forget",
