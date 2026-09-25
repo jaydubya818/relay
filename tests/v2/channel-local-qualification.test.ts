@@ -19,8 +19,8 @@ const base=():Record<string,string|undefined>=>({
   NODE_ENV:"development",RELAY_CHANNEL_ENVIRONMENT:"development",RELAY_DEPLOYMENT_MODE:"local",
   RELAY_OWNER_EXECUTOR_URL:"https://127.0.0.1:3229/api/relay/owner-execution",RELAY_OWNER_EXECUTOR_AUDIENCE:"myeve-local-qualification",
   RELAY_DATABASE_URL:"postgresql://qualifier@127.0.0.1:55472/relay_telegram_qualification",
-  RELAY_TELEGRAM_ACCOUNT_ID:"qualification-relay",RELAY_TELEGRAM_OWNER_PRINCIPAL_ID:"qualification-principal",
-  RELAY_TELEGRAM_AGENT_ID:"qualification-relay-agent",RELAY_TELEGRAM_CONNECTION_ID:"qualification-telegram-connection",
+  RELAY_TELEGRAM_ACCOUNT_ID:"acct_qualificationrelay",RELAY_TELEGRAM_OWNER_PRINCIPAL_ID:"prn_qualificationowner",
+  RELAY_TELEGRAM_AGENT_ID:"agt_qualificationsofie",RELAY_TELEGRAM_CONNECTION_ID:"qualification-telegram-connection",
   RELAY_TELEGRAM_BOT_USERNAME:BOT,
 });
 const decide=(changes:Record<string,string|undefined>,now=NOW,pins:readonly string[]=[BOT])=>localExecutorQualification({...base(),...changes},now,pins);

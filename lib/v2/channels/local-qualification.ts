@@ -10,11 +10,14 @@ type Env = Record<string, string | undefined>;
 export const LOCAL_QUALIFICATION_PROFILE = "telegram-owner-v1";
 export const LOCAL_QUALIFICATION_MAX_WINDOW_MS = 60 * 60 * 1000;
 
-/** Exact synthetic identities; they mirror MyEve's localOwnerQualification mapping. */
+/**
+ * Exact synthetic identities in canonical Relay ID format (prefix_[A-Za-z0-9]{8,}),
+ * mirrored by MyEve's live localOwnerQualification identity set.
+ */
 export const LOCAL_QUALIFICATION_IDENTITY = {
-  accountId: "qualification-relay",
-  ownerPrincipalId: "qualification-principal",
-  agentId: "qualification-relay-agent",
+  accountId: "acct_qualificationrelay",
+  ownerPrincipalId: "prn_qualificationowner",
+  agentId: "agt_qualificationsofie",
   connectionId: "qualification-telegram-connection",
   audience: "myeve-local-qualification",
   executorPath: "/api/relay/owner-execution",

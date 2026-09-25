@@ -511,3 +511,96 @@ The active campaign ledger is now stopped at `~/Library/Application Support/Rela
 Fresh checks: Relay **398 passed / 5 skipped** including cross-repository approval/duplicate/revocation tests; MyEve **1,063 passed / 1 skipped**; provider-boundary subset **25 passed**; MyEve production build/typecheck PASS; governance **570 classified / UNKNOWN=0**. Earlier integration lint, migrations, Relay build/typecheck and performance results remain the preceding checkpoint; no fresh UI or dependency-audit result is implied.
 
 Both release gates remain false. No deployment, public enablement, merge into main, release tag or `PASSED_LIVE` claim. Live Telegram scenarios: **0**. Local actual-runtime prerequisites are ready for the next qualification stage, but hosted and consequential Telegram scenarios remain pending. Smallest owner input: dedicated qualification bot @username and non-secret secure token reference, or create that dedicated bot through BotFather and securely store its token. Never paste the token. **TELEGRAM PRIVATE-BETA GOLDEN PATH INCOMPLETE; not ready to merge into main.**
+
+
+## Bounded local live-qualification path — 2026-09-25 UTC
+
+Integration branch `claude/telegram-local-qualification` (Relay) with companion MyEve branch of the
+same name. Historical sections above are unchanged evidence for their own sources.
+
+### Source reconciliation
+
+| Input | SHA | Decision |
+|---|---|---|
+| Relay main | `a0e6b3ca297836aba442c43c975d4fd267614346` | Base |
+| Relay `feat/relay-v2-telegram-private-beta` | `e3b981a787476416005a555a5ac9c58b24c00300` | Branch-only content taken: this record's Eve 0.66 evidence and the MyEve fixture session binding |
+| MyEve main / `codex/telegram-owner-integration` | `14d8c36…` / `65dd90f98f3cbbdfd2a0ee29e5718982ec57e0bf` | See the MyEve record |
+
+Both lineages merged the same parents (`953883c` + `b867b90`) independently. Drizzle SQL files are
+byte-identical; `schema.ts` differs only in table order. Main's journal timestamps, snapshots,
+per-test federation deadlines and `vercel.json` are kept. A database migrated from the old branch
+journal (`when` 1789926547428/1789931319056) is not an in-place upgrade target for main's journal;
+this path uses a fresh isolated Relay database.
+
+### Qualification decision (unchanged release constant)
+
+`OWNER_EXECUTOR_QUALIFIED` remains `false`. `lib/v2/channels/local-qualification.ts` can stand in
+for it only when every condition holds, evaluated per request, per worker cycle and again
+immediately before dispatch:
+
+- `RELAY_LOCAL_QUALIFICATION=telegram-owner-v1`; `RELAY_LOCAL_QUALIFICATION_UNTIL` in the future
+  and at most one hour ahead.
+- `NODE_ENV=development`, `RELAY_CHANNEL_ENVIRONMENT=development`, `RELAY_DEPLOYMENT_MODE=local`.
+- No hosted, managed or CI indicator (Vercel, Railway, Render, Fly, Cloud Run, Lambda, Netlify,
+  Heroku, `CI`, `GITHUB_ACTIONS`).
+- Executor exactly `https://127.0.0.1:<port>/api/relay/owner-execution`, audience
+  `myeve-local-qualification`.
+- Database `127.0.0.1:<port>/relay_telegram_qualification`, never the MyEve ledger port 55447.
+- Identities exactly `acct_qualificationrelay`, `prn_qualificationowner`, `agt_qualificationsofie`,
+  connection `qualification-telegram-connection` (canonical Relay ID format; the earlier MyEve
+  constants were rejected by Relay's passport schema).
+- Bot username listed in the reviewed source pin `LOCAL_QUALIFICATION_BOT_USERNAMES`, which is
+  **empty** until the owner identifies the dedicated bot.
+
+Worker, execution, approval controls, cancellation, management and readiness all read the one
+`channelConfiguration` decision. Expiry fails closed to reconciliation; cancellation and revocation
+still drain after expiry. Readiness reports `executorQualified` (the constant) separately from
+`localQualification`.
+
+### Evidence (component and local; not live Telegram)
+
+| Check | Result |
+|---|---|
+| Relay serial suite incl. cross-repository MyEve fixture (reconciled MyEve) | 490 passed / 5 skipped (63 files); webhook control 14 passed separately; typecheck, lint, drizzle check, production build PASS |
+| Local-qualification decision + DB behaviour | 88 cases incl. hosted/CI/non-loopback/identity/bot/DB/audience denials, expiry, window race, duplicate update, approval after expiry, revocation, readiness |
+| Webhook gateway (`scripts/qualification/telegram-webhook-gateway.mjs`) | 16 passed: only `POST /api/channels/telegram/webhook` (JSON, secret header, ≤32 KiB) is forwarded; login, management, readiness, MCP and query/traversal variants return 404; cookies/auth/forwarding headers stripped |
+| Webhook control (`scripts/qualification/telegram-webhook.ts`) | 14 passed: keychain references only, getMe must match the pin, exact path/secret/updates, delete drops pending updates, network errors never surface the token |
+| TLS trust for the worker's global fetch | Loopback cert with `IP:127.0.0.1` SAN: rejected by default (`DEPTH_ZERO_SELF_SIGNED_CERT`), accepted with `NODE_EXTRA_CA_CERTS`; DNS-only SAN rejected (`ERR_TLS_CERT_ALTNAME_INVALID`) |
+| Worker lifecycle (disposable DB) | Runs, SIGTERM exit 0 in <1 s; unreachable storage exits not-ready; configuration drift stops the worker |
+| Synthetic pairing via the real webhook handler | forged secret 401, pairing 200, reused challenge 403, `identityReady=true`, binding `tgb_<32 hex>`; execution denied only by `BOT_NOT_PINNED` |
+| Integrated no-spend dry run (campaign ledger under lock + real Eve 0.66.3 via OIDC + Relay-style global-fetch probe) | Live identity set + pinned binding + pinned key → authenticated non-admission proof; unpinned binding, harness identities and unpinned key denied; no CA → TLS failure; ledger unchanged (62,221 / 16,312 µUSD, 7 calls, 0 active Runs) |
+
+Live Telegram scenarios: **0**. Model calls in this phase: **0**.
+
+### Local topology (all loopback except the tunnel)
+
+```
+Telegram ─HTTPS─▶ tunnel ─▶ 127.0.0.1:3231 webhook gateway (one path) ─▶ 127.0.0.1:3230 Relay (next dev)
+Relay channel worker ─global fetch + NODE_EXTRA_CA_CERTS─▶ 127.0.0.1:3229 TLS ─▶ 127.0.0.1:3228 MyEve Eve 0.66.3
+Relay DB 127.0.0.1:<isolated>/relay_telegram_qualification      MyEve ledger 127.0.0.1:55447 (campaign, locked)
+```
+
+The tunnel must target the gateway, never Relay. Relay's qualification window must end at least
+15 minutes before MyEve's so post-expiry cancellation can still be confirmed.
+
+### Emergency stop (in order)
+
+1. `tsx scripts/qualification/telegram-webhook.ts delete <token-ref>`: removes the webhook and drops pending updates.
+2. Stop the tunnel process.
+3. Stop the Relay worker, Relay web, gateway and MyEve `serve` (SIGTERM). Both qualification windows also self-expire within one hour.
+4. Revoke the pairing (management API / `disconnectTelegram`); queued replies are suppressed and admitted work is cancelled.
+5. Stop the campaign ledger server and release the campaign lock only after cleanup evidence is recorded.
+6. Owner fallback: BotFather `/revoke` for the dedicated bot token.
+
+### Remaining gaps
+
+- Owner-only: dedicated bot `@username` and its keychain reference; reviewed commit adding the
+  username to `LOCAL_QUALIFICATION_BOT_USERNAMES`; tunnel account authorization.
+- Approval scenarios: the owner endpoint wires only `tool.send_email` (real AgentMail) for approval
+  continuation, and the local mapping allows only `web.read`. No existing harmless approval adapter is
+  connected. Exact approval, expired approval and recovery therefore need either an owner-authorized
+  consequential email test or a reviewed qualification-only adapter through the canonical Action Gateway.
+- Live matrix, hosted qualification, independent federation security and production-platform gates:
+  **NOT_RUN**.
+
+Verdict: **TELEGRAM PRIVATE-BETA GOLDEN PATH INCOMPLETE.**
