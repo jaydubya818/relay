@@ -53,3 +53,23 @@ it("leaves the existing default-off startup path inert", async () => {
   vi.stubEnv("RELAY_FEDERATION_ENABLED", "false");
   await expect(register()).resolves.toBeUndefined();
 });
+
+it("wires the production Vercel secret provider only with explicit opt-in", async () => {
+  const signing = ["evidence", "federation-delivery", "passport"].map(purpose => ({
+    keyId: `secret-${purpose}`, keyVersion: `secret-${purpose}`, purpose, algorithm: "Ed25519",
+    state: "ACTIVE", activatedAt: "2026-01-01T00:00:00Z",
+    privateKeyPem: generateKeyPairSync("ed25519").privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+  }));
+  const wrapping = generateKeyPairSync("rsa", { modulusLength: 3072 });
+  for (const [name, value] of Object.entries({
+    NEXT_RUNTIME: "nodejs", NODE_ENV: "production", VERCEL: "1", VERCEL_TARGET_ENV: "production",
+    RELAY_FEDERATION_ENABLED: "true", RELAY_V2_ACTIONS_ENABLED: "true", RELAY_DEPLOYMENT_MODE: "production",
+    RELAY_CRYPTO_BACKEND: "vercel-secret", RELAY_ISSUER_URL: "https://relay.example",
+    RELAY_PRODUCTION_SECRET_SIGNING_KEYS_JSON: JSON.stringify(signing),
+    RELAY_PRODUCTION_SECRET_WRAPPING_KEY_JSON: JSON.stringify({ keyId: "secret-wrap", version: "secret-wrap-1",
+      privateKeyPem: wrapping.privateKey.export({ type: "pkcs8", format: "pem" }).toString() }),
+  })) vi.stubEnv(name, value);
+  await register();
+  expect(requireV2PlatformBindings().signer.keyId).toBe("secret-evidence");
+  expect(requireV2PlatformBindings().signer.forPurpose?.("federation-delivery").keyId).toBe("secret-federation-delivery");
+});

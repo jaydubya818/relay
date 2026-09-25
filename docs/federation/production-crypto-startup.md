@@ -8,6 +8,20 @@ Hosted startup now rejects the exportable `managed-secret` backend. It remains
 available only to explicit non-production tests/development. There is no local
 production key fallback. This supersedes the earlier managed-secret proposal.
 
+For the no-new-service Alpha/Sofie production test, hosted startup also supports
+an explicit `vercel-secret` backend. It requires three separate active Ed25519
+keys for evidence, federation delivery, and passports, plus a 3072-bit RSA
+wrapping key. Operators supply the keys through production-only Vercel Sensitive
+Environment Variables: `RELAY_PRODUCTION_SECRET_SIGNING_KEYS_JSON` and
+`RELAY_PRODUCTION_SECRET_WRAPPING_KEY_JSON`. This is a deliberate reduction in
+key isolation: function runtimes and sufficiently privileged project members
+can access the private material, and disabling an old deployment does not revoke
+its copy of a key. Keep this path scoped to the approved public-profile test;
+rotate keys and public-key pins if exposure is suspected. Missing keys, wrong
+algorithms, public/private mismatch, non-production deployments, and incomplete
+purpose registries fail closed. The KMS backend remains available for stronger
+key isolation when a paid service is acceptable.
+
 `productionCryptoBindings(environment, { keyring, keyWrapper })` composes an
 explicit hosted provider when `RELAY_CRYPTO_BACKEND=kms`. Production Node startup
 now builds that provider only when federation is explicitly enabled, qualification

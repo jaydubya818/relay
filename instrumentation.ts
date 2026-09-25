@@ -8,8 +8,13 @@ export async function register() {
       return;
     }
     if (process.env.NODE_ENV === "production") {
-      const { productionHostedCrypto } = await import("./lib/v2/production-hosted-crypto");
-      initializeProductionFederation(process.env, productionHostedCrypto(process.env));
+      if (process.env.RELAY_CRYPTO_BACKEND === "vercel-secret") {
+        const { productionSecretCrypto } = await import("./lib/v2/production-secret-crypto");
+        initializeProductionFederation(process.env, productionSecretCrypto(process.env));
+      } else {
+        const { productionHostedCrypto } = await import("./lib/v2/production-hosted-crypto");
+        initializeProductionFederation(process.env, productionHostedCrypto(process.env));
+      }
       return;
     }
     initializeProductionFederation();

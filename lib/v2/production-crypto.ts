@@ -7,15 +7,15 @@ import type { KeyWrapper } from "./evidence/crypto";
 
 type Environment = Record<string, string | undefined>;
 
-/** Hosted bindings require an explicitly composed KMS provider and key registry.
- * The persistent-secret adapter is retained only for non-production regression.
+/** Hosted bindings require an explicitly composed provider and key registry.
+ * The legacy single-purpose secret adapter is retained only for non-production regression.
  * No key generation, environment mutation, secret logging or development fallback.
  */
 export function productionCryptoBindings(environment: Environment, hosted?: { keyring: SigningKeyring; keyWrapper: KeyWrapper }): V2PlatformBindings {
   try {
     const origin = new URL(environment.RELAY_ISSUER_URL ?? "");
     if (origin.protocol !== "https:" || origin.username || origin.password || origin.pathname !== "/" || origin.search || origin.hash) throw new Error();
-    if (environment.RELAY_CRYPTO_BACKEND === "kms") {
+    if (environment.RELAY_CRYPTO_BACKEND === "kms" || environment.RELAY_CRYPTO_BACKEND === "vercel-secret") {
       if (!hosted) throw new Error();
       // Bootstrap and the complete existing federation path require all three.
       for (const purpose of ["evidence", "federation-delivery", "passport"] as const) hosted.keyring.signer(purpose);
