@@ -6,7 +6,7 @@ export interface VercelWorkloadIdentity {
   ownerId: string;
   projectId: string;
   environment: string;
-  customEnvironmentId: string;
+  customEnvironmentId?: string;
   subject: string;
   provider: string;
 }
@@ -14,9 +14,11 @@ export function vercelStsTokenSource(identity: VercelWorkloadIdentity, assertion
   if (!/^https:\/\/oidc\.vercel\.com\/[a-z0-9-]+$/.test(identity.issuer) ||
       identity.audience !== identity.issuer.replace('oidc.vercel.com', 'vercel.com') ||
       !identity.ownerId.startsWith('team_') || !identity.projectId.startsWith('prj_') ||
-      identity.environment !== 'federation-qualification' || !identity.customEnvironmentId.startsWith('env_') ||
+      !['production', 'federation-qualification'].includes(identity.environment) ||
+      (identity.environment === 'federation-qualification' && !identity.customEnvironmentId?.startsWith('env_')) ||
+      (identity.environment === 'production' && identity.customEnvironmentId !== undefined) ||
       !identity.subject || !/^\/\/iam.googleapis.com\/projects\/[0-9]+\/locations\/global\/workloadIdentityPools\/[a-z0-9-]+\/providers\/[a-z0-9-]+$/.test(identity.provider)) {
-    throw new Error('Qualification workload identity is invalid.');
+    throw new Error('Vercel workload identity is invalid.');
   }
   // Deliberately no module-global token cache: obtain the assertion in the
   // current request context, including on each KMS invocation after rotation.
@@ -28,7 +30,10 @@ export function vercelStsTokenSource(identity: VercelWorkloadIdentity, assertion
       const now = Math.floor(clock() / 1000);
       if (claims.iss !== identity.issuer || claims.aud !== identity.audience ||
           claims.owner_id !== identity.ownerId || claims.project_id !== identity.projectId ||
-          claims.environment !== identity.environment || claims.custom_environment_id !== identity.customEnvironmentId ||
+          claims.environment !== identity.environment ||
+          (identity.customEnvironmentId !== undefined
+            ? claims.custom_environment_id !== identity.customEnvironmentId
+            : claims.custom_environment_id !== undefined) ||
           claims.sub !== identity.subject || !Number.isSafeInteger(claims.exp) || !Number.isSafeInteger(claims.iat) ||
           Number(claims.exp) <= now + 30 || Number(claims.iat) > now + 5 || Number(claims.iat) >= Number(claims.exp) ||
           (claims.nbf !== undefined && (!Number.isSafeInteger(claims.nbf) || Number(claims.nbf) > now))) throw new Error();
@@ -46,6 +51,6 @@ export function vercelStsTokenSource(identity: VercelWorkloadIdentity, assertion
           typeof result.access_token !== 'string' || !result.access_token || /\s/.test(result.access_token) ||
           Number(claims.exp) <= Math.floor(clock()/1000)+15) throw new Error();
       return result.access_token;
-    } catch { throw new Error('Qualification workload identity exchange is unavailable.'); }
+    } catch { throw new Error('Vercel workload identity exchange is unavailable.'); }
   };
 }
