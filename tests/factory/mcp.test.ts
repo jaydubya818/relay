@@ -1,0 +1,18 @@
+import { beforeEach, expect, it, vi } from "vitest";
+const mocks=vi.hoisted(()=>({auth:vi.fn(),allowed:vi.fn(),authorize:vi.fn(),factory:vi.fn(),audit:vi.fn()}));
+vi.mock("@/lib/auth",()=>({authenticateAgent:mocks.auth}));
+vi.mock("@/lib/authorization",()=>({listAllowedCapabilities:mocks.allowed,authorize:mocks.authorize}));
+vi.mock("@/lib/myfactory",()=>({factoryRequest:mocks.factory}));
+vi.mock("@/lib/activity",()=>({recordActivity:mocks.audit}));
+vi.mock("@/lib/agent-sessions",()=>({touchAgentSession:async()=>({id:"session"})}));
+vi.mock("@/lib/rate-limit",()=>({checkAgentRateLimit:()=>{}}));
+import {handleMcp} from "../../lib/mcp";
+import {RelayError} from "../../lib/errors";
+const principal={accountId:"account",agentId:"agent",credentialId:"credential"};
+const args={idempotencyKey:"stable-key",title:"Bounded work",description:"Route this work",kind:"investigation",acceptanceCriteria:["A receipt returns"],allowedPaths:["docs/"]};
+const call={method:"tools/call",params:{name:"relay_factory_workorder_create",arguments:args}};
+beforeEach(()=>{vi.resetAllMocks();mocks.auth.mockResolvedValue({ok:true,principal});mocks.allowed.mockResolvedValue(["factory.workorder.read"]);mocks.factory.mockResolvedValue({requestId:"actual-id"});});
+it("advertises only the factory capability granted to the agent",async()=>{const result=await handleMcp("test",{method:"tools/list"}) as {tools:{name:string}[]};expect(result.tools.map(t=>t.name)).toEqual(["relay_factory_workorder_read"]);});
+it("stops a revoked credential before routing",async()=>{mocks.auth.mockResolvedValue({ok:false,code:"REVOKED_CREDENTIAL",principal});await expect(handleMcp("test",call)).rejects.toMatchObject({code:"REVOKED_CREDENTIAL"});expect(mocks.factory).not.toHaveBeenCalled();});
+it("enforces the create grant even if a caller guesses a hidden tool",async()=>{mocks.authorize.mockRejectedValue(new RelayError("CAPABILITY_DENIED","denied"));await expect(handleMcp("test",call)).rejects.toMatchObject({code:"CAPABILITY_DENIED"});expect(mocks.authorize).toHaveBeenCalledWith(principal,"factory.workorder.create");expect(mocks.factory).not.toHaveBeenCalled();});
+it("routes an authorized agent through the same account-bound action as the owner UI",async()=>{const result=await handleMcp("test",call);expect(mocks.factory).toHaveBeenCalledWith("account","create",args);expect(result).toEqual({content:[{type:"text",text:'{"requestId":"actual-id"}'}]});});

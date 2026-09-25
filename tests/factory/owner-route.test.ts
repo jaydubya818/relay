@@ -1,0 +1,11 @@
+import { beforeEach, expect, it, vi } from "vitest";
+const mocks=vi.hoisted(()=>({user:vi.fn(),sameOrigin:vi.fn(),factory:vi.fn(),audit:vi.fn()}));
+vi.mock("@/lib/api",()=>({requireApiUser:mocks.user,verifySameOrigin:mocks.sameOrigin,errorResponse:(e: {status?:number;message:string})=>Response.json({message:e.message},{status:e.status??500})}));
+vi.mock("@/lib/myfactory",()=>({factoryRequest:mocks.factory}));
+vi.mock("@/lib/activity",()=>({recordActivity:mocks.audit}));
+import { POST } from "../../app/api/v2/operator/factory/route";
+const request=()=>new Request("https://relay.example/api/v2/operator/factory",{method:"POST",body:JSON.stringify({operation:"create",input:{title:"test"}})});
+beforeEach(()=>{vi.resetAllMocks();mocks.sameOrigin.mockReturnValue(true);mocks.user.mockResolvedValue({role:"OWNER",accountId:"account"});mocks.factory.mockResolvedValue({requestId:"request"});});
+it("denies a cross-origin call before identity or provider access",async()=>{mocks.sameOrigin.mockReturnValue(false);expect((await POST(request())).status).toBe(403);expect(mocks.user).not.toHaveBeenCalled();expect(mocks.factory).not.toHaveBeenCalled();});
+it("denies members without owner authority",async()=>{mocks.user.mockResolvedValue({role:"MEMBER",accountId:"account"});expect((await POST(request())).status).toBe(403);expect(mocks.factory).not.toHaveBeenCalled();});
+it("binds the request to the authenticated owner account and records its actual receipt",async()=>{const response=await POST(request());expect(response.status).toBe(200);expect(mocks.factory).toHaveBeenCalledWith("account","create",{title:"test"});expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({accountId:"account",resourceId:"request",capability:"factory.workorder.create"}));});
