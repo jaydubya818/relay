@@ -155,6 +155,20 @@
       "when": 1789766804265,
       "tag": "0021_violet_captain_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790312198755,
+      "tag": "0022_telegram_pairing",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1790312210308,
+      "tag": "0023_channel_execution",
+      "breakpoints": true
     }
   ]
 }
