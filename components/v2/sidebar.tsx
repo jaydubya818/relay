@@ -7,7 +7,7 @@ const links = [
   ["01", "Command", "/v2"], ["02", "Tasks", "/v2/tasks"], ["03", "Approvals", "/v2/approvals"],
   ["04", "Agents", "/v2/agents"], ["05", "Computers", "/v2/computers"], ["06", "Connections", "/v2/connections"],
   ["07", "Governance", "/v2/governance"], ["08", "Infrastructure", "/v2/infrastructure"], ["09", "Activity", "/v2/activity"],
-  ["10", "Settings", "/v2/settings"],
+  ["10", "Settings", "/v2/settings"], ["11", "MyFactory", "/factory"],
 ];
 
 export function V2Sidebar() {
