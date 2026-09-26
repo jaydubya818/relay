@@ -604,3 +604,11 @@ The tunnel must target the gateway, never Relay. Relay's qualification window mu
   **NOT_RUN**.
 
 Verdict: **TELEGRAM PRIVATE-BETA GOLDEN PATH INCOMPLETE.**
+
+### Dedicated qualification bot — 2026-09-26 UTC
+
+Owner-created dedicated bot **@sofie_qual_relay_q4x7_bot** ("Sofie Qualification", Telegram id 8925552605),
+verified with read-only `getMe`; no webhook registered, 0 pending updates. The token is stored only in the
+owner Keychain, reference `keychain:relay-telegram-qualification/RELAY_TELEGRAM_BOT_TOKEN`; it has not been
+displayed, logged or committed. The username is the single entry in `LOCAL_QUALIFICATION_BOT_USERNAMES`.
+No personal bot is pinned. Live Telegram scenarios: **0**.

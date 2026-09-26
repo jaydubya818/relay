@@ -26,10 +26,11 @@ export const LOCAL_QUALIFICATION_IDENTITY = {
 
 /**
  * Reviewed pin for the dedicated qualification bot (lowercase, without "@").
- * Empty until the owner identifies the dedicated bot; adding one is a reviewed
- * source change. A personal bot must never be listed here.
+ * Changing it is a reviewed source change. The webhook tool additionally
+ * requires getMe to match before any change. A personal bot must never be listed.
  */
-export const LOCAL_QUALIFICATION_BOT_USERNAMES: readonly string[] = [];
+// Verified 2026-09-26 via Telegram getMe (id 8925552605, "Sofie Qualification").
+export const LOCAL_QUALIFICATION_BOT_USERNAMES: readonly string[] = ["sofie_qual_relay_q4x7_bot"];
 
 /** Any of these indicates a hosted, managed or CI runtime. */
 export const HOSTED_RUNTIME_INDICATORS = [

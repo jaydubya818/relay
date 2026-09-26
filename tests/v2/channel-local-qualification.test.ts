@@ -31,9 +31,12 @@ describe("local Relay qualification decision",()=>{
     expect(decide({})).toEqual({active:true,expiresAt:NOW+30*60_000});
     expect(decide({RELAY_TELEGRAM_BOT_USERNAME:"Qual_Fixture_Bot"}).active).toBe(true);
   });
-  it("has no pinned bot until the owner's dedicated bot is reviewed into source",()=>{
-    expect(LOCAL_QUALIFICATION_BOT_USERNAMES).toEqual([]);
+  it("pins exactly the owner's dedicated qualification bot",()=>{
+    expect(LOCAL_QUALIFICATION_BOT_USERNAMES).toEqual(["sofie_qual_relay_q4x7_bot"]);
     expect(localExecutorQualification(base(),NOW)).toEqual({active:false,reason:"BOT_NOT_PINNED"});
+    expect(localExecutorQualification({...base(),RELAY_TELEGRAM_BOT_USERNAME:"sofie_qual_relay_q4x7_bot"},NOW).active).toBe(true);
+    for(const personal of ["jay_coach_bot","sofie_chief_of_staff_bot","BJ_sellerfi_bot"])
+      expect(localExecutorQualification({...base(),RELAY_TELEGRAM_BOT_USERNAME:personal},NOW)).toEqual({active:false,reason:"BOT_NOT_PINNED"});
   });
   it.each(HOSTED_RUNTIME_INDICATORS.map(name=>[name]))("denies hosted/managed/CI indicator %s",name=>{
     expect(decide({[name]:"1"})).toEqual({active:false,reason:"HOSTED_RUNTIME"});
