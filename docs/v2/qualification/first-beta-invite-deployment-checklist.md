@@ -8,6 +8,7 @@ Status: **NO-GO** until the exact release revision, production database lineage,
 - `RELAY_FEDERATION_ENABLED=true`, `RELAY_CRYPTO_BACKEND=vercel-secret`, `RELAY_DEPLOYMENT_MODE=production`, `RELAY_ALLOW_SIGNUP=false`, and `NEXT_PUBLIC_RELAY_URL` is the alias above. These are config observations, not proof that an external peer exchange works.
 - Current Relay main uses `RELAY_BETA_INVITER_EMAILS` (falling back to `RELAY_ADMIN_EMAIL`) plus `RELAY_ALLOW_SIGNUP=false`; it does not use the older branch's `RELAY_REQUIRE_INVITE`, `RELAY_TESTER_INVITE_ISSUER_EMAIL`, or `RELAY_TESTER_BUILDER_URL`. The invite route and `beta_invites` migration are not known to be deployed at the live alias.
 - A read-only connection to the configured production database did not complete from this audit host. The temporary pulled environment file was removed. Migration lineage and pre-deploy counts are **unverified**.
+- An unauthenticated request to `https://relay-jaydubya818.vercel.app/api/federation/trust` currently receives a Vercel SSO redirect. A new beta user's Builder cannot verify Relay's public signing identity through that protected URL. Resolve project access protection for the intended public origin before pairing; do not distribute a bypass secret to testers.
 - Relay main at `221a9e7` contains the invitation implementation. On the isolated PR #24 candidate, local auth tests (7/7), typecheck, lint, migration consistency, build, and a synthetic clean-browser signup/replay check passed. This does not establish production database lineage or Builder readiness. Relay PR #20 was closed without merging and is separate Factory work.
 
 ## Invariants
@@ -42,7 +43,7 @@ Stop if the database is not the configured Relay production database, if the mig
 ## Release steps
 
 1. Record the exact current deployment ID and recover its source revision. Use current Relay main plus the narrowly reviewed PR #24, not the older UI-audit branch. Run typecheck, lint, auth/database tests, migration rehearsal on a clone of the production schema, and production build on the exact SHA.
-2. Verify Builder's deployed HTTPS origin, `/api/template-version`, and pinned production delivery signing key ID/version/public key. Set `RELAY_BETA_INVITER_EMAILS` to the pilot operator's exact email. Keep `RELAY_ALLOW_SIGNUP=false` and `NEXT_PUBLIC_RELAY_URL` on the verified Relay origin. Provide the Builder URL directly in the guided packet; merged Relay has no `/setup` page.
+2. Verify Builder's deployed HTTPS origin and `/api/template-version`. Configure Builder PR #32's `BUILDER_RELAY_ORIGIN` to the exact public Relay origin, and verify an unauthenticated request to its `/api/federation/trust` returns the production delivery identity with no SSO redirect. Send the approved signing-key fingerprint to the tester through an independent trusted channel. Set `RELAY_BETA_INVITER_EMAILS` to the pilot operator's exact email. Keep `RELAY_ALLOW_SIGNUP=false` and `NEXT_PUBLIC_RELAY_URL` on the verified Relay origin. Provide the Builder URL directly in the guided packet; merged Relay has no `/setup` page.
 3. Apply the migrations in order during a recorded window. Do not run `0024_beta_invites` by hand if Drizzle's lineage does not match. Deploy the exact built revision and record deployment ID and target before promoting its alias.
 4. Verify existing owner login and Factory receipt lookup. Have the configured issuer create one synthetic exact-email invitation. Confirm an unprivileged owner cannot issue one. Redeem in a clean browser, confirm one new empty account and one consumed invitation, and verify wrong email/replay fail. Confirm the link fragment disappears from the address bar and never appears in the request URL.
 
@@ -62,7 +63,7 @@ ROLLBACK;
 
 ## Stop, rollback, and 24-hour watch
 
-Stop promotion if migration hashes differ, login breaks, a nonissuer can invite, a wrong-email or replayed link succeeds, an invitation returns another owner's data, the Builder pin differs, or the hosted Agent exchange leaks private Knowledge. Do not weaken auth or publish the invitation link to debug.
+Stop promotion if migration hashes differ, login breaks, a nonissuer can invite, a wrong-email or replayed link succeeds, an invitation returns another owner's data, the public trust endpoint still requires Vercel SSO, the Builder pin differs, or the hosted Agent exchange leaks private Knowledge. Do not weaken app authentication or publish the invitation link to debug.
 
 If code fails after the additive migration, remove the public alias from the bad deployment or redeploy the previous known-good revision. Stop issuing invitations and preserve the table and any accounts already created for audit. Current main has no invite-revocation UI; use a reviewed database operation if an issued, unconsumed link must be invalidated. Do not restore the whole database merely to undo an additive table. A data-integrity failure requires a separate restore decision from the pre-deploy snapshot.
 
