@@ -9,10 +9,10 @@ export async function POST(request: Request) {
     if (!verifySameOrigin(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
     const user = await requireApiUser();
     const { email } = schema.parse(await request.json());
-    const invite = await issueBetaInvite(user, email);
     const configuredOrigin = process.env.NEXT_PUBLIC_RELAY_URL ?? process.env.RELAY_ISSUER_URL;
     const origin = new URL(configuredOrigin ?? request.headers.get("origin") ?? request.url).origin;
     if (process.env.NODE_ENV === "production" && !configuredOrigin) throw new Error("A canonical Relay URL is required to issue beta invitations.");
+    const invite = await issueBetaInvite(user, email);
     return Response.json({ url: `${origin}/signup?invite=${encodeURIComponent(invite.token)}`, email: invite.email, expiresAt: invite.expiresAt }, { status: 201 });
   } catch (error) {
     return errorResponse(error);
