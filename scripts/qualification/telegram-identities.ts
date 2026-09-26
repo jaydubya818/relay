@@ -1,6 +1,9 @@
 // Local Telegram qualification identities (isolated database only).
 //   tsx scripts/qualification/telegram-identities.ts identities   # idempotent exact synthetic identities
 //   tsx scripts/qualification/telegram-identities.ts pair <file>  # one-use pairing link -> 0600 file, never stdout
+//   tsx scripts/qualification/telegram-identities.ts revoke        # offline emergency revocation (canonical disconnectTelegram)
+// revoke needs only the isolated database and the signing key: it works with Relay web,
+// worker, gateway and tunnel stopped, and after the qualification window has expired.
 // The synthetic owner has no usable password: pairing is created here, so no
 // owner web session, cookie or credential is involved. Refuses any database
 // other than 127.0.0.1/relay_telegram_qualification (never the ledger port).
@@ -11,7 +14,7 @@ import { hashPassword } from "@/lib/crypto";
 import { closeDatabase, withTransaction } from "@/lib/db";
 import { rows } from "@/lib/v2/channels/store";
 import { channelConfiguration } from "@/lib/v2/channels/config";
-import { setupTelegramPairing } from "@/lib/v2/channels/management";
+import { revokeAllTelegramBindings, setupTelegramPairing } from "@/lib/v2/channels/management";
 import { LOCAL_QUALIFICATION_IDENTITY as ID } from "@/lib/v2/channels/local-qualification";
 import { activateV2Agent, issueAgentPassport } from "@/lib/v2/passports";
 import { appendAuditRecordInTransaction } from "@/lib/v2/evidence/audit";
@@ -60,8 +63,17 @@ async function pair(file: string | undefined) {
   console.log(JSON.stringify({ event: "pairing_link_written", file, expiresAt, bot: config.botUsername }));
 }
 
+async function revoke() {
+  const config = channelConfiguration();
+  if (config.accountId !== ID.accountId || config.ownerPrincipalId !== ID.ownerPrincipalId || config.connectionId !== ID.connectionId) throw new Error("Refusing: channel identity is not the qualification identity.");
+  const { revoked } = await revokeAllTelegramBindings(ID.accountId, ID.ownerPrincipalId, config);
+  const [connection] = await rows<{ status: string; revoked: boolean }>(sql`SELECT status,(revoked_at IS NOT NULL) AS revoked FROM communication_connections WHERE id=${ID.connectionId}`);
+  const [cancellations] = await rows<{ n: number }>(sql`SELECT count(*)::int AS n FROM channel_work_links w JOIN v2_tasks t ON t.id=w.task_id WHERE w.account_id=${ID.accountId} AND t.status NOT IN ('SUCCEEDED','FAILED','CANCELLED','DEAD_LETTERED')`);
+  console.log(JSON.stringify({ event: "qualification_binding_revoked", revoked, activeBindings: 0, connection: connection ?? null, openChannelTasks: Number(cancellations?.n ?? 0) }));
+}
+
 (async () => {
   assertIsolated();
   const [mode, arg] = process.argv.slice(2);
-  if (mode === "identities") await identities(); else if (mode === "pair") await pair(arg); else throw new Error("Usage: identities | pair <file>");
+  if (mode === "identities") await identities(); else if (mode === "pair") await pair(arg); else if (mode === "revoke") await revoke(); else throw new Error("Usage: identities | pair <file> | revoke");
 })().catch((error) => { console.error(JSON.stringify({ event: "qualification_identities_failed", message: error instanceof Error ? error.message : "failed" })); process.exitCode = 1; }).finally(closeDatabase);

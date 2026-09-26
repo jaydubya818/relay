@@ -5,7 +5,7 @@ import { activateV2Agent,createV2Agent,issueAgentPassport } from "@/lib/v2/passp
 import { channelConfiguration,type ChannelConfiguration } from "@/lib/v2/channels/config";
 import { OWNER_EXECUTOR_QUALIFIED,type ExecutionCommand,type ExecutionSnapshot } from "@/lib/v2/channels/contracts";
 import { HOSTED_RUNTIME_INDICATORS,LOCAL_QUALIFICATION_BOT_USERNAMES,LOCAL_QUALIFICATION_MAX_WINDOW_MS,localExecutorQualification } from "@/lib/v2/channels/local-qualification";
-import { setupTelegramPairing,disconnectTelegram } from "@/lib/v2/channels/management";
+import { setupTelegramPairing,disconnectTelegram,revokeAllTelegramBindings,telegramManagement } from "@/lib/v2/channels/management";
 import { telegramWebhook,telegramReadiness } from "@/lib/v2/channels/http";
 import { runChannelExecutionCycle } from "@/lib/v2/channels/worker";
 import { runChannelCancellationCycle } from "@/lib/v2/channels/cancellation";
@@ -146,6 +146,18 @@ describe("durable channel under a local qualification window",()=>{
     expect(await runChannelExecutionCycle(f.config,{call:async()=>{throw new Error("must not execute");}},f.signer)).toEqual({processed:false});
     const cancels:string[]=[];await runChannelCancellationCycle(f.config,{call:async c=>{cancels.push(c.operation);return done(c,"CANCELLED");}},f.signer);
     expect(cancels).toEqual(["cancel"]);
+  });
+  it("emergency revocation works offline after window expiry and is idempotent",async()=>{
+    const f=await setup(open());await f.post("request");
+    // Services stopped and window expired: only the database and signing key remain.
+    Object.assign(f.config,{executionEnabled:false,localQualification:expired});
+    expect(await revokeAllTelegramBindings(f.accountId,f.principalId,f.config)).toEqual({revoked:[f.bindingId],activeBindings:0});
+    expect(await revokeAllTelegramBindings(f.accountId,f.principalId,f.config)).toEqual({revoked:[],activeBindings:0});
+    expect((await telegramManagement(f.accountId,f.principalId,f.config)).state).toMatch(/^REVOKED/);
+    expect((await f.post("after revocation")).status).toBe(403);
+    const cancels:string[]=[];await runChannelCancellationCycle(f.config,{call:async c=>{cancels.push(c.operation);return done(c,"CANCELLED");}},f.signer);
+    expect(cancels).toEqual(["cancel"]);
+    expect(await runChannelExecutionCycle(f.config,{call:async()=>{throw new Error("must not execute");}},f.signer)).toEqual({processed:false});
   });
   it("readiness reports the immutable constant separately from the local window",async()=>{
     const f=await setup(open());const ready=await telegramReadiness(f.config);

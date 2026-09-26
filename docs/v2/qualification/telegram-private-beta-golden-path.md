@@ -585,12 +585,31 @@ The tunnel must target the gateway, never Relay. Relay's qualification window mu
 
 ### Emergency stop (in order)
 
-1. `tsx scripts/qualification/telegram-webhook.ts delete <token-ref>`: removes the webhook and drops pending updates.
-2. Stop the tunnel process.
-3. Stop the Relay worker, Relay web, gateway and MyEve `serve` (SIGTERM). Both qualification windows also self-expire within one hour.
-4. Revoke the pairing (management API / `disconnectTelegram`); queued replies are suppressed and admitted work is cancelled.
-5. Stop the campaign ledger server and release the campaign lock only after cleanup evidence is recorded.
-6. Owner fallback: BotFather `/revoke` for the dedicated bot token.
+Revocation comes first and does not depend on any running service. The synthetic owner has no
+usable web session, so the management API route is not a revocation path for this qualification.
+Every step is attempted even if an earlier one fails; failures are recorded, never skipped.
+
+1. `tsx scripts/qualification/telegram-identities.ts revoke`: offline, canonical `disconnectTelegram`
+   for every active binding. Needs only the isolated Relay database and signing key; works with Relay
+   web, worker, gateway and tunnel stopped and after the qualification window expires. Idempotent.
+   Suppresses queued replies and enqueues cancellation of admitted work.
+2. If MyEve and the Relay worker are still up, let one cancellation cycle drain (bounded wait); after the
+   Relay window expires cancellation still drains exactly once while MyEve's window is open.
+3. `tsx scripts/qualification/telegram-webhook.ts delete <token-ref>`. On failure, continue; ingress is
+   already refused for revoked bindings, the tunnel is stopped next, and step 7 is the fallback.
+4. Stop the tunnel process.
+5. Stop the Relay worker, Relay web, gateway and MyEve `serve` (SIGTERM, then SIGKILL after 10 s).
+6. Record final ledger evidence, stop the Relay qualification database and the campaign ledger server,
+   then release the campaign lock.
+7. Owner fallback (always if step 3 failed): BotFather `/revoke` for the dedicated bot token.
+
+### Known CI defect (separate fix, not part of this branch)
+
+`tests/v2/orchestration.test.ts` teardown intermittently reports an unhandled PostgreSQL 57P01
+(`terminating connection due to administrator command`): `tests/helpers.ts` runs
+`DROP DATABASE ... WITH (FORCE)` while a pooled idle client is still open. Observed once on run
+36270903962 attempt 1 (539 tests passed); attempt 2 passed. Fix separately by closing application
+pools before the drop; do not suppress database errors.
 
 ### Remaining gaps
 
