@@ -176,6 +176,13 @@
       "when": 1790442097723,
       "tag": "0024_beta_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790462361210,
+      "tag": "0025_hesitant_betty_brant",
+      "breakpoints": true
     }
   ]
 }

@@ -1126,6 +1126,19 @@ export const federationGrants = pgTable("federation_grants", {
   ...timestamps,
 }, (table) => [index("federation_grants_scope_idx").on(table.ownerId, table.granteeOwnerId, table.capability, table.resource)]);
 
+export const federationMessageDelegations = pgTable("federation_message_delegations", {
+  id: text("id").primaryKey(),
+  ownerId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  granteeOwnerId: text("grantee_account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  granteeAgentId: text("grantee_agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+}, (table) => [uniqueIndex("federation_message_delegations_token_idx").on(table.tokenHash), index("federation_message_delegations_owner_idx").on(table.ownerId, table.agentId, table.expiresAt)]);
+
 export const publishedViews = pgTable("published_views", {
   id: text("id").primaryKey(), ownerId: text("account_id").notNull().references(() => accounts.id),
   publisherAgentId: text("publisher_agent_id").notNull().references(() => agents.id),

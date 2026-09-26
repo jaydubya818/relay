@@ -30,4 +30,15 @@ describe("production dashboard authentication", () => {
     await createAccountOwner({ accountName: "First", name: "Owner", email: "owner@example.com", password: "owner-password-strong" });
     await expect(createAccountOwner({ accountName: "Second", name: "Other", email: "OWNER@example.com", password: "other-password-strong" })).rejects.toMatchObject({ status: 409 });
   });
+
+  it("keeps a Gmail plus alias in a separate Relay account", async () => {
+    await freshDatabase();
+    const owner = await createAccountOwner({ accountName: "Owner", name: "Owner", email: "owner@gmail.com", password: "owner-password-strong" });
+    const tester = await createAccountOwner({ accountName: "Tester", name: "Tester", email: "OWNER+beta@gmail.com", password: "tester-password-strong" });
+    expect(tester.accountId).not.toBe(owner.accountId);
+    expect(tester.id).not.toBe(owner.id);
+    await expect(authenticateDashboardUser("owner+beta@gmail.com", "tester-password-strong"))
+      .resolves.toMatchObject({ accountId: tester.accountId, email: "owner+beta@gmail.com" });
+    await expect(authenticateDashboardUser("owner@gmail.com", "tester-password-strong")).resolves.toBeNull();
+  });
 });
