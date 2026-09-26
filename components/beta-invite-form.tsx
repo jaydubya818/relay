@@ -22,6 +22,6 @@ export function BetaInviteForm() {
     <div className="field"><label htmlFor="beta-email">Tester email</label><input id="beta-email" name="email" type="email" autoComplete="off" required /></div>
     <button className="button" disabled={busy}>{busy ? "Creating…" : "Create invitation"}</button>
     {error && <div className="notice error" role="alert">{error}</div>}
-    {url && <div className="notice" role="status"><strong>Invitation ready. Expires in seven days and can be used once.</strong><div className="secret">{url}</div><button type="button" className="button secondary small" onClick={() => navigator.clipboard.writeText(url)}>Copy link</button></div>}
+    {url && <div className="notice" role="status"><strong>Invitation ready. Expires in 48 hours and can create one account for this email.</strong><div className="secret">{url}</div><button type="button" className="button secondary small" onClick={() => navigator.clipboard.writeText(url)}>Copy link</button></div>}
   </form>;
 }

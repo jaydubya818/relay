@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
-import { accountMemberships, accounts, agentCredentials, agents, betaInvites, principals, userSessions, users } from "@/lib/db/schema";
+import { accountMemberships, accounts, agentCredentials, agents, principals, userSessions, users } from "@/lib/db/schema";
 import { hashPassword, hashSecret, verifyPassword } from "@/lib/crypto";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
@@ -23,8 +23,35 @@ export function signupEnabled() {
 }
 
 export function canIssueBetaInvites(user: SessionUser) {
-  const allowed = (process.env.RELAY_BETA_INVITER_EMAILS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
-  return user.role === "OWNER" && allowed.includes(user.email.toLowerCase());
+  const adminEmail = process.env.RELAY_ADMIN_EMAIL?.trim().toLowerCase();
+  return Boolean(adminEmail) && user.role === "OWNER" && user.email.toLowerCase() === adminEmail;
+}
+
+function inviteSecret() {
+  const secret = process.env.RELAY_SESSION_SECRET;
+  if (!secret || secret.length < 32) throw new Error("Relay session secret is required for beta invitations.");
+  return secret;
+}
+
+function inviteEmailDigest(email: string) {
+  return createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
+}
+
+function readBetaInvite(token: string, email?: string) {
+  const parts = token.split(".");
+  if (parts.length !== 2 || parts[0].length > 512 || !/^[A-Za-z0-9_-]+$/.test(parts[0]) || !/^[A-Za-z0-9_-]{43}$/.test(parts[1])) return null;
+  const expected = createHmac("sha256", inviteSecret()).update(`relay-beta-invite-v1\0${parts[0]}`).digest();
+  const actual = Buffer.from(parts[1], "base64url");
+  if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return null;
+  let value: unknown;
+  try { value = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8")); } catch { return null; }
+  if (!value || typeof value !== "object") return null;
+  const invite = value as { emailDigest?: unknown; expiresAt?: unknown; nonce?: unknown };
+  if (typeof invite.emailDigest !== "string" || !/^[0-9a-f]{64}$/.test(invite.emailDigest)
+      || typeof invite.expiresAt !== "number" || !Number.isSafeInteger(invite.expiresAt) || invite.expiresAt <= Date.now()
+      || typeof invite.nonce !== "string" || !/^[A-Za-z0-9_-]{22}$/.test(invite.nonce)
+      || (email && invite.emailDigest !== inviteEmailDigest(email))) return null;
+  return { expiresAt: new Date(invite.expiresAt).toISOString() };
 }
 
 export async function issueBetaInvite(user: SessionUser, emailInput: string) {
@@ -33,16 +60,15 @@ export async function issueBetaInvite(user: SessionUser, emailInput: string) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new RelayError("INVALID_INPUT", "Enter a valid email address.");
   const [existing] = await db().select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (existing) throw new RelayError("INVALID_INPUT", "An account already exists for this email.", undefined, 409);
-  const token = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  await db().insert(betaInvites).values({ id: id("inv"), email, tokenHash: hashSecret(token), createdBy: user.id, expiresAt });
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  const payload = Buffer.from(JSON.stringify({ emailDigest: inviteEmailDigest(email), expiresAt: Date.parse(expiresAt), nonce: randomBytes(16).toString("base64url") })).toString("base64url");
+  const signature = createHmac("sha256", inviteSecret()).update(`relay-beta-invite-v1\0${payload}`).digest("base64url");
+  const token = `${payload}.${signature}`;
   return { token, email, expiresAt };
 }
 
 export async function lookupBetaInvite(token: string) {
-  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
-  const [invite] = await db().select({ email: betaInvites.email, expiresAt: betaInvites.expiresAt }).from(betaInvites).where(and(eq(betaInvites.tokenHash, hashSecret(token)), isNull(betaInvites.consumedAt), gt(betaInvites.expiresAt, now()))).limit(1);
-  return invite ?? null;
+  return readBetaInvite(token);
 }
 
 export async function createAccountOwner(input: { accountName: string; name: string; email: string; password: string; inviteToken?: string }): Promise<SessionUser> {
@@ -51,6 +77,8 @@ export async function createAccountOwner(input: { accountName: string; name: str
   const accountName = input.accountName.trim();
   const name = input.name.trim();
   if (!accountName || !name || !email || input.password.length < 12) throw new RelayError("INVALID_INPUT", "Valid account, name, email, and a 12-character password are required.");
+  if (!signupEnabled() && !readBetaInvite(input.inviteToken ?? "", email))
+    throw new RelayError("INVALID_INPUT", "This invitation is invalid, expired, or already used.", undefined, 403);
   const existing = await db().select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (existing.length) throw new RelayError("INVALID_INPUT", "An account already exists for this email.", undefined, 409);
   const accountId = id("acct");
@@ -58,15 +86,8 @@ export async function createAccountOwner(input: { accountName: string; name: str
   const timestamp = now();
   try {
     await withTransaction(async (transaction) => {
-      if (!signupEnabled()) {
-        const [claimed] = await transaction.update(betaInvites).set({ consumedAt: timestamp }).where(and(
-          eq(betaInvites.tokenHash, hashSecret(input.inviteToken ?? "")),
-          eq(betaInvites.email, email),
-          isNull(betaInvites.consumedAt),
-          gt(betaInvites.expiresAt, timestamp),
-        )).returning({ id: betaInvites.id });
-        if (!claimed) throw new RelayError("INVALID_INPUT", "This invitation is invalid, expired, or already used.", undefined, 403);
-      }
+      if (!signupEnabled() && !readBetaInvite(input.inviteToken ?? "", email))
+        throw new RelayError("INVALID_INPUT", "This invitation has expired.", undefined, 403);
       await transaction.insert(accounts).values({ id: accountId, name: accountName, createdAt: timestamp, updatedAt: timestamp });
       await transaction.insert(users).values({ id: userId, accountId, email, name, role: "OWNER", passwordHash: hashPassword(input.password), createdAt: timestamp });
       const principalId = id("prn");

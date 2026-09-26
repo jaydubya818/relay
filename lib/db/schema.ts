@@ -150,16 +150,6 @@ export const userSessions = pgTable("user_sessions", {
   revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
 }, (table) => [uniqueIndex("user_sessions_token_idx").on(table.tokenHash), index("user_sessions_user_idx").on(table.userId, table.expiresAt)]);
 
-export const betaInvites = pgTable("beta_invites", {
-  id: text("id").primaryKey(),
-  email: text("email").notNull(),
-  tokenHash: text("token_hash").notNull(),
-  createdBy: text("created_by").notNull().references(() => users.id),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
-  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
-  consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }),
-}, (table) => [uniqueIndex("beta_invites_token_idx").on(table.tokenHash), index("beta_invites_email_idx").on(table.email)]);
-
 export const agents = pgTable("agents", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
