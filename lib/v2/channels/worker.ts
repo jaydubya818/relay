@@ -57,6 +57,9 @@ export async function runChannelExecutionCycle(config:ChannelConfiguration,trans
     await lockBinding(config.connectionId,tx);
     const current=await currentBinding(claim.binding_id,tx);
     if(!current || current.agent_status!=="ACTIVE" || !await channelGranted(current,"channel.owner.receive",tx))throw new Error("Channel authority changed.");
+    // A local qualification window may close between claim and dispatch; fail closed to reconciliation.
+    const local=config.localQualification;
+    if(local && (!local.active || Date.now()>=local.expiresAt))throw new Error("Local qualification window closed.");
     return transport.call(command);
   })); if(snapshot.requestId!==work.requestId||snapshot.ownerPrincipalId!==work.ownerPrincipalId||snapshot.agentId!==work.agentId||claim.run_id&&snapshot.runId!==claim.run_id)throw new Error("Run identity changed."); }
   catch(error) {
