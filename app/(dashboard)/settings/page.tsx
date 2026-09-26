@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/page";
-import { requireUser } from "@/lib/auth";
+import { canIssueBetaInvites, requireUser } from "@/lib/auth";
+import { BetaInviteForm } from "@/components/beta-invite-form";
 import { db } from "@/lib/db";
 import { accounts, agentCredentials, memories } from "@/lib/db/schema";
 import { and, count, eq, isNull } from "drizzle-orm";
@@ -24,6 +25,7 @@ export default async function SettingsPage() {
           <div className="card"><h2>Data</h2><p className="subtle">{memoryCount} active memories belong to this account. Forgotten memories are excluded from all active retrieval.</p></div>
         </div>
         <div className="card"><h2>Danger zone</h2><p className="subtle">Account deletion is intentionally deferred. V0 exposes scoped agent disable, credential revocation, connection removal, and memory forget controls without a broad destructive operation.</p></div>
+        {canIssueBetaInvites(user) && <div className="card"><h2>Invite a beta tester</h2><p className="subtle">Create a private, email-bound Relay signup link. Send it only to the intended tester through a trusted channel.</p><BetaInviteForm /></div>}
       </section>
     </>
   );

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
-import { accountMemberships, accounts, agentCredentials, agents, principals, userSessions, users } from "@/lib/db/schema";
+import { accountMemberships, accounts, agentCredentials, agents, betaInvites, principals, userSessions, users } from "@/lib/db/schema";
 import { hashPassword, hashSecret, verifyPassword } from "@/lib/crypto";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
@@ -22,8 +22,31 @@ export function signupEnabled() {
   return process.env.RELAY_ALLOW_SIGNUP === "true" || process.env.NODE_ENV !== "production";
 }
 
-export async function createAccountOwner(input: { accountName: string; name: string; email: string; password: string }): Promise<SessionUser> {
-  if (!signupEnabled()) throw new RelayError("INVALID_INPUT", "Account registration is not enabled.", undefined, 403);
+export function canIssueBetaInvites(user: SessionUser) {
+  const allowed = (process.env.RELAY_BETA_INVITER_EMAILS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+  return user.role === "OWNER" && allowed.includes(user.email.toLowerCase());
+}
+
+export async function issueBetaInvite(user: SessionUser, emailInput: string) {
+  if (!canIssueBetaInvites(user)) throw new RelayError("INVALID_CREDENTIAL", "Beta invitation access required.", undefined, 403);
+  const email = emailInput.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new RelayError("INVALID_INPUT", "Enter a valid email address.");
+  const [existing] = await db().select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  if (existing) throw new RelayError("INVALID_INPUT", "An account already exists for this email.", undefined, 409);
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  await db().insert(betaInvites).values({ id: id("inv"), accountId: user.accountId, email, tokenHash: hashSecret(token), createdBy: user.id, expiresAt });
+  return { token, email, expiresAt };
+}
+
+export async function lookupBetaInvite(token: string) {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
+  const [invite] = await db().select({ email: betaInvites.email, expiresAt: betaInvites.expiresAt }).from(betaInvites).where(and(eq(betaInvites.tokenHash, hashSecret(token)), isNull(betaInvites.consumedAt), gt(betaInvites.expiresAt, now()))).limit(1);
+  return invite ?? null;
+}
+
+export async function createAccountOwner(input: { accountName: string; name: string; email: string; password: string; inviteToken?: string }): Promise<SessionUser> {
+  if (!signupEnabled() && !input.inviteToken) throw new RelayError("INVALID_INPUT", "A beta invitation is required.", undefined, 403);
   const email = input.email.trim().toLowerCase();
   const accountName = input.accountName.trim();
   const name = input.name.trim();
@@ -35,6 +58,15 @@ export async function createAccountOwner(input: { accountName: string; name: str
   const timestamp = now();
   try {
     await withTransaction(async (transaction) => {
+      if (!signupEnabled()) {
+        const [claimed] = await transaction.update(betaInvites).set({ consumedAt: timestamp }).where(and(
+          eq(betaInvites.tokenHash, hashSecret(input.inviteToken ?? "")),
+          eq(betaInvites.email, email),
+          isNull(betaInvites.consumedAt),
+          gt(betaInvites.expiresAt, timestamp),
+        )).returning({ id: betaInvites.id });
+        if (!claimed) throw new RelayError("INVALID_INPUT", "This invitation is invalid, expired, or already used.", undefined, 403);
+      }
       await transaction.insert(accounts).values({ id: accountId, name: accountName, createdAt: timestamp, updatedAt: timestamp });
       await transaction.insert(users).values({ id: userId, accountId, email, name, role: "OWNER", passwordHash: hashPassword(input.password), createdAt: timestamp });
       const principalId = id("prn");
