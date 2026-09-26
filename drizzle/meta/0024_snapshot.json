@@ -1,5 +1,5 @@
 {
-  "id": "953e340e-a3ff-4bea-b85f-239c48b8fd12",
+  "id": "63b0644f-aaf4-4ed8-923c-39c9f6de2b24",
   "prevId": "ed1f6389-f391-48c5-807b-8760474dcf68",
   "version": "7",
   "dialect": "postgresql",
@@ -2656,6 +2656,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "email": {
           "name": "email",
           "type": "text",
@@ -2727,6 +2733,19 @@
         }
       },
       "foreignKeys": {
+        "beta_invites_account_id_accounts_id_fk": {
+          "name": "beta_invites_account_id_accounts_id_fk",
+          "tableFrom": "beta_invites",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "beta_invites_created_by_users_id_fk": {
           "name": "beta_invites_created_by_users_id_fk",
           "tableFrom": "beta_invites",

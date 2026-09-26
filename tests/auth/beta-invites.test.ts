@@ -13,6 +13,7 @@ describe("private beta invitations", () => {
     const operator = { accountId, id: userId, email: "operator@example.com", name: "Operator", role: "OWNER" as const };
     vi.stubEnv("RELAY_BETA_INVITER_EMAILS", "operator@example.com");
     const { token } = await issueBetaInvite(operator, " Tester@Example.com ");
+    expect(await db().select({ accountId: betaInvites.accountId }).from(betaInvites)).toEqual([{ accountId }]);
     expect(await lookupBetaInvite(token)).toMatchObject({ email: "tester@example.com" });
     vi.stubEnv("NODE_ENV", "production");
     await expect(createAccountOwner({ accountName: "Wrong", name: "Wrong", email: "wrong@example.com", password: "wrong-password-long", inviteToken: token })).rejects.toMatchObject({ status: 403 });

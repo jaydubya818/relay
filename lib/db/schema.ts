@@ -152,6 +152,7 @@ export const userSessions = pgTable("user_sessions", {
 
 export const betaInvites = pgTable("beta_invites", {
   id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
   tokenHash: text("token_hash").notNull(),
   createdBy: text("created_by").notNull().references(() => users.id),

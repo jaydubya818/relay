@@ -35,7 +35,7 @@ export async function issueBetaInvite(user: SessionUser, emailInput: string) {
   if (existing) throw new RelayError("INVALID_INPUT", "An account already exists for this email.", undefined, 409);
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  await db().insert(betaInvites).values({ id: id("inv"), email, tokenHash: hashSecret(token), createdBy: user.id, expiresAt });
+  await db().insert(betaInvites).values({ id: id("inv"), accountId: user.accountId, email, tokenHash: hashSecret(token), createdBy: user.id, expiresAt });
   return { token, email, expiresAt };
 }
 
