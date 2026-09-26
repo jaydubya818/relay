@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const origin = new URL(configuredOrigin ?? request.headers.get("origin") ?? request.url).origin;
     if (process.env.NODE_ENV === "production" && !configuredOrigin) throw new Error("A canonical Relay URL is required to issue beta invitations.");
     const invite = await issueBetaInvite(user, email);
-    return Response.json({ url: `${origin}/signup?invite=${encodeURIComponent(invite.token)}`, email: invite.email, expiresAt: invite.expiresAt }, { status: 201 });
+    return Response.json({ url: `${origin}/signup#invite=${encodeURIComponent(invite.token)}`, email: invite.email, expiresAt: invite.expiresAt }, { status: 201 });
   } catch (error) {
     return errorResponse(error);
   }
