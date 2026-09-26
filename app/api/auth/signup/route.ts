@@ -8,6 +8,7 @@ const schema = z.object({
   name: z.string().trim().min(2).max(100),
   email: z.string().trim().email().max(254),
   password: z.string().min(12).max(200),
+  inviteToken: z.string().max(128).optional(),
 });
 
 export async function POST(request: Request) {

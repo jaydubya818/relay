@@ -17,6 +17,9 @@
   "regions": [
     "iad1"
   ],
+  "crons": [
+    { "path": "/api/internal/federation-maintenance", "schedule": "*/5 * * * *" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

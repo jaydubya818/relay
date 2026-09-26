@@ -8,12 +8,30 @@ Hosted startup now rejects the exportable `managed-secret` backend. It remains
 available only to explicit non-production tests/development. There is no local
 production key fallback. This supersedes the earlier managed-secret proposal.
 
+For the no-new-service Alpha/Sofie production test, hosted startup also supports
+an explicit `vercel-secret` backend. It requires three separate active Ed25519
+keys for evidence, federation delivery, and passports, plus a 3072-bit RSA
+wrapping key. Operators supply the keys through production-only Vercel Sensitive
+Environment Variables: `RELAY_PRODUCTION_SECRET_SIGNING_KEYS_JSON` and
+`RELAY_PRODUCTION_SECRET_WRAPPING_KEY_JSON`. This is a deliberate reduction in
+key isolation: function runtimes and sufficiently privileged project members
+can access the private material, and disabling an old deployment does not revoke
+its copy of a key. Keep this path scoped to the approved public-profile test;
+rotate keys and public-key pins if exposure is suspected. Missing keys, wrong
+algorithms, public/private mismatch, non-production deployments, and incomplete
+purpose registries fail closed. The KMS backend remains available for stronger
+key isolation when a paid service is acceptable.
+
 `productionCryptoBindings(environment, { keyring, keyWrapper })` composes an
-explicit hosted provider when `RELAY_CRYPTO_BACKEND=kms`. All of `evidence`,
+explicit hosted provider when `RELAY_CRYPTO_BACKEND=kms`. Production Node startup
+now builds that provider only when federation is explicitly enabled, qualification
+mode is off, and the deployment identifies as Vercel production. It pins Relay's
+team issuer, team ID, project ID, production environment, and exact subject. The
+Vercel OIDC assertion is read from the current request when Google STS is called;
+there is no build token, ADC, or environment-token fallback. All of `evidence`,
 `federation-delivery`, and `passport` must have an active signer. Missing lease
 and workload-session signers fail closed. An unscoped production lease verifier
-also refuses to resolve a key. Normal startup has no composed KMS provider yet
-and therefore remains unavailable when federation is opted in.
+also refuses to resolve a key.
 
 The Google KMS provider sends the exact UTF-8 signing input in `data`, never
 `digest`. It checks version identity/state/algorithm/protection, CRC32C, signature
@@ -42,11 +60,21 @@ only after operator validation. Old public keys survive the 30-day synthetic
 retention period. Do not overlap private signing rights across old/new deployments.
 KMS disablement is required to fence processes still holding an old registry.
 
-Still required before hosted use: request-scoped Vercel OIDC → Google STS binding,
-real KMS versions/public-key pins, the account-bound KMS envelope wrapper,
-qualification-only identity policy, durable admission adapters, and provider
-size verification. The injected wrapper is a trusted composition dependency;
-this factory does not establish that an arbitrary supplied wrapper is remote KMS.
+Production public configuration is supplied in `RELAY_PRODUCTION_IDENTITY_JSON`,
+`RELAY_PRODUCTION_KMS_PROJECT_ID`, `RELAY_PRODUCTION_SIGNING_KEYS_JSON`, and
+`RELAY_PRODUCTION_WRAPPING_VERSIONS_JSON`. It contains the Google workload
+identity provider resource, immutable KMS version names, and Ed25519 public-key
+pins only. Signing and wrapping versions must belong to the named KMS project.
+The runtime assertion remains request-scoped. The qualification path keeps its
+separate custom-environment identity and admission controller.
+
+The code path is now wired, but hosted use is not qualified: production currently
+has no such provider, key versions, or public-key pins configured. Durable
+admission adapters and provider-size verification also remain external gates.
+The injected wrapper is a trusted composition dependency; this factory does not
+establish that an arbitrary supplied wrapper is remote KMS. Keep federation and
+runtime-action flags false until the separate local Alpha ↔ Sofie conversation
+test passes and the production resources are provisioned.
 
 Local verification includes purpose/provider tests, PostgreSQL-backed historical
 export rotation, complete Relay tests, and a production-build startup smoke that
@@ -55,7 +83,7 @@ path and cannot close either external gate.
 
 ## Request-scoped qualification composition
 
-The candidate now composes `qualificationCrypto` from instrumentation only when
+The application composes `qualificationCrypto` from instrumentation only when
 both federation and qualification flags are explicitly true. It requires Vercel's
 `federation-qualification` custom environment and the pinned Relay project/team.
 Public configuration variables are `RELAY_QUALIFICATION_IDENTITY_JSON`,
@@ -76,3 +104,14 @@ raw Ed25519 request compatibility is unverified, and controller enforcement stil
 needs integration into the origin/provider paths. Both external gates remain
 NOT_RUN. Keep flags false until those engineering prerequisites and explicit
 hosted authorization are satisfied.
+
+## Production configuration shape
+
+`RELAY_PRODUCTION_IDENTITY_JSON` has the same fields as the qualification identity
+except that `environment` is `production` and `customEnvironmentId` is omitted.
+The production owner/team, project, issuer, audience, and subject are pinned in
+code; only the Google workload-identity provider resource is operator-supplied.
+`RELAY_PRODUCTION_KMS_PROJECT_ID` pins the GCP project containing every signing
+and wrapping resource. Do not put assertions, OAuth tokens, private keys, or
+other credentials in these variables. The current production Vercel project has
+none of these KMS settings, so opting into federation fails closed.

@@ -12,6 +12,19 @@ import { touchAgentSession } from "@/lib/agent-sessions";
 type McpRequest = { jsonrpc?: string; id?: string | number | null; method?: string; params?: any };
 
 const toolDefinitions = {
+  relay_factory_workorder_create: {
+    capability: "factory.workorder.create", action: "factory.workorder.create",
+    description: "Submit one signed WorkOrder request to the owner's local MyFactory via Linear. Requires a stable idempotencyKey. Intake only: cannot execute code, approve publication, merge, or deploy. Check the read tool for a signed local receipt; queued means received, not completed.",
+    inputSchema: { type: "object", required: ["idempotencyKey", "title", "description", "kind", "acceptanceCriteria", "allowedPaths"], properties: {
+      idempotencyKey: {type:"string"}, title:{type:"string"}, description:{type:"string"}, kind:{type:"string",enum:["feature","defect","investigation"]},
+      acceptanceCriteria:{type:"array",items:{type:"string"}}, allowedPaths:{type:"array",items:{type:"string"}},
+    } },
+  },
+  relay_factory_workorder_read: {
+    capability: "factory.workorder.read", action: "factory.workorder.read",
+    description: "Read a MyFactory request and verify the local host's signed WorkOrder receipt. No receipt means awaiting the Mac. Does not create or start work.",
+    inputSchema: {type:"object",required:["requestId"],properties:{requestId:{type:"string"}}},
+  },
   relay_memory_add: {
     capability: "memory.write",
     action: "memory.add",
@@ -160,6 +173,9 @@ const toolDefinitions = {
 export type RelayToolName = keyof typeof toolDefinitions;
 
 const toolInputSchemas: Record<RelayToolName, z.ZodTypeAny> = {
+  relay_factory_workorder_create: z.object({ idempotencyKey: z.string().min(1).max(160), title: z.string().min(1).max(200), description: z.string().min(1).max(12000),
+    kind: z.enum(["feature", "defect", "investigation"]), acceptanceCriteria: z.array(z.string().min(1).max(500)).min(1).max(30), allowedPaths: z.array(z.string().min(1).max(500)).min(1).max(30) }).strict(),
+  relay_factory_workorder_read: z.object({requestId:z.string().uuid()}).strict(),
   relay_memory_add: z.object({
     content: z.string().trim().min(1).max(10_000),
     type: z.enum(["FACT", "PREFERENCE", "PROJECT", "DECISION", "OTHER"]).default("OTHER"),

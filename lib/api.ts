@@ -17,6 +17,9 @@ export function verifySameOrigin(request: Request) {
 
 export function errorResponse(error: unknown) {
   if (error instanceof RelayError) return Response.json(error.toJSON(), { status: error.status });
-  console.error(JSON.stringify({ level: "error", event: "api_error", message: error instanceof Error ? error.message : "Unknown error" }));
+  const cause = error instanceof Error ? error.cause : undefined;
+  console.error(JSON.stringify({ level: "error", event: "api_error", message: error instanceof Error ? error.message : "Unknown error",
+    causeCode: cause && typeof cause === "object" && "code" in cause ? String(cause.code) : undefined,
+    causeName: cause instanceof Error ? cause.name : undefined }));
   return Response.json({ code: "INTERNAL_ERROR", message: "Relay could not complete the request." }, { status: 500 });
 }
