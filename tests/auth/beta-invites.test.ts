@@ -26,6 +26,7 @@ describe("private beta invitations", () => {
   it("refuses an expired invitation and an unlisted issuer", async () => {
     const { accountId, userId } = await freshDatabase();
     const operator = { accountId, id: userId, email: "operator@example.com", name: "Operator", role: "OWNER" as const };
+    vi.stubEnv("RELAY_ADMIN_EMAIL", "other@example.com");
     await expect(issueBetaInvite(operator, "tester@example.com")).rejects.toMatchObject({ status: 403 });
     vi.stubEnv("RELAY_BETA_INVITER_EMAILS", "operator@example.com");
     const { token } = await issueBetaInvite(operator, "tester@example.com");
@@ -33,5 +34,15 @@ describe("private beta invitations", () => {
     vi.stubEnv("NODE_ENV", "production");
     expect(await lookupBetaInvite(token)).toBeNull();
     await expect(createAccountOwner({ accountName: "Tester", name: "Tester", email: "tester@example.com", password: "tester-password-long", inviteToken: token })).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("uses the existing admin identity when an explicit inviter list is absent", async () => {
+    const { accountId, userId } = await freshDatabase();
+    const operator = { accountId, id: userId, email: "operator@example.com", name: "Operator", role: "OWNER" as const };
+    vi.stubEnv("RELAY_ADMIN_EMAIL", "operator@example.com");
+    const invite = await issueBetaInvite(operator, "tester@example.com");
+    expect(await lookupBetaInvite(invite.token)).toMatchObject({ email: "tester@example.com" });
+    vi.stubEnv("RELAY_BETA_INVITER_EMAILS", "other@example.com");
+    await expect(issueBetaInvite(operator, "second@example.com")).rejects.toMatchObject({ status: 403 });
   });
 });

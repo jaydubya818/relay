@@ -23,7 +23,8 @@ export function signupEnabled() {
 }
 
 export function canIssueBetaInvites(user: SessionUser) {
-  const allowed = (process.env.RELAY_BETA_INVITER_EMAILS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+  const configured = process.env.RELAY_BETA_INVITER_EMAILS?.trim();
+  const allowed = (configured || process.env.RELAY_ADMIN_EMAIL || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
   return user.role === "OWNER" && allowed.includes(user.email.toLowerCase());
 }
 
