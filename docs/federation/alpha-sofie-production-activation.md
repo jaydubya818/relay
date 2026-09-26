@@ -1,8 +1,20 @@
 # Alpha ↔ Sofie production activation
 
-Status (2026-09-25): source and local protocol tests pass. Production Federation has not been enabled or tested.
+Status (2026-09-26): production Federation is enabled. Alpha and Sofie completed a live, approval-gated exchange; the exact messaging relationship was renewed for seven days. The activation steps below are retained as the original runbook.
 
-## Candidate and current host
+## Current production relationship
+
+- Relay runs at `https://relay-sage-nine.vercel.app`; Sofie runs at `https://sofie-personal-agent.vercel.app`. Alpha's responder is a running local Mac LaunchAgent.
+- Sofie's saved peer permission requires owner approval for both incoming `message.receive` and outgoing `message.send`. Its exact Alpha relationship expires **2026-10-03 16:09:23 UTC**.
+- The three existing Relay grants remain limited to `message.send` between the same two Agent IDs, with their original resources, 10-calls-per-minute rate limit, and empty topic list. They expire **2026-10-03 16:14:54 UTC**. Relay's grant-level `approvalRequired` remains false; Sofie's local policy provides the per-message approval gate.
+- Both production Agent Passports were reissued with valid signatures, `REGISTERED` trust, only `message.receive` eligibility, and no data access. They expire **2026-10-03 16:18:36 UTC**. Previous Passport versions are superseded.
+- Read-only production authority inspections returned `ACTIVE` in both directions after renewal. The effective relationship expires when Sofie's peer permission expires first. No new live message was sent during the renewal check.
+
+The Relay grant expiry was extended through a guarded operator database update after verifying every existing Agent, resource, capability, rate-limit, and topic field. This operation did not use Relay's grant-creation API, so it did not append a grant-creation audit event. Future renewals should use an audited owner operation.
+
+## Pre-activation baseline (2026-09-25)
+
+The following notes describe the state before production activation, not the current deployment.
 
 - Relay candidate: production secret signing and protected expiry cron. Sofie candidate: free-only peer replies, reply-settings migration, and protected inbox cron.
 - The local synthetic conversation report is `/private/tmp/alpha-conversation-report-current.json`. Alpha initiated a signed question, Sofie required exact owner approval and answered only from the approved SellerFi profile, Sofie followed up, and Alpha answered from its separate Orion profile. The model response was test-stubbed, so hosted model inference remains unverified.
