@@ -154,7 +154,7 @@ describe("durable channel under a local qualification window",()=>{
     expect(await revokeAllTelegramBindings(f.accountId,f.principalId,f.config)).toEqual({revoked:[f.bindingId],activeBindings:0});
     expect(await revokeAllTelegramBindings(f.accountId,f.principalId,f.config)).toEqual({revoked:[],activeBindings:0});
     expect((await telegramManagement(f.accountId,f.principalId,f.config)).state).toMatch(/^REVOKED/);
-    expect((await f.post("after revocation")).status).toBe(403);
+    const after=await f.post("after revocation");expect(after.status).toBe(200);expect(await after.json()).toMatchObject({accepted:false,acknowledged:true});
     const cancels:string[]=[];await runChannelCancellationCycle(f.config,{call:async c=>{cancels.push(c.operation);return done(c,"CANCELLED");}},f.signer);
     expect(cancels).toEqual(["cancel"]);
     expect(await runChannelExecutionCycle(f.config,{call:async()=>{throw new Error("must not execute");}},f.signer)).toEqual({processed:false});

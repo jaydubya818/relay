@@ -1,8 +1,14 @@
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
+import { spawn } from "node:child_process";
+import { copyFile, mkdtemp, rm } from "node:fs/promises";
+import { realpathSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 // @ts-expect-error plain ESM qualification script without type declarations
-import { createWebhookGateway, WEBHOOK_PATH } from "../../scripts/qualification/telegram-webhook-gateway.mjs";
+import { createWebhookGateway, isDirectRun, WEBHOOK_PATH } from "../../scripts/qualification/telegram-webhook-gateway.mjs";
 
 let upstream: Server, gateway: Server, base = "";
 const received: Array<{ method?: string; url?: string; headers: IncomingHttpHeaders; body: string }> = [];
@@ -42,4 +48,35 @@ describe("Telegram qualification webhook gateway", () => {
     expect(last.headers["x-telegram-bot-api-secret-token"]).toBe("fixture-secret");
     expect(last.headers.cookie).toBeUndefined(); expect(last.headers.authorization).toBeUndefined(); expect(last.headers["x-forwarded-for"]).toBeUndefined();
   });
+});
+
+describe("gateway entry point", () => {
+  it("recognises direct runs from paths containing spaces and escaped characters", () => {
+    const entry = "/Users/q/Library/Application Support/Relay #1/telegram-webhook-gateway.mjs";
+    expect(isDirectRun(pathToFileURL(entry).href, entry)).toBe(true);
+    expect(isDirectRun(pathToFileURL(entry).href, "/Users/q/other.mjs")).toBe(false);
+    expect(isDirectRun(pathToFileURL(entry).href, undefined)).toBe(false);
+    // Entry reached through a symlink must match the module's real path.
+    const tmp = tmpdir();
+    expect(isDirectRun(pathToFileURL(realpathSync(tmp)).href, tmp)).toBe(true);
+  });
+  it("starts and stops cleanly when launched from a directory with spaces", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "relay gateway space "));
+    const script = path.join(dir, "telegram-webhook-gateway.mjs");
+    await copyFile(path.resolve("scripts/qualification/telegram-webhook-gateway.mjs"), script);
+    try {
+      const child = spawn(process.execPath, [script], { env: { ...process.env, GATEWAY_PORT: "0", RELAY_PORT: "9" }, stdio: ["ignore", "pipe", "pipe"] });
+      let output = "";
+      child.stdout.on("data", (chunk: Buffer) => { output += chunk.toString(); });
+      const listening = await new Promise<boolean>((done) => {
+        const timer = setTimeout(() => done(false), 10000);
+        child.stdout.on("data", () => { if (output.includes("gateway_listening")) { clearTimeout(timer); done(true); } });
+        child.once("exit", () => { clearTimeout(timer); done(false); });
+      });
+      expect(listening).toBe(true);
+      const exited = new Promise<number | null>((done) => child.once("exit", (code: number | null) => done(code)));
+      child.kill("SIGTERM");
+      expect(await exited).toBe(0);
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  }, 20000);
 });

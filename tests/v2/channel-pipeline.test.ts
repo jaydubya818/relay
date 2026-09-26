@@ -7,7 +7,7 @@ import { createLocalEd25519Signer } from "@/lib/v2/evidence/crypto";
 import { activateV2Agent,createV2Agent,issueAgentPassport } from "@/lib/v2/passports";
 import { channelConfiguration,type ChannelConfiguration } from "@/lib/v2/channels/config";
 import { setupTelegramPairing,disconnectTelegram,telegramManagement } from "@/lib/v2/channels/management";
-import { telegramWebhook,telegramReadiness } from "@/lib/v2/channels/http";
+import { permanentlyRejected,telegramWebhook,telegramReadiness } from "@/lib/v2/channels/http";
 import { runChannelExecutionCycle } from "@/lib/v2/channels/worker";
 import { runChannelDeliveryCycle,TelegramOwnerSender } from "@/lib/v2/channels/delivery";
 import { rows,decode,type Reply } from "@/lib/v2/channels/store";
@@ -29,6 +29,7 @@ async function setup(){
  return {...owner,agentId,signer,config,post,webhook,bindingId:binding.id,acknowledgements};
 }
 const count=async(table:string)=>(await rows<{count:number}>(sql.raw(`SELECT count(*)::int AS count FROM ${table}`)))[0].count;
+const permanentlyRejectedStatus=async(response:Response)=>{expect(response.status).toBe(200);expect(await response.json()).toMatchObject({accepted:false,acknowledged:true});};
 function completed(c:ExecutionCommand):ExecutionSnapshot{return {requestId:c.work.requestId,ownerPrincipalId:c.work.ownerPrincipalId,agentId:c.work.agentId,runId:`run_${c.work.requestId}`,state:"COMPLETED",resultId:`result_${c.work.requestId}`,text:"Your active goal is isolated qualification."};}
 describe("durable owner channel",()=>{
  afterEach(cleanupDatabase);
@@ -45,9 +46,28 @@ describe("durable owner channel",()=>{
   await db().execute(sql`UPDATE agents SET status='DISABLED' WHERE id=${f.agentId}`);expect((await f.post("request")).status).toBe(200);
   await db().execute(sql`UPDATE agents SET status='ACTIVE' WHERE id=${f.agentId}`);await db().execute(sql`UPDATE capability_grants SET effect='DENY' WHERE agent_id=${f.agentId}`);expect((await f.post("request")).status).toBe(200);expect(await count("channel_work_links")).toBe(0);
  });
+ it("acknowledges a replayed /start without executing it so later updates are not blocked",async()=>{
+  const f=await setup();const replay=`/start ${"A".repeat(43)}`;
+  // Telegram redelivers non-2xx updates before any later one: permanent rejections must be 200.
+  await permanentlyRejectedStatus(await f.post(replay));await permanentlyRejectedStatus(await f.post(replay));
+  await permanentlyRejectedStatus(await f.post(`/start ${"b".repeat(43)}`,456));
+  expect(await count("telegram_bindings")).toBe(1);expect(await count("channel_work_links")).toBe(0);
+  const next=await f.post("What are my active goals?");expect(next.status).toBe(200);expect(await count("channel_work_links")).toBe(1);
+ });
+ it("keeps webhook authentication failures rejected and transient failures retryable",async()=>{
+  const f=await setup();
+  expect((await f.webhook({update_id:1},"wrong-secret-wrong-secret-wrong-secret")).status).toBe(401);
+  expect((await f.webhook({update_id:2},"")).status).toBe(401);
+  // Execution temporarily disabled is transient: the decision must be redelivered, not acknowledged.
+  f.config.executionEnabled=false;
+  const disabled=await f.webhook({update_id:3,callback_query:{id:"q",from:{id:123,is_bot:false},message:{message_id:5,chat:{id:123,type:"private"}},data:`ctl_${"a".repeat(32)}:approve`}});
+  expect(disabled.status).toBe(503);expect(await count("task_commands")).toBe(0);
+  expect([400,403,404,409,413,415,422].every(permanentlyRejected)).toBe(true);
+  expect([401,408,429,500,502,503].some(permanentlyRejected)).toBe(false);
+ });
  it("denies forged, unpaired and revoked ingress",async()=>{
-  const f=await setup();expect((await f.webhook({},"bad")).status).toBe(401);expect((await f.post("request",456)).status).toBe(403);
-  await disconnectTelegram(f.accountId,f.principalId,f.bindingId,f.config);expect((await f.post("request")).status).toBe(403);expect(await count("channel_work_links")).toBe(0);expect((await telegramManagement(f.accountId,f.principalId,f.config)).state).toBe("REVOKED");
+  const f=await setup();expect((await f.webhook({},"bad")).status).toBe(401);const unpaired=await f.post("request",456);expect(unpaired.status).toBe(200);expect(await unpaired.json()).toMatchObject({accepted:false,acknowledged:true});
+  await disconnectTelegram(f.accountId,f.principalId,f.bindingId,f.config);const revoked=await f.post("request");expect(revoked.status).toBe(200);expect(await revoked.json()).toMatchObject({accepted:false,acknowledged:true});expect(await count("channel_work_links")).toBe(0);expect((await telegramManagement(f.accountId,f.principalId,f.config)).state).toBe("REVOKED");
  });
  it("reconciles a crashed start instead of repeating it",async()=>{
   const f=await setup();await f.post("request");await db().execute(sql`UPDATE task_commands SET status='PROCESSING',lease_until=now()-interval '1 second' WHERE kind='CHANNEL_START'`);
@@ -99,7 +119,7 @@ describe("durable owner channel",()=>{
   await runChannelExecutionCycle(f.config,{call:async c=>{commands.push(c);return {...completed(c),state:"WAITING_APPROVAL",pending:{kind:"approval",reference:"canonical-approval",bindingHash:"exact-hash",summary:"Write isolated artifact",target:"test workspace",consequence:"Creates one test artifact",expiresAt:new Date(Date.now()+60000).toISOString(),estimatedCost:null}};}},f.signer);
   const [out]=await rows<{content:{encrypted:string}}>(sql`SELECT content FROM communication_messages WHERE direction='OUTBOUND'`);const data=decode<Reply>(out.content.encrypted).buttons![0].data;expect(data).not.toContain("canonical-approval");expect(data.length).toBeLessThanOrEqual(64);
   const callback=(user:number)=>f.webhook({update_id:555,callback_query:{id:"query",from:{id:user,is_bot:false},message:{message_id:999,chat:{id:user,type:"private"}},data}});
-  expect((await callback(456)).status).toBe(403);expect((await callback(123)).status).toBe(200);expect((await callback(123)).status).toBe(200);expect(f.acknowledgements).toHaveLength(3);expect(f.acknowledgements[2]).toContain("already recorded");
+  const wrong=await callback(456);expect(wrong.status).toBe(200);expect(await wrong.json()).toMatchObject({accepted:false,acknowledged:true});expect((await callback(123)).status).toBe(200);expect((await callback(123)).status).toBe(200);expect(f.acknowledgements).toHaveLength(3);expect(f.acknowledgements[2]).toContain("already recorded");
   await runChannelExecutionCycle(f.config,{call:async c=>{commands.push(c);return completed(c);}},f.signer);expect(commands.map(c=>c.operation)).toEqual(["start","approval"]);expect(commands[1].decision).toEqual({reference:"canonical-approval",bindingHash:"exact-hash",choice:"approve"});expect(commands[1].work).toEqual(commands[0].work);
  });
  it("suppresses queued delivery after revocation",async()=>{

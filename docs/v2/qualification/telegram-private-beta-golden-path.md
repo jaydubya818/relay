@@ -631,3 +631,96 @@ verified with read-only `getMe`; no webhook registered, 0 pending updates. The t
 owner Keychain, reference `keychain:relay-telegram-qualification/RELAY_TELEGRAM_BOT_TOKEN`; it has not been
 displayed, logged or committed. The username is the single entry in `LOCAL_QUALIFICATION_BOT_USERNAMES`.
 No personal bot is pinned. Live Telegram scenarios: **0**.
+
+## Live Telegram qualification windows — 2026-09-26 (Relay `8a9567f`, MyEve `8362683`)
+
+Owner-authorized, loopback-only topology above; ngrok tunnel to the one-path gateway; dedicated bot
+@sofie_qual_relay_q4x7_bot; both release constants `false` throughout. Evidence is sanitized (IDs,
+states, amounts; no bodies or secrets). Raw evidence: campaign `live/evidence.jsonl` and
+`live/window2-evidence.json`.
+
+### Window 1 — 14:28:30–15:28:30 PDT: expired unused
+
+Webhook and tunnel were up; the pairing link opened in a browser rather than Telegram and no update
+arrived. Scenarios executed 0; model calls 0; email attempts 0. Revocation-first cleanup at 15:27
+(0 bindings, webhook deleted, public URL 404, processes and databases stopped, lock released).
+
+### Window 2 — 15:39:48 PDT (Relay until 16:24:48, MyEve until 16:39:48)
+
+Binding `tgb_b91c01565f4645de895695425fce53ac`.
+
+| # | Scenario | Result | Evidence |
+|---|---|---|---|
+| 1 | Pairing | **PASSED_LIVE** | Deep link opened in the Telegram app; binding created 15:40:08; readiness `executionReady:true` |
+| 2 | Public research | **PASSED_LIVE** | 1 ingress → `tsk_cc8ea429…` → `owner_run_ac99e90d…` completed → 1 reply ("Example Domain" + source URL); 2 model calls, spent 8,456 µUSD |
+| 3 | Private-data isolation | **PASSED_LIVE** | Refusal reply; canary absent from every stored MyEve row except the agent definition and from runtime logs; `memory_refs=[]`; 1 call, 6,082 µUSD |
+| 4a | Relay-side approval expiry (injected) | **NOT_RUN** | Email was approved before the injected expiry; zero-attempt precondition no longer satisfiable with pin 1 |
+| 4b | MyEve-side approval expiry (injected) | **NOT_RUN** | As 4a |
+| 5 | Exact email approval | **PASSED_LIVE** | Approval `approval_88ee9369…` requested 16:06:48, owner Approve in Telegram 16:11:05 (decided_by `qualification-owner`); `action_f1a5e472-…` completed 16:11:07; 1 attempt; owner confirmed receipt; 1 call, 6,546 µUSD |
+| 6 | Reject pending approval | **NOT_RUN** | |
+| 6b | Cancel an active model run | **NOT_RUN** | |
+| 7 | Callback replay / duplicate | **PASSED_LIVE** | Approve callback delivered twice 1.5 s apart → exactly 1 `CHANNEL_APPROVAL`, 1 send |
+| 8 | Restart / recovery | **PARTIAL** | Worker stopped and restarted with a delivery `CHANNEL_STATUS` pending; task completed once afterwards. No model run was interrupted, so interrupted-run recovery is unproven |
+| 9 | Budget denial | **NOT_RUN** | Injected limit 0.0001 set 16:13, no owner message arrived; restored to 0.1 at 16:21 |
+| 10 | Revocation | **PARTIAL** | Offline `telegram-identities.ts revoke` at 16:21:23 revoked the binding; connection `DISCONNECTED`. No post-revocation message arrived, so ingress denial is unproven live |
+
+Finding (fixed below): at 15:49 a replayed pairing deep link (`/start` + consumed challenge) got 403;
+Telegram redelivered it and held every later update behind it (`pending_update_count` 2), swallowing
+the first email request. Recovered with `setWebhook drop_pending_updates`.
+
+Ledger (phase ceiling 1,078,533 µUSD, original $5 CHECK retained): before window 2 reserved 62,221 /
+spent 16,312 / 7 calls (2 uncertain); after reserved 62,221 / spent 37,396 / 11 calls (2 uncertain,
+both pre-existing) / 0 active Runs. Window 2 spent 21,084 µUSD over 4 calls. Remaining in phase
+978,916 µUSD; remaining of original allowance 4,900,383 µUSD.
+
+Email pin 1 (sha256 `832bd4e4…6bce`, recipient owner-controlled, maxSends 1) is **EXHAUSTED** and
+retained read-only as `live/email-pin-1-EXHAUSTED.json` with its status record. It is never reset,
+reissued or reused.
+
+Cleanup 16:23 (revocation first): revoke idempotent, drain 0 open tasks, webhook deleted (url null,
+0 pending), tunnel/gateway/Relay/MyEve/worker stopped, public URL 404, both databases stopped, lock
+released 20260926T232325Z.
+
+Verdict: **TELEGRAM PRIVATE-BETA GOLDEN PATH INCOMPLETE. Do not merge.**
+
+### Fixes after window 2
+
+1. **Head-of-line blocking.** `telegramWebhook` now acknowledges authenticated updates that can
+   never succeed (replayed/expired pairing, unpaired or revoked sender, wrong callback identity,
+   expired control, malformed, unsupported or oversized body) with `200 {accepted:false,
+   acknowledged:true}` and executes nothing. Webhook authentication failures stay `401`; transient
+   failures (408, 429, execution temporarily disabled, unavailable storage) keep retryable statuses.
+   Regression tests: replayed `/start` twice plus a foreign `/start` are acknowledged, create no
+   binding or work, and a following message is admitted; bad/empty secret 401; disabled-execution
+   callback 503 with no command; status classification table.
+2. **Gateway startup.** The entry guard compared `import.meta.url` with a hand-built `file://` string,
+   so a path with spaces ("Application Support") or reached through a symlink (macOS `/var`) never
+   matched and the process exited silently. It now compares URLs of real paths. Tests: pure guard
+   cases and a spawned gateway from a temporary directory with spaces that must log
+   `gateway_listening` and exit 0 on SIGTERM.
+3. **Per-pin email counter (MyEve).** Each pin carries `pinId` and `issuedAt`; its single attempt is
+   counted over all email attempts created since issuance. The harness refuses a pin whose id or
+   exact draft matches any `email-pin-*-EXHAUSTED.json`.
+
+### Cancellation coverage (two distinct paths)
+
+- **Reject a pending approval**: owner taps Reject on an exact-action prompt → MyEve records
+  `denied`, the Run is cancelled, no action executes. Component: `retains opaque approval controls…`
+  (Relay), MyEve control tests. Live: NOT_RUN.
+- **Cancel an active model run**: Telegram has no owner `/cancel` command in this beta; an active run
+  is cancelled through revocation (or execution disablement), which enqueues cancellation that the
+  worker drains to MyEve (`operation:"cancel"`), including after the Relay window expires. Component:
+  `revocation inside an open window cancels…`, `persists cancellation through revocation…`,
+  `after expiry … drains cancellation exactly once`. Live: NOT_RUN.
+
+### Remaining live matrix (requires a new owner authorization)
+
+| Order | Scenario | Method | Pass criteria |
+|---|---|---|---|
+| R1 | Relay-side expiry (injected) | Email request with pin 2 → prompt; backdate that one `channel_controls.expires_at`; owner taps Approve | Callback acknowledged "expired", no `CHANNEL_APPROVAL`, MyEve approval stays `pending`, pin-2 attempts 0 before/after, AgentMail unchanged |
+| R2 | MyEve-side expiry (injected) | New request → prompt; backdate that one `task_approval_decisions.expires_at` only; owner taps Approve | Relay forwards; MyEve refuses "Approval unavailable or expired"; approval stays `pending`; pin-2 attempts 0 |
+| R3 | Reject pending approval | New request → owner taps Reject | Run `cancelled`, approval `denied`, pin-2 attempts 0 |
+| R4 | Interrupted-run recovery | Research request; SIGKILL the Relay worker while the MyEve run is `running`; restart | Exactly one Run, one result, one reply; no duplicate START; model calls within the run budget |
+| R5 | Budget denial (injected limit) | Set the agent limit to 0.0001, send research | Refused; `owner_model_calls` count and provider reservations unchanged (zero provider invocation); limit restored |
+| R6 | Cancel active run via revocation | Research request; while `running`, offline revoke | MyEve run `cancelled` exactly once; no reply delivered after revocation |
+| R7 | Post-revocation message | Owner sends a message after R6 | Acknowledged, no work link, no model call, no reply |

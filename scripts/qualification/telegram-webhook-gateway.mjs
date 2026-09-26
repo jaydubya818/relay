@@ -5,6 +5,9 @@
 // routes stay unreachable from the internet. Relay still verifies the secret
 // in constant time; this gateway only narrows exposure and never logs bodies.
 import { createServer, request as httpRequest } from "node:http";
+import { realpathSync } from "node:fs";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 export const WEBHOOK_PATH = "/api/channels/telegram/webhook";
 const MAX_BODY = 32 * 1024;
@@ -41,7 +44,18 @@ export function createWebhookGateway({ upstreamPort, upstreamHost = "127.0.0.1",
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Compare URLs of real paths, not a hand-built string: paths with spaces or other escaped
+// characters ("Application Support") or reached through a symlink (macOS /var -> /private/var)
+// otherwise never match, and the gateway would exit silently without listening.
+export function isDirectRun(moduleUrl, entry = process.argv[1]) {
+  if (!entry) return false;
+  const direct = resolve(entry);
+  let real = direct;
+  try { real = realpathSync(direct); } catch { /* keep the resolved path */ }
+  return moduleUrl === pathToFileURL(real).href || moduleUrl === pathToFileURL(direct).href;
+}
+
+if (isDirectRun(import.meta.url)) {
   const listenPort = Number(process.env.GATEWAY_PORT ?? "3231"), upstreamPort = Number(process.env.RELAY_PORT ?? "3230");
   const server = createWebhookGateway({ upstreamPort, log: (entry) => console.log(JSON.stringify({ at: new Date().toISOString(), ...entry })) });
   server.listen(listenPort, "127.0.0.1", () => console.log(JSON.stringify({ event: "gateway_listening", host: "127.0.0.1", port: listenPort, upstreamPort })));
