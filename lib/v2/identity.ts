@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
-import { accountMemberships, principals, serviceClients, stepUpChallenges, users, userSessions } from "@/lib/db/schema";
+import { accountMemberships, accounts, principals, serviceClients, stepUpChallenges, users, userSessions } from "@/lib/db/schema";
 import { hashSecret, verifyPassword } from "@/lib/crypto";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
@@ -54,7 +54,7 @@ export async function authenticateServiceClient(secret: string, accountId: strin
 export async function requireMembership(input: { accountId: string; principalId: string; allowedRoles?: readonly MembershipRole[] }) {
   const conditions = [eq(accountMemberships.accountId, input.accountId), eq(accountMemberships.principalId, input.principalId), eq(accountMemberships.status, "ACTIVE"), eq(principals.status, "ACTIVE")];
   if (input.allowedRoles?.length) conditions.push(inArray(accountMemberships.role, [...input.allowedRoles]));
-  const [membership] = await db().select({ accountId: accountMemberships.accountId, principalId: accountMemberships.principalId, role: accountMemberships.role, type: principals.type, displayName: principals.displayName }).from(accountMemberships).innerJoin(principals, eq(principals.id, accountMemberships.principalId)).where(and(...conditions)).limit(1);
+  const [membership] = await db().select({ accountId: accountMemberships.accountId, principalId: accountMemberships.principalId, role: accountMemberships.role, type: principals.type, displayName: principals.displayName }).from(accountMemberships).innerJoin(principals, eq(principals.id, accountMemberships.principalId)).innerJoin(accounts, and(eq(accounts.id, accountMemberships.accountId), isNull(accounts.retiredAt))).where(and(...conditions)).limit(1);
   if (!membership) throw new RelayError("CAPABILITY_DENIED", "Active account membership with the required role was not found.", undefined, 403);
   return membership;
 }

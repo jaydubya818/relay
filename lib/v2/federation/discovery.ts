@@ -1,7 +1,7 @@
-import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { agents, federationAgents, federationRelationships, publishedViews } from "@/lib/db/schema";
+import { accounts, agents, federationAgents, federationRelationships, publishedViews } from "@/lib/db/schema";
 import { registrationSchema, viewSchema } from "./contracts";
 import { assertNotBlocked } from "./registry";
 import { authenticateFederationAgent, chargeRates } from "./service";
@@ -11,7 +11,7 @@ export async function discoverFederationAgents(secret: string, value: unknown) {
   const caller = await authenticateFederationAgent(secret);
   const input = z.object({ after: z.string().max(255).default(""), topic: z.string().max(100).optional() }).strict().parse(value);
   await chargeRates([{ accountId: caller.ownerId, key: `discovery:${caller.ownerId}`, limit: 10, seconds: 60 }]);
-  const candidates = await db().select({ profile: federationAgents }).from(federationAgents).innerJoin(agents, and(eq(agents.id, federationAgents.agentId), eq(agents.status, "ACTIVE")))
+  const candidates = await db().select({ profile: federationAgents }).from(federationAgents).innerJoin(agents, and(eq(agents.id, federationAgents.agentId), eq(agents.status, "ACTIVE"))).innerJoin(accounts, and(eq(accounts.id, federationAgents.ownerId), isNull(accounts.retiredAt)))
     .where(and(gt(federationAgents.agentId, input.after), inArray(federationAgents.availability, ["ONLINE", "OFFLINE", "DEGRADED", "UNKNOWN"]), sql`${federationAgents.registration}->>'discovery' <> 'HIDDEN'`)).orderBy(asc(federationAgents.agentId)).limit(50);
   const results = [];
   for (const { profile } of candidates) {

@@ -1,0 +1,1 @@
+ALTER TABLE "control_outbox" ADD COLUMN "cancelled_at" timestamp with time zone;

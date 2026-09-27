@@ -162,6 +162,7 @@ export const betaInvites = pgTable("beta_invites", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
   consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }),
+  acceptedAccountId: text("accepted_account_id").references(() => accounts.id),
   revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
   revokedByUserId: text("revoked_by_user_id").references(() => users.id),
 }, (table) => [uniqueIndex("beta_invites_token_idx").on(table.tokenHash), index("beta_invites_email_idx").on(table.email)]);
@@ -820,6 +821,7 @@ export const controlOutbox = pgTable("control_outbox", {
   idempotencyKey: text("idempotency_key").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   publishedAt: timestamp("published_at", { withTimezone: true, mode: "string" }),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true, mode: "string" }),
 }, (table) => [uniqueIndex("control_outbox_idempotency_idx").on(table.accountId, table.idempotencyKey), index("control_outbox_pending_idx").on(table.publishedAt, table.createdAt), index("control_outbox_account_idx").on(table.accountId, table.createdAt)]);
 
 export const deadLetterEntries = pgTable("dead_letter_entries", {

@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type RelayDatabase, withTransaction } from "@/lib/db";
-import { agents, controlOutbox, deadLetterEntries, eventRoutes, eventSourceCursors, taskCommands, taskStateHistory, v2Events, v2Tasks } from "@/lib/db/schema";
+import { accounts, agents, controlOutbox, deadLetterEntries, eventRoutes, eventSourceCursors, taskCommands, taskStateHistory, v2Events, v2Tasks } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { canTransition, relayEventSchema, taskTransitions, type TaskState } from "@/lib/v2/contracts";
@@ -243,12 +243,26 @@ export async function replayDeadLetter(input: { accountId: string; actorPrincipa
 }
 
 export async function publishOutboxBatch(publisher: { publish(message: typeof controlOutbox.$inferSelect): Promise<void> }, limit = 100) {
-  const pending = await db().select().from(controlOutbox).where(isNull(controlOutbox.publishedAt)).orderBy(asc(controlOutbox.createdAt)).limit(limit);
+  const pending = await db().select().from(controlOutbox).where(and(isNull(controlOutbox.publishedAt), isNull(controlOutbox.cancelledAt))).orderBy(asc(controlOutbox.createdAt)).limit(limit);
   let published = 0;
   for (const message of pending) {
-    await publisher.publish(message);
-    const updated = await db().update(controlOutbox).set({ publishedAt: now() }).where(and(eq(controlOutbox.accountId, message.accountId), eq(controlOutbox.id, message.id), isNull(controlOutbox.publishedAt))).returning({ id: controlOutbox.id });
-    if (updated.length) published += 1;
+    const sent = await withTransaction(async (transaction) => {
+      // Retirement holds this lock while fencing the account. No queued event
+      // crosses the final publish boundary after that fence commits.
+      await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`federation:${message.accountId}`}, 0))`);
+      const [current] = await transaction.select({ outbox: controlOutbox, retiredAt: accounts.retiredAt }).from(controlOutbox)
+        .innerJoin(accounts, eq(accounts.id, controlOutbox.accountId))
+        .where(and(eq(controlOutbox.id, message.id), eq(controlOutbox.accountId, message.accountId))).limit(1);
+      if (!current || current.outbox.publishedAt || current.outbox.cancelledAt) return false;
+      if (current.retiredAt) {
+        await transaction.update(controlOutbox).set({ cancelledAt: now() }).where(eq(controlOutbox.id, message.id));
+        return false;
+      }
+      await publisher.publish(current.outbox);
+      await transaction.update(controlOutbox).set({ publishedAt: now() }).where(eq(controlOutbox.id, message.id));
+      return true;
+    });
+    if (sent) published += 1;
   }
   return published;
 }

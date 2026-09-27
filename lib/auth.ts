@@ -93,6 +93,8 @@ export async function createAccountOwner(input: { accountName: string; name: str
         if (!claimed) throw new RelayError("INVALID_INPUT", "This invitation is invalid, expired, or already used.", undefined, 403);
       }
       await transaction.insert(accounts).values({ id: accountId, name: accountName, disposableBeta: Boolean(input.inviteToken), createdAt: timestamp, updatedAt: timestamp });
+      if (input.inviteToken) await transaction.update(betaInvites).set({ acceptedAccountId: accountId })
+        .where(and(eq(betaInvites.tokenHash, hashSecret(input.inviteToken)), eq(betaInvites.email, email), eq(betaInvites.consumedAt, timestamp)));
       await transaction.insert(users).values({ id: userId, accountId, email, name, role: "OWNER", passwordHash: hashPassword(input.password), createdAt: timestamp });
       const principalId = id("prn");
       await transaction.insert(principals).values({ id: principalId, type: "HUMAN", userId, displayName: name, createdAt: timestamp, updatedAt: timestamp });
