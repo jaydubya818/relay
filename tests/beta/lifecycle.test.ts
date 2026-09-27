@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { agentCredentials, agents, auditRecords, betaInvites, controlOutbox, federationGrants, memories, principals, userSessions, users } from "@/lib/db/schema";
-import { createAccountOwner, createSession, issueBetaInvite, lookupBetaInvite, parseSession, revokeBetaInvite } from "@/lib/auth";
-import { createAgent } from "@/lib/agents";
+import { agentCredentials, agents, auditRecords, betaInvites, controlOutbox, federationGrants, memories, principals, runtimeClients, userSessions, users } from "@/lib/db/schema";
+import { authenticateAgent, createAccountOwner, createSession, issueBetaInvite, lookupBetaInvite, parseSession, revokeBetaInvite } from "@/lib/auth";
+import { createAgent, issueCredential, updateAgentStatus } from "@/lib/agents";
+import { touchAgentSession } from "@/lib/agent-sessions";
+import { addMemory, listMemories } from "@/lib/memory";
 import { hashSecret } from "@/lib/crypto";
 import { id } from "@/lib/ids";
 import { planDisposableBetaRetirement, retireDisposableBetaAccount } from "@/lib/beta-account-retirement";
@@ -27,7 +29,7 @@ async function disposable(email: string) {
 }
 
 describe("disposable Relay beta lifecycle on PostgreSQL", () => {
-  afterEach(async () => { delete process.env.RELAY_ADMIN_EMAIL; await cleanupDatabase(); });
+  afterEach(async () => { delete process.env.RELAY_ADMIN_EMAIL; delete process.env.RELAY_BETA_INVITER_EMAILS; await cleanupDatabase(); });
 
   it("revokes a pending invitation once and denies lookup, acceptance, and replay", async () => {
     const { user } = await inviter();
@@ -77,11 +79,12 @@ describe("disposable Relay beta lifecycle on PostgreSQL", () => {
     const principalId = principal.id;
     await registerFederationAgent({ accountId: tester.accountId, principalId }, { agentId: agent.agentId, platform: "qualification", capabilities: [{ name: "message.send", version: "1.0" }], discovery: "PUBLIC", publicName: "Ava" }, signer);
     await db().insert(memories).values({ id: id("mem"), accountId: tester.accountId, createdByAgentId: agent.agentId, scope: "AGENT_PRIVATE", type: "FACT", content: "private-canary", source: "test" });
+    await db().insert(memories).values({ id: id("mem"), accountId: tester.accountId, createdByAgentId: agent.agentId, scope: "AGENT_PRIVATE", type: "FACT", content: "forgotten-private-canary", source: "test", forgottenAt: new Date().toISOString() });
     await db().insert(federationGrants).values({ id: id("fgr"), ownerId: tester.accountId, granteeOwnerId: owner.accountId, capability: "message.send", resource: "inbox", document: {} });
     expect(await parseSession(session)).toMatchObject({ accountId: tester.accountId });
     expect(await authenticateFederationAgent(agent.credential)).toMatchObject({ ownerId: tester.accountId });
     const plan = await planDisposableBetaRetirement(tester.accountId);
-    expect(plan).toMatchObject({ state: "ACTIVE", agents: 1, activeGrants: 1, privateDataObjects: 1, unsupportedResources: 0, policy: "RETIRE_ONLY" });
+    expect(plan).toMatchObject({ state: "ACTIVE", agents: 1, activeGrants: 1, privateDataObjects: 2, unsupportedResources: 0, policy: "RETIRE_ONLY" });
     const before = await listAuditRecords(tester.accountId);
     const retireInput = { accountId: tester.accountId, ownerUserId: tester.id, signer };
     const results = await Promise.all([retireDisposableBetaAccount(retireInput), retireDisposableBetaAccount(retireInput)]);
@@ -91,9 +94,9 @@ describe("disposable Relay beta lifecycle on PostgreSQL", () => {
     expect(await db().select().from(userSessions).where(and(eq(userSessions.accountId, tester.accountId), isNull(userSessions.revokedAt)))).toHaveLength(0);
     expect(await db().select().from(agentCredentials).where(and(eq(agentCredentials.accountId, tester.accountId), isNull(agentCredentials.revokedAt)))).toHaveLength(0);
     expect(await db().select().from(federationGrants).where(and(eq(federationGrants.ownerId, tester.accountId), eq(federationGrants.status, "ACTIVE")))).toHaveLength(0);
-    const [memory] = await db().select().from(memories).where(eq(memories.accountId, tester.accountId));
-    expect(memory).toMatchObject({ content: "" });
-    expect(memory.forgottenAt).not.toBeNull();
+    const scrubbed = await db().select().from(memories).where(eq(memories.accountId, tester.accountId));
+    expect(scrubbed).toHaveLength(2);
+    expect(scrubbed.every((memory) => memory.content === "" && memory.forgottenAt !== null)).toBe(true);
     const history = await listAuditRecords(tester.accountId);
     expect(history).toHaveLength(before.length + 1);
     expect(history.at(-1)?.eventType).toBe("beta.account.retired");
@@ -118,5 +121,50 @@ describe("disposable Relay beta lifecycle on PostgreSQL", () => {
     expect(published).toEqual([]);
     const [outbox] = await db().select().from(controlOutbox).where(eq(controlOutbox.accountId, tester.accountId));
     expect(outbox.cancelledAt).not.toBeNull();
+  });
+
+  it("keeps sessions, credentials, invitations, and memory at zero across retirement races", async () => {
+    const { tester } = await disposable("fenced@example.com");
+    const signer = createLocalEd25519Signer();
+    const agent = await createAgent(tester.accountId, { name: "Ava", capabilities: [] });
+    const auth = await authenticateAgent(agent.credential);
+    if (!auth.ok) throw new Error("Test Agent did not authenticate");
+    process.env.RELAY_BETA_INVITER_EMAILS = tester.email;
+    const retiring = retireDisposableBetaAccount({ accountId: tester.accountId, ownerUserId: tester.id, signer });
+    await Promise.allSettled([
+      retiring,
+      createSession(tester),
+      touchAgentSession(auth.principal),
+      issueCredential(tester.accountId, agent.agentId, "Racing credential"),
+      issueBetaInvite(tester, "racing-invite@example.com"),
+      addMemory(auth.principal, { content: "private race canary", type: "FACT", scope: "AGENT_PRIVATE" }),
+      updateAgentStatus(tester.accountId, agent.agentId, "ACTIVE"),
+    ]);
+    expect((await retiring).state).toBe("RETIRED");
+    const plan = await planDisposableBetaRetirement(tester.accountId);
+    expect(plan).toMatchObject({ state: "RETIRED", activeSessions: 0, activeCredentials: 0,
+      pendingInvites: 0, privateDataObjects: 0 });
+    await expect(createSession(tester)).rejects.toMatchObject({ status: 403 });
+    await expect(touchAgentSession(auth.principal)).rejects.toMatchObject({ status: 403 });
+    await expect(issueCredential(tester.accountId, agent.agentId, "Late credential")).rejects.toMatchObject({ status: 403 });
+    await expect(issueBetaInvite(tester, "late-invite@example.com")).rejects.toMatchObject({ status: 403 });
+    await expect(addMemory(auth.principal, { content: "late private canary", type: "FACT", scope: "AGENT_PRIVATE" })).rejects.toMatchObject({ status: 403 });
+    await expect(updateAgentStatus(tester.accountId, agent.agentId, "ACTIVE")).rejects.toMatchObject({ status: 403 });
+    expect(await listMemories(auth.principal)).toEqual([]);
+  });
+
+  it("blocks terminal retirement while a runtime client still has authority", async () => {
+    const { tester } = await disposable("runtime-client@example.com");
+    const clientId = id("rtc");
+    await db().insert(runtimeClients).values({ id: clientId, accountId: tester.accountId,
+      displayName: "Qualification runtime", selfDeclaredProduct: "local-test",
+      secretHash: hashSecret("local-runtime-secret"), prefix: "local-runtime" });
+    expect((await planDisposableBetaRetirement(tester.accountId)).unsupportedResources).toBeGreaterThan(0);
+    await expect(retireDisposableBetaAccount({ accountId: tester.accountId, ownerUserId: tester.id,
+      signer: createLocalEd25519Signer() })).rejects.toMatchObject({ status: 409 });
+    await db().update(runtimeClients).set({ revokedAt: new Date().toISOString() }).where(eq(runtimeClients.id, clientId));
+    const retired = await retireDisposableBetaAccount({ accountId: tester.accountId, ownerUserId: tester.id,
+      signer: createLocalEd25519Signer() });
+    expect(retired.state).toBe("RETIRED");
   });
 });

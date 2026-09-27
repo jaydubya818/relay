@@ -8,6 +8,7 @@ import { hashPassword, hashSecret, verifyPassword } from "@/lib/crypto";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import type { AgentPrincipal, SessionUser } from "@/lib/types";
+import { lockActiveAccount } from "@/lib/account-fence";
 
 const SESSION_COOKIE = "relay_session";
 const SESSION_SECONDS = 60 * 60 * 12;
@@ -36,7 +37,10 @@ export async function issueBetaInvite(user: SessionUser, emailInput: string) {
   if (existing) throw new RelayError("INVALID_INPUT", "An account already exists for this email.", undefined, 409);
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  await db().insert(betaInvites).values({ id: id("inv"), accountId: user.accountId, email, tokenHash: hashSecret(token), createdBy: user.id, expiresAt });
+  await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, user.accountId);
+    await transaction.insert(betaInvites).values({ id: id("inv"), accountId: user.accountId, email, tokenHash: hashSecret(token), createdBy: user.id, expiresAt });
+  });
   return { token, email, expiresAt };
 }
 
@@ -111,7 +115,10 @@ export async function createSession(user: SessionUser) {
   const token = randomBytes(32).toString("base64url");
   const timestamp = now();
   const expiresAt = new Date(Date.now() + SESSION_SECONDS * 1000).toISOString();
-  await db().insert(userSessions).values({ id: id("ses"), accountId: user.accountId, userId: user.id, tokenHash: hashSecret(token), createdAt: timestamp, lastSeenAt: timestamp, expiresAt });
+  await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, user.accountId);
+    await transaction.insert(userSessions).values({ id: id("ses"), accountId: user.accountId, userId: user.id, tokenHash: hashSecret(token), createdAt: timestamp, lastSeenAt: timestamp, expiresAt });
+  });
   return token;
 }
 

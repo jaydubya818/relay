@@ -21,8 +21,10 @@ export async function POST(request: Request) {
     return Response.json({ invitationId: invite.id, state, accountId: invite.acceptedAccountId, accountState: plan?.state ?? null,
       activeSessions: plan?.activeSessions ?? 0, activeCredentials: plan?.activeCredentials ?? 0,
       activeAgentIdentities: plan?.activeAgentIdentities ?? 0, activeDelegations: plan?.activeDelegations ?? 0,
-      activeGrants: plan?.activeGrants ?? 0, queuedDeliveries: plan?.queuedDeliveries ?? 0,
-      publishedKnowledge: plan?.publishedKnowledge ?? 0, privateDataObjects: plan?.privateDataObjects ?? 0 },
+      activeGrants: plan?.activeGrants ?? 0, pendingInvites: plan?.pendingInvites ?? 0,
+      queuedDeliveries: plan?.queuedDeliveries ?? 0,
+      publishedKnowledge: plan?.publishedKnowledge ?? 0, privateDataObjects: plan?.privateDataObjects ?? 0,
+      unsupportedResources: plan?.unsupportedResources ?? 0 },
       { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return errorResponse(error); }
 }

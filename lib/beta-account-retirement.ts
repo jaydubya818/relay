@@ -40,14 +40,24 @@ async function planInDatabase(database: Queryable, accountId: string): Promise<B
       (SELECT count(*) FROM federation_requests WHERE (account_id=a.id OR target_account_id=a.id) AND status IN ('CREATED','AUTHORIZED','DELIVERED','WAITING','ACCEPTED','RUNNING')) AS queued_deliveries,
       (SELECT count(*) FROM published_views WHERE account_id=a.id AND status='ACTIVE') AS published_knowledge,
       (SELECT count(*) FROM federation_requests WHERE (account_id=a.id OR target_account_id=a.id) AND status IN ('COMPLETED','DENIED','REJECTED','FAILED','CANCELLED')) AS historical_receipts,
-      (SELECT count(*) FROM memories WHERE account_id=a.id AND forgotten_at IS NULL) AS private_data_objects,
+      ((SELECT count(*) FROM memories WHERE account_id=a.id AND content<>'') +
+       (SELECT count(*) FROM delegation_context_entries WHERE account_id=a.id AND content_snapshot<>'')) AS private_data_objects,
       ((SELECT count(*) FROM connections WHERE account_id=a.id) +
        (SELECT count(*) FROM communication_connections WHERE account_id=a.id) +
        (SELECT count(*) FROM connector_connections WHERE account_id=a.id) +
        (SELECT count(*) FROM sandboxes WHERE account_id=a.id AND status NOT IN ('DESTROYED','EXPIRED')) +
        (SELECT count(*) FROM browser_sessions WHERE account_id=a.id AND status NOT IN ('DESTROYED','EXPIRED')) +
        (SELECT count(*) FROM v2_tasks WHERE account_id=a.id AND status NOT IN ('SUCCEEDED','FAILED','CANCELLED','DEAD_LETTERED')) +
-       (SELECT count(*) FROM service_clients sc JOIN account_memberships am ON am.principal_id=sc.principal_id WHERE am.account_id=a.id AND sc.revoked_at IS NULL)) AS unsupported_resources
+       (SELECT count(*) FROM service_clients sc JOIN account_memberships am ON am.principal_id=sc.principal_id WHERE am.account_id=a.id AND sc.revoked_at IS NULL) +
+       (SELECT count(*) FROM runtime_clients WHERE account_id=a.id AND revoked_at IS NULL) +
+       (SELECT count(*) FROM workloads WHERE account_id=a.id AND status IN ('BOOTSTRAPPING','ACTIVE') AND expires_at>now()) +
+       (SELECT count(*) FROM capability_leases WHERE account_id=a.id AND status IN ('ISSUED','ACTIVE') AND expires_at>now()) +
+       (SELECT count(*) FROM runner_enrollments WHERE account_id=a.id AND consumed_at IS NULL AND expires_at>now()) +
+       (SELECT count(*) FROM runners WHERE account_id=a.id AND status<>'REVOKED' AND certificate_expires_at>now()) +
+       (SELECT count(*) FROM runner_assignments WHERE account_id=a.id AND status IN ('OFFERED','CLAIMED','RUNNING','PAUSED') AND expires_at>now()) +
+       (SELECT count(*) FROM private_gateway_resources WHERE account_id=a.id AND enabled=true) +
+       (SELECT count(*) FROM computer_control_sessions WHERE account_id=a.id AND controller<>'TERMINATED' AND expires_at>now()) +
+       (SELECT count(*) FROM computer_viewer_grants WHERE account_id=a.id AND revoked_at IS NULL AND expires_at>now())) AS unsupported_resources
     FROM accounts a WHERE a.id=${accountId}`);
   const row = result.rows[0] as Record<string, unknown> | undefined;
   if (!row || row.disposable_beta !== true) throw new RelayError("CAPABILITY_DENIED", "Only an invited disposable beta account can be retired here.", undefined, 403);
@@ -99,7 +109,9 @@ export async function retireDisposableBetaAccount(input: { accountId: string; ow
       WHERE published_at IS NULL AND cancelled_at IS NULL AND
         (account_id=${input.accountId} OR (aggregate_type='federation_request' AND aggregate_id IN
           (SELECT id FROM federation_requests WHERE account_id=${input.accountId} OR target_account_id=${input.accountId})))`);
-    await transaction.execute(sql`UPDATE memories SET content='',forgotten_at=${timestamp},updated_at=${timestamp} WHERE account_id=${input.accountId} AND forgotten_at IS NULL`);
+    await transaction.execute(sql`UPDATE memories SET content='',forgotten_at=coalesce(forgotten_at,${timestamp}),updated_at=${timestamp}
+      WHERE account_id=${input.accountId} AND (content<>'' OR forgotten_at IS NULL)`);
+    await transaction.execute(sql`UPDATE delegation_context_entries SET content_snapshot='' WHERE account_id=${input.accountId} AND content_snapshot<>''`);
     await transaction.execute(sql`UPDATE account_memberships SET status='REMOVED',updated_at=${timestamp} WHERE account_id=${input.accountId} AND status='ACTIVE'`);
     const verified = await planInDatabase(transaction, input.accountId);
     if (verified.state !== "RETIRED" || [verified.activeSessions, verified.activeCredentials,

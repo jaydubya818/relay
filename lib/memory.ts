@@ -1,6 +1,7 @@
 import { and, desc, eq, ilike, isNull, or, type SQL } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { agents, memories } from "@/lib/db/schema";
+import { db, withTransaction } from "@/lib/db";
+import { accounts, agents, memories } from "@/lib/db/schema";
+import { lockActiveAccount } from "@/lib/account-fence";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import type { AgentPrincipal, MemoryScope, MemoryType } from "@/lib/types";
@@ -22,12 +23,15 @@ const memoryColumns = {
 export async function addMemory(principal: AgentPrincipal, input: { content: string; type: MemoryType; scope: MemoryScope; source?: string }) {
   const timestamp = now();
   const memoryId = id("mem");
-  await db().insert(memories).values({ id: memoryId, accountId: principal.accountId, createdByAgentId: principal.agentId, scope: input.scope, type: input.type, content: input.content.trim(), source: input.source ?? "agent", createdAt: timestamp, updatedAt: timestamp });
+  await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, principal.accountId);
+    await transaction.insert(memories).values({ id: memoryId, accountId: principal.accountId, createdByAgentId: principal.agentId, scope: input.scope, type: input.type, content: input.content.trim(), source: input.source ?? "agent", createdAt: timestamp, updatedAt: timestamp });
+  });
   return getMemory(principal, memoryId);
 }
 
 export async function getMemory(principal: AgentPrincipal, memoryId: string) {
-  const [memory] = await db().select(memoryColumns).from(memories).innerJoin(agents, eq(agents.id, memories.createdByAgentId)).where(and(
+  const [memory] = await db().select(memoryColumns).from(memories).innerJoin(agents, eq(agents.id, memories.createdByAgentId)).innerJoin(accounts, and(eq(accounts.id, memories.accountId), isNull(accounts.retiredAt))).where(and(
     eq(memories.id, memoryId),
     eq(memories.accountId, principal.accountId),
     isNull(memories.forgottenAt),
@@ -54,7 +58,7 @@ function authorizedConditions(principal: AgentPrincipal, filters: MemoryFilters)
 }
 
 export async function listMemories(principal: AgentPrincipal, filters: MemoryFilters = {}) {
-  return db().select(memoryColumns).from(memories).innerJoin(agents, eq(agents.id, memories.createdByAgentId)).where(and(...authorizedConditions(principal, filters))).orderBy(desc(memories.createdAt)).limit(Math.min(filters.limit ?? 100, 250));
+  return db().select(memoryColumns).from(memories).innerJoin(agents, eq(agents.id, memories.createdByAgentId)).innerJoin(accounts, and(eq(accounts.id, memories.accountId), isNull(accounts.retiredAt))).where(and(...authorizedConditions(principal, filters))).orderBy(desc(memories.createdAt)).limit(Math.min(filters.limit ?? 100, 250));
 }
 
 export async function forgetMemoryAsUser(accountId: string, memoryId: string) {
@@ -80,5 +84,5 @@ export async function dashboardMemories(accountId: string, filters: MemoryFilter
   if (filters.type) conditions.push(eq(memories.type, filters.type));
   if (filters.scope) conditions.push(eq(memories.scope, filters.scope));
   if (filters.createdByAgentId) conditions.push(eq(memories.createdByAgentId, filters.createdByAgentId));
-  return db().select({ ...memoryColumns }).from(memories).innerJoin(agents, eq(agents.id, memories.createdByAgentId)).where(and(...conditions)).orderBy(desc(memories.createdAt)).limit(250);
+  return db().select({ ...memoryColumns }).from(memories).innerJoin(agents, eq(agents.id, memories.createdByAgentId)).innerJoin(accounts, and(eq(accounts.id, memories.accountId), isNull(accounts.retiredAt))).where(and(...conditions)).orderBy(desc(memories.createdAt)).limit(250);
 }
