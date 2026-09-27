@@ -14,11 +14,14 @@ The account owner reviews dependency counts in Settings and confirms `RETIRE`.
 The retirement transaction takes the federation owner lock, marks the account
 retired, revokes active sessions, credentials, identities, delegations, grants,
 and publications, blocks relationships, cancels pending requests and outbox
-events on both sides of a peer exchange, blanks private memory content, and
+events on both sides of a peer exchange, blanks private memory content including
+forgotten records and delegation snapshots, and
 removes active memberships. It verifies zero live authority before committing a
 signed retirement audit record. A crash before commit rolls the transaction
 back; a committed retirement is terminal and idempotent at the service layer.
 Unsupported external resources or active work block retirement until cleared.
+Session, credential, invitation, agent-status, and memory writes take the same
+lock and refuse a retired account.
 
 Historical signed receipts and publication provenance remain attributable.
 Information already delivered to another peer cannot be recalled. New requests,
@@ -41,7 +44,8 @@ readback of its own lifecycle, never account administration.
   Database readback: retired `1`, active sessions `0`, active grants `0`, active
   private-memory objects `0`.
 - `pnpm db:check`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, Relay suite and
-  focused federation regressions passed. Builder typecheck/build and all 33
+  focused federation regressions passed. The final Relay suite passed 450 tests
+  with six optional live tests skipped. Builder typecheck/build and all 35
   local tests passed, including readback denial before provider deletion.
 
 This is local qualification only. No hosted Ava/Sofie exchange, tester invite,
