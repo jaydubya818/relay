@@ -8,6 +8,15 @@ It gives Agents durable identity, bounded authority, human approvals, budgets, e
 
 Relay V1 remains frozen in RC soak. V2 is additive and guarded by an automated frontier check that prevents changes to the frozen V1 references.
 
+**Managed MyEve beta status:** The combined disposable Ava/Sofie Golden Journey
+is **not qualified**. The last release-candidate run stopped at the dedicated
+MyEve Beta team's AI Gateway payment prerequisite before reciprocal peer and
+governed Knowledge exchange. The disposable Relay accounts were retired with
+zero active sessions and grants; both candidate PRs remain draft and global
+managed provisioning is disabled. See the
+[beta identity lifecycle](docs/beta-identity-lifecycle.md) for the exact
+retirement boundary, unrun gates, and evidence links.
+
 ## Hosted private preview
 
 The current `main` branch is deployed at [relay-jaydubya818.vercel.app](https://relay-jaydubya818.vercel.app) as an owner-only private preview.

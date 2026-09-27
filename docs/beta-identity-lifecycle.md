@@ -1,5 +1,21 @@
 # Disposable beta identity lifecycle
 
+## Combined managed-beta release status
+
+**NOT QUALIFIED (September 26, 2026).** The last disposable release-candidate
+run on the dedicated `myeve-beta` Vercel team stopped at the first live Eve
+model request: AI Gateway returned HTTP 403 `customer_verification_required`
+because the team had no payment method. That run retired its disposable Relay
+accounts with terminal zero active sessions and grants, then confirmed zero
+Vercel projects and Neon stores. No reciprocal Ava/Sofie or governed Knowledge
+exchange occurred, so peer delivery, provenance, private canaries, live
+revocation, and replay remain unqualified. A new full Golden Journey must use
+new disposable identities after the owner completes dedicated-team billing;
+the $1 Pause On spend guard remains in place. [Relay PR #27](https://github.com/jaydubya818/relay/pull/27)
+and [MyEve PR #34](https://github.com/jaydubya818/MyEveBot/pull/34) remain
+draft. Global managed provisioning remains disabled, neither main branch was
+changed for this requalification, and no external tester was invited.
+
 Invitations can be revoked only while pending and unexpired. Acceptance and
 revocation conditionally update the same PostgreSQL row, so one wins. A repeated
 revoke returns the existing revoked state. The Settings page lists pending,
