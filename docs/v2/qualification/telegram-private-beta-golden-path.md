@@ -698,9 +698,31 @@ Verdict: **TELEGRAM PRIVATE-BETA GOLDEN PATH INCOMPLETE. Do not merge.**
    matched and the process exited silently. It now compares URLs of real paths. Tests: pure guard
    cases and a spawned gateway from a temporary directory with spaces that must log
    `gateway_listening` and exit 0 on SIGTERM.
-3. **Per-pin email counter (MyEve).** Each pin carries `pinId` and `issuedAt`; its single attempt is
-   counted over all email attempts created since issuance. The harness refuses a pin whose id or
-   exact draft matches any `email-pin-*-EXHAUSTED.json`.
+3. **Durable per-pin email allowance (MyEve migration 0039).** Superseding an interim issuance-time
+   counter (which a later timestamp could have reset), each pin is a row in the append-only
+   `owner_qualification_email_pins` ledger keyed by pin id and the SHA-256 of its exact draft (both
+   unique). The single attempt is consumed atomically before the provider call; attempts never
+   decrease, rows cannot be deleted or truncated, and identity cannot be rebound, so restarts,
+   reloads, re-registration or timestamps cannot restore an allowance. Exhausted pins (pin 1) are
+   registered as exhausted from their retained evidence before any new pin. Integration tests on
+   PostgreSQL (restart, re-registration, rebinding, decrement/delete/truncate, concurrency,
+   unregistered pin, backfilled pin) now run in MyEve CI against a Postgres service.
+
+### Window-3 controls (owner conditions)
+
+1. Pin 2 expected sends are **zero**; any attempt is a failed scenario. A watchdog polls the pin
+   ledger and email actions every 2 s and runs revocation-first cleanup on the first attempt.
+   Injected expiries are applied automatically the moment the prompt's control/approval exists.
+2. Pin allowance is enforced by the durable ledger above; pin 1 stays exhausted.
+3. R4 kills the worker only when the MyEve run is `running` with a provider reservation recorded;
+   pass requires the same run, one `CHANNEL_START`, one result and one reply.
+4. R6 revokes only after a provider reservation exists for the run; pass requires canonical
+   cancellation and unchanged or increased liability (spent/uncertain calls retained).
+5. Fresh isolated Relay database (window-2 database archived); MyEve uses the existing campaign
+   ledger (data_directory and lock verified) with the $5 and 1,078,533 µUSD ceilings unchanged.
+6. Every injected mutation is id-scoped and logged; cleanup restores the budget limit first and
+   verifies it on every path (manual, watchdog, tripwire). Injected expiries are not reverted:
+   reopening an approval would be unsafe; affected runs are cancelled by revocation.
 
 ### Cancellation coverage (two distinct paths)
 
