@@ -5,6 +5,7 @@ import { accountMemberships, accounts, principals, serviceClients, stepUpChallen
 import { hashSecret, verifyPassword } from "@/lib/crypto";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
+import { lockActiveAccount } from "@/lib/account-fence";
 
 export const MEMBERSHIP_ROLES = ["OWNER", "ADMIN", "OPERATOR", "APPROVER", "MEMBER", "AUDITOR"] as const;
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
@@ -22,6 +23,7 @@ export async function createHumanPrincipal(input: { accountId: string; userId: s
   const principalId = id("prn");
   const timestamp = now();
   await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, input.accountId);
     await transaction.insert(principals).values({ id: principalId, type: "HUMAN", userId: input.userId, displayName: input.displayName, createdAt: timestamp, updatedAt: timestamp });
     await transaction.insert(accountMemberships).values({ accountId: input.accountId, principalId, role: input.role, createdAt: timestamp, updatedAt: timestamp });
   });
@@ -34,6 +36,7 @@ export async function createServicePrincipal(input: { accountId: string; display
   const secret = `rsvc_${randomBytes(24).toString("base64url")}`;
   const timestamp = now();
   await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, input.accountId);
     await transaction.insert(principals).values({ id: principalId, type: "SERVICE", displayName: input.displayName, createdAt: timestamp, updatedAt: timestamp });
     await transaction.insert(accountMemberships).values({ accountId: input.accountId, principalId, role: input.role, createdAt: timestamp, updatedAt: timestamp });
     await transaction.insert(serviceClients).values({ id: clientId, principalId, name: input.displayName, secretHash: hashSecret(secret), prefix: secret.slice(0, 13), expiresAt: input.expiresAt, createdAt: timestamp });

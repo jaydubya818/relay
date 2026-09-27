@@ -10,6 +10,7 @@ import { canonicalHash, canonicalJson } from "@/lib/v2/contracts";
 import { appendAuditRecordInTransaction } from "@/lib/v2/evidence/audit";
 import { verifyAuditSignature, type AuditSigner } from "@/lib/v2/evidence/crypto";
 import { requireMembership } from "@/lib/v2/identity";
+import { lockActiveAccount } from "@/lib/account-fence";
 
 const digestSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
 const assignmentPayloadSchema = z.object({ command: z.array(z.string().max(10_000)).min(1).max(100), environment: z.record(z.string().max(10_000)).default({}), credentialHandles: z.array(z.string().regex(/^vlt_[A-Za-z0-9_-]{8,}$/)).max(100).default([]), gatewayResourceIds: z.array(z.string().regex(/^pgr_/)).max(100).default([]) }).strict();
@@ -38,7 +39,7 @@ function thumbprint(publicKeyPem: string) { return `sha256:${createHash("sha256"
 export async function createRunnerEnrollment(input: { accountId: string; principalId: string; runnerName: string; ttlSeconds?: number }, signer: AuditSigner) {
   await requireMembership({ accountId: input.accountId, principalId: input.principalId, allowedRoles: ["OWNER", "ADMIN", "OPERATOR"] });
   const enrollmentId = id("ren"); const secret = `ren_${randomBytes(32).toString("base64url")}`; const expiresAt = new Date(Date.now() + Math.min(Math.max(input.ttlSeconds ?? 300, 30), 600) * 1_000).toISOString();
-  await withTransaction(async (tx) => { await tx.insert(runnerEnrollments).values({ id: enrollmentId, accountId: input.accountId, createdByPrincipalId: input.principalId, secretHash: hashSecret(secret), runnerName: input.runnerName, expiresAt }); await appendAuditRecordInTransaction(tx, { accountId: input.accountId, actorPrincipalId: input.principalId, eventType: "runner.enrollment_created", outcome: "SUCCESS", details: { enrollmentId, expiresAt } }, signer); });
+  await withTransaction(async (tx) => { await lockActiveAccount(tx, input.accountId); await tx.insert(runnerEnrollments).values({ id: enrollmentId, accountId: input.accountId, createdByPrincipalId: input.principalId, secretHash: hashSecret(secret), runnerName: input.runnerName, expiresAt }); await appendAuditRecordInTransaction(tx, { accountId: input.accountId, actorPrincipalId: input.principalId, eventType: "runner.enrollment_created", outcome: "SUCCESS", details: { enrollmentId, expiresAt } }, signer); });
   return { enrollmentId, secret, challenge: `relay-runner-enroll:${enrollmentId}:${input.accountId}`, expiresAt };
 }
 

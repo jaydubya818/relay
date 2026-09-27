@@ -117,7 +117,7 @@ export async function retireDisposableBetaAccount(input: { accountId: string; ow
     if (verified.state !== "RETIRED" || [verified.activeSessions, verified.activeCredentials,
       verified.activeAgentIdentities, verified.activeDelegations, verified.activeGrants,
       verified.pendingInvites, verified.queuedDeliveries, verified.publishedKnowledge,
-      verified.privateDataObjects].some((count) => count !== 0)) {
+      verified.privateDataObjects, verified.unsupportedResources].some((count) => count !== 0)) {
       throw new Error("Beta account retirement verification failed; all changes were rolled back.");
     }
     await appendAuditRecordInTransaction(transaction, {

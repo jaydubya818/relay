@@ -14,6 +14,9 @@ import { listAuditRecords, verifyAuditRecords } from "@/lib/v2/evidence/audit";
 import { authenticateFederationAgent } from "@/lib/v2/federation/service";
 import { createFederationGrant, registerFederationAgent } from "@/lib/v2/federation/registry";
 import { publishOutboxBatch } from "@/lib/v2/orchestration";
+import { registerRuntimeClient } from "@/lib/v2/runtime-clients";
+import { createRunnerEnrollment } from "@/lib/v2/runners";
+import { createServicePrincipal } from "@/lib/v2/identity";
 import { cleanupDatabase, freshDatabase } from "../helpers";
 
 async function inviter() {
@@ -103,6 +106,10 @@ describe("disposable Relay beta lifecycle on PostgreSQL", () => {
     expect(await verifyAuditRecords(history, signer)).toBe(true);
     expect(await db().select().from(auditRecords).where(eq(auditRecords.accountId, tester.accountId))).toHaveLength(history.length);
     expect((await db().select().from(agents).where(eq(agents.accountId, tester.accountId)))[0].status).toBe("DISABLED");
+    await expect(registerRuntimeClient({ accountId: tester.accountId, actorPrincipalId: principalId,
+      displayName: "Late runtime", selfDeclaredProduct: "qualification" }, signer)).rejects.toMatchObject({ status: 403 });
+    await expect(createRunnerEnrollment({ accountId: tester.accountId, principalId, runnerName: "Late runner" }, signer)).rejects.toMatchObject({ status: 403 });
+    await expect(createServicePrincipal({ accountId: tester.accountId, displayName: "Late service", role: "OPERATOR" })).rejects.toMatchObject({ status: 403 });
   });
 
   it("serializes retirement against grant creation and cancels queued outbox work", async () => {
