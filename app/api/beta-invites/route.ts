@@ -1,8 +1,15 @@
 import { z } from "zod";
 import { requireApiUser, errorResponse, verifySameOrigin } from "@/lib/api";
-import { issueBetaInvite } from "@/lib/auth";
+import { issueBetaInvite, listBetaInvites, revokeBetaInvite } from "@/lib/auth";
 
 const schema = z.object({ email: z.string().trim().email().max(254) });
+const revokeSchema = z.object({ invitationId: z.string().min(1).max(255) }).strict();
+
+export async function GET() {
+  try {
+    return Response.json({ invitations: await listBetaInvites(await requireApiUser()) }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return errorResponse(error); }
+}
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +21,14 @@ export async function POST(request: Request) {
     if (process.env.NODE_ENV === "production" && !configuredOrigin) throw new Error("A canonical Relay URL is required to issue beta invitations.");
     const invite = await issueBetaInvite(user, email);
     return Response.json({ url: `${origin}/signup#invite=${encodeURIComponent(invite.token)}`, email: invite.email, expiresAt: invite.expiresAt }, { status: 201 });
-  } catch (error) {
-    return errorResponse(error);
-  }
+  } catch (error) { return errorResponse(error); }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    if (!verifySameOrigin(request)) return Response.json({ error: "Invalid request origin." }, { status: 403 });
+    const user = await requireApiUser();
+    const { invitationId } = revokeSchema.parse(await request.json());
+    return Response.json(await revokeBetaInvite(user, invitationId), { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return errorResponse(error); }
 }

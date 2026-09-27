@@ -81,6 +81,9 @@ export const delegatedAuthorityStatus = pgEnum("delegated_authority_status", ["A
 export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  disposableBeta: boolean("disposable_beta").notNull().default(false),
+  retiredAt: timestamp("retired_at", { withTimezone: true, mode: "string" }),
+  retiredByUserId: text("retired_by_user_id"),
   ...timestamps,
 });
 
@@ -159,6 +162,8 @@ export const betaInvites = pgTable("beta_invites", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
   consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "string" }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+  revokedByUserId: text("revoked_by_user_id").references(() => users.id),
 }, (table) => [uniqueIndex("beta_invites_token_idx").on(table.tokenHash), index("beta_invites_email_idx").on(table.email)]);
 
 export const agents = pgTable("agents", {
