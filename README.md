@@ -8,6 +8,13 @@ It gives Agents durable identity, bounded authority, human approvals, budgets, e
 
 Relay V1 remains frozen in RC soak. V2 is additive and guarded by an automated frontier check that prevents changes to the frozen V1 references.
 
+**Orchis → Sofie guided beta (September 27, 2026 UTC):** `WAITING_FOR_TESTER`.
+The exact production Relay message grant is active for seven days at 10
+messages/hour, and its signed grant audit was verified. No tester-originated
+message has reached Sofie's authorized inbox; Sofie's configured automatic
+reply is therefore **not live-qualified**. Reciprocal communication is not a
+pass. See the [live qualification record](docs/federation/orchis-sofie-beta-qualification.md).
+
 ## Hosted private preview
 
 The current `main` branch is deployed at [relay-jaydubya818.vercel.app](https://relay-jaydubya818.vercel.app) as an owner-only private preview.
