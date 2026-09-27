@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type RelayDatabase, withTransaction } from "@/lib/db";
-import { accounts, agents, controlOutbox, deadLetterEntries, eventRoutes, eventSourceCursors, taskCommands, taskStateHistory, v2Events, v2Tasks } from "@/lib/db/schema";
+import { accounts, agents, controlOutbox, deadLetterEntries, eventRoutes, eventSourceCursors, federationRequests, taskCommands, taskStateHistory, v2Events, v2Tasks } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { canTransition, relayEventSchema, taskTransitions, type TaskState } from "@/lib/v2/contracts";
@@ -249,12 +249,18 @@ export async function publishOutboxBatch(publisher: { publish(message: typeof co
     const sent = await withTransaction(async (transaction) => {
       // Retirement holds this lock while fencing the account. No queued event
       // crosses the final publish boundary after that fence commits.
-      await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`federation:${message.accountId}`}, 0))`);
+      const [request] = message.aggregateType === "federation_request"
+        ? await transaction.select({ callerOwnerId: federationRequests.callerOwnerId, targetOwnerId: federationRequests.targetOwnerId })
+          .from(federationRequests).where(eq(federationRequests.id, message.aggregateId)).limit(1) : [];
+      const owners = [...new Set([message.accountId, ...(request ? [request.callerOwnerId, request.targetOwnerId] : [])])].sort();
+      for (const owner of owners) await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`federation:${owner}`}, 0))`);
       const [current] = await transaction.select({ outbox: controlOutbox, retiredAt: accounts.retiredAt }).from(controlOutbox)
         .innerJoin(accounts, eq(accounts.id, controlOutbox.accountId))
         .where(and(eq(controlOutbox.id, message.id), eq(controlOutbox.accountId, message.accountId))).limit(1);
       if (!current || current.outbox.publishedAt || current.outbox.cancelledAt) return false;
-      if (current.retiredAt) {
+      const [retiredPeer] = await transaction.select({ id: accounts.id }).from(accounts)
+        .where(and(inArray(accounts.id, owners), sql`${accounts.retiredAt} IS NOT NULL`)).limit(1);
+      if (current.retiredAt || retiredPeer) {
         await transaction.update(controlOutbox).set({ cancelledAt: now() }).where(eq(controlOutbox.id, message.id));
         return false;
       }

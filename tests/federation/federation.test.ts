@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { accountMemberships, agents, federationAttempts, federationRequests, principals } from "@/lib/db/schema";
+import { accountMemberships, accounts, agents, controlOutbox, federationAttempts, federationRequests, principals, users } from "@/lib/db/schema";
 import { createAgent, rotateCredential } from "@/lib/agents";
+import { hashPassword } from "@/lib/crypto";
 import { id } from "@/lib/ids";
 import { createLocalEd25519Signer, createLocalRsaKeyWrapper } from "@/lib/v2/evidence/crypto";
 import { listAuditRecords } from "@/lib/v2/evidence/audit";
+import { verifyAuditRecords } from "@/lib/v2/evidence/audit";
+import { retireDisposableBetaAccount } from "@/lib/beta-account-retirement";
+import { publishOutboxBatch } from "@/lib/v2/orchestration";
 import { issueAgentPassport } from "@/lib/v2/passports";
 import { publishRelaySafetyPolicy } from "@/lib/v2/policy";
 import { capabilitySchema, viewSchema } from "@/lib/v2/federation/contracts";
@@ -53,6 +57,48 @@ async function receive(f: Awaited<ReturnType<typeof fixture>>) {
 const publishedRecord = { reference: "published-1", revision: "1", recordType: "Fact", content: "Verify every consequential action.", sourceReferences: ["owner-source-1"], provenance: "Explicit owner publication", updatedAt: new Date().toISOString() };
 
 describe("federation trust boundaries", () => {
+  it("retires an outgoing peer and cancels its event in the receiving account", async () => {
+    const f = await fixture();
+    const ownerUserId = id("usr");
+    await db().update(accounts).set({ disposableBeta: true }).where(eq(accounts.id, f.sarah.accountId));
+    await db().insert(users).values({ id: ownerUserId, accountId: f.sarah.accountId,
+      email: "disposable-peer@example.test", name: "Disposable owner", role: "OWNER",
+      passwordHash: hashPassword("local-test-password") });
+    const request = await submitFederationRequest(f.ava.credential, f.submission, f.bindings);
+    const [queued] = await db().select().from(controlOutbox).where(eq(controlOutbox.aggregateId, request.requestId));
+    expect(queued.accountId).toBe(f.jay.accountId);
+    const before = await listAuditRecords(f.sarah.accountId);
+    const result = await retireDisposableBetaAccount({ accountId: f.sarah.accountId, ownerUserId, signer: f.bindings.signer });
+    expect(result.idempotentReplay).toBe(false);
+    const [cancelled] = await db().select().from(controlOutbox).where(eq(controlOutbox.id, queued.id));
+    expect(cancelled.cancelledAt).not.toBeNull();
+    const published: string[] = [];
+    expect(await publishOutboxBatch({ publish: async (message) => { published.push(message.id); } })).toBe(0);
+    expect(published).toEqual([]);
+    expect((await pollFederationInbox(f.sofie.credential, f.bindings)).deliveries).toEqual([]);
+    await expect(submitFederationRequest(f.ava.credential,
+      { ...f.submission, idempotencyKey: "after-retirement" }, f.bindings)).rejects.toMatchObject({ code: "INVALID_CREDENTIAL" });
+    const history = await listAuditRecords(f.sarah.accountId);
+    expect(history).toHaveLength(before.length + 1);
+    expect(await verifyAuditRecords(history, f.bindings.signer)).toBe(true);
+  });
+  it("serializes incoming Knowledge requests and publication with retirement", async () => {
+    const f = await fixture();
+    await db().update(accounts).set({ disposableBeta: true }).where(eq(accounts.id, f.jay.accountId));
+    const retirement = { accountId: f.jay.accountId, ownerUserId: f.jay.userId, signer: f.bindings.signer };
+    await Promise.allSettled([
+      retireDisposableBetaAccount(retirement),
+      submitFederationRequest(f.ava.credential, f.submission, f.bindings),
+      publishView(f.jay, { ...f.document, id: f.view.viewId, expectedVersion: 1 }, f.bindings.signer),
+    ]);
+    const [owner] = await db().select({ retiredAt: accounts.retiredAt }).from(accounts).where(eq(accounts.id, f.jay.accountId));
+    expect(owner.retiredAt).not.toBeNull();
+    const active = await db().select().from(federationRequests).where(eq(federationRequests.targetOwnerId, f.jay.accountId));
+    expect(active.every((request) => request.status === "CANCELLED")).toBe(true);
+    await expect(submitFederationRequest(f.ava.credential,
+      { ...f.submission, idempotencyKey: "knowledge-after-retirement" }, f.bindings)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" });
+    await expect(pollFederationInbox(f.sofie.credential, f.bindings)).rejects.toMatchObject({ code: "INVALID_CREDENTIAL" });
+  });
   afterEach(cleanupDatabase);
   it("persists a metadata-only signed denial receipt after authorization rolls back", async () => {
     const f = await fixture();

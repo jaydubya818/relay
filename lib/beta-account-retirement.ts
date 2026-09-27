@@ -95,7 +95,10 @@ export async function retireDisposableBetaAccount(input: { accountId: string; ow
       inbox_status=CASE WHEN status IN ('COMPLETED','DENIED','REJECTED','FAILED','CANCELLED','EXPIRED') THEN inbox_status ELSE 'REJECTED' END,
       encrypted_payload=NULL,encrypted_result=NULL,updated_at=${timestamp}
       WHERE account_id=${input.accountId} OR target_account_id=${input.accountId}`);
-    await transaction.execute(sql`UPDATE control_outbox SET cancelled_at=${timestamp} WHERE account_id=${input.accountId} AND published_at IS NULL AND cancelled_at IS NULL`);
+    await transaction.execute(sql`UPDATE control_outbox SET cancelled_at=${timestamp}
+      WHERE published_at IS NULL AND cancelled_at IS NULL AND
+        (account_id=${input.accountId} OR (aggregate_type='federation_request' AND aggregate_id IN
+          (SELECT id FROM federation_requests WHERE account_id=${input.accountId} OR target_account_id=${input.accountId})))`);
     await transaction.execute(sql`UPDATE memories SET content='',forgotten_at=${timestamp},updated_at=${timestamp} WHERE account_id=${input.accountId} AND forgotten_at IS NULL`);
     await transaction.execute(sql`UPDATE account_memberships SET status='REMOVED',updated_at=${timestamp} WHERE account_id=${input.accountId} AND status='ACTIVE'`);
     const verified = await planInDatabase(transaction, input.accountId);

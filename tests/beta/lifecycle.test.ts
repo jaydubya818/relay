@@ -55,6 +55,18 @@ describe("disposable Relay beta lifecycle on PostgreSQL", () => {
     expect(results.filter((entry) => entry.status === "fulfilled")).toHaveLength(1);
   });
 
+  it("rejects invitation administration and retirement by another owner or an agent", async () => {
+    const { user, tester } = await disposable("authority@example.com");
+    const invite = await issueBetaInvite(user, "unused@example.com");
+    const [row] = await db().select().from(betaInvites).where(eq(betaInvites.tokenHash, hashSecret(invite.token)));
+    const otherOwner = { ...tester, role: "OWNER" as const };
+    await expect(revokeBetaInvite(otherOwner, row.id)).rejects.toMatchObject({ status: 403 });
+    await expect(revokeBetaInvite({ ...user, role: "MEMBER" as const }, row.id)).rejects.toMatchObject({ status: 403 });
+    await expect(retireDisposableBetaAccount({ accountId: tester.accountId, ownerUserId: user.id,
+      signer: createLocalEd25519Signer() })).rejects.toMatchObject({ status: 403 });
+    expect(await lookupBetaInvite(invite.token)).not.toBeNull();
+  });
+
   it("retires an invited account, fences authority, scrubs private memory, and keeps signed history", async () => {
     const { tester, owner } = await disposable("retire@example.com");
     const signer = createLocalEd25519Signer();
