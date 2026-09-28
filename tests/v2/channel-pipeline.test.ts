@@ -122,6 +122,28 @@ describe("durable owner channel",()=>{
   const wrong=await callback(456);expect(wrong.status).toBe(200);expect(await wrong.json()).toMatchObject({accepted:false,acknowledged:true});expect((await callback(123)).status).toBe(200);expect((await callback(123)).status).toBe(200);expect(f.acknowledgements).toHaveLength(3);expect(f.acknowledgements[2]).toContain("already recorded");
   await runChannelExecutionCycle(f.config,{call:async c=>{commands.push(c);return completed(c);}},f.signer);expect(commands.map(c=>c.operation)).toEqual(["start","approval"]);expect(commands[1].decision).toEqual({reference:"canonical-approval",bindingHash:"exact-hash",choice:"approve"});expect(commands[1].work).toEqual(commands[0].work);
  });
+ it.each([false,true])("reconciles expired decisions only for the exact consumed control (mismatch=%s)",async mismatch=>{
+  const f=await setup();await f.post("Send the exact draft.");
+  const pending={kind:"approval" as const,reference:"approval-exact",bindingHash:"hash-exact",summary:"Send pinned email",target:"fixture inbox",consequence:"One email",expiresAt:new Date(Date.now()+60000).toISOString(),estimatedCost:null};
+  await runChannelExecutionCycle(f.config,{call:async c=>({...completed(c),state:"WAITING_APPROVAL",pending})},f.signer);
+  const [out]=await rows<{content:{encrypted:string}}>(sql`SELECT content FROM communication_messages WHERE direction='OUTBOUND'`);
+  const data=decode<Reply>(out.content.encrypted).buttons![0].data;
+  await f.webhook({update_id:777,callback_query:{id:"expiry-query",from:{id:123,is_bot:false},message:{message_id:999,chat:{id:123,type:"private"}},data}});
+  // Unknown approval response: never retry the approval operation.
+  await runChannelExecutionCycle(f.config,{call:async c=>{expect(c.operation).toBe("approval");throw new Error("executor denied");}},f.signer);
+  await db().execute(sql`UPDATE task_commands SET run_after=now() WHERE payload->>'controlId' IS NOT NULL`);
+  const transport={call:async(c:ExecutionCommand)=>{expect(c.operation).toBe("status");return {...completed(c),state:"WAITING_APPROVAL" as const,pending:{...pending,bindingHash:mismatch?"other-hash":pending.bindingHash,expiresAt:new Date(Date.now()-1000).toISOString()}};}};
+  const result=await runChannelExecutionCycle(f.config,transport,f.signer);
+  const expired=await rows<{content:{encrypted:string}}>(sql`SELECT content FROM communication_messages WHERE idempotency_key LIKE 'channel-expired:%'`);
+  if(mismatch){expect(expired).toHaveLength(0);expect((await rows<{status:string}>(sql`SELECT status FROM v2_tasks`))[0].status).toBe("WAITING_APPROVAL");return;}
+  expect(result.state).toBe("APPROVAL_EXPIRED");expect(expired).toHaveLength(1);
+  expect(decode<Reply>(expired[0].content.encrypted).text).toContain("Nothing was approved or sent");
+  expect((await rows<{status:string}>(sql`SELECT status FROM v2_tasks`))[0].status).toBe("CANCELLED");
+  expect(await rows(sql`SELECT id FROM task_commands WHERE kind='CHANNEL_CANCEL'`)).toHaveLength(1);
+  let cancels=0;await runChannelCancellationCycle(f.config,{call:async c=>{cancels++;expect(c.operation).toBe("cancel");return {...completed(c),state:"CANCELLED"};}},f.signer);
+  await runChannelExecutionCycle(f.config,transport,f.signer);
+  expect(cancels).toBe(1);expect(await rows(sql`SELECT id FROM communication_messages WHERE idempotency_key LIKE 'channel-expired:%'`)).toHaveLength(1);
+ });
  it("suppresses queued delivery after revocation",async()=>{
   const f=await setup();await f.post("request");await runChannelExecutionCycle(f.config,{call:async c=>completed(c)},f.signer);await disconnectTelegram(f.accountId,f.principalId,f.bindingId,f.config);
   let calls=0;await runChannelDeliveryCycle(f.config,{send:async()=>{calls++;return {kind:"sent",messageId:"never"};}},f.signer);expect(calls).toBe(0);

@@ -70,7 +70,7 @@ export async function runChannelExecutionCycle(config:ChannelConfiguration,trans
     });
     return {processed:true,state:notAdmitted?"ADMISSION_RETRY":"RECONCILE"};
   }
-  await withTransaction(async tx=>{
+  const outcome=await withTransaction(async tx=>{
     const owned=await rows<{id:string}>(sql`UPDATE task_commands SET status='COMPLETED',lease_until=NULL,updated_at=now() WHERE id=${claim.id} AND worker_id=${workerId} AND fence_token=${claim.fence_token} AND status='PROCESSING' AND lease_until>now() RETURNING id`,tx);
     if(!owned.length)return;
     await lockBinding(config.connectionId,tx);
@@ -78,6 +78,24 @@ export async function runChannelExecutionCycle(config:ChannelConfiguration,trans
     const terminal=["COMPLETED","FAILED","CANCELLED"].includes(snapshot.state);
     const taskState=snapshot.state==="COMPLETED"?"SUCCEEDED":snapshot.state==="WAITING_APPROVAL"?"WAITING_APPROVAL":snapshot.state==="RECOVERY_REQUIRED"?"PAUSED":snapshot.state;
     await tx.execute(sql`UPDATE channel_work_links SET run_id=${snapshot.runId},result_id=${snapshot.resultId??null},snapshot_encrypted=${encode(snapshot)},updated_at=now() WHERE task_id=${claim.task_id}`);
+    // An approval transport failure is reconciled through status, never replayed.
+    // If MyEve still reports that exact consumed decision as pending and expired,
+    // report the refusal once and use canonical cancellation to release the task.
+    if(claim.payload.controlId && snapshot.state==="WAITING_APPROVAL" && snapshot.pending
+      && Date.parse(snapshot.pending.expiresAt)<=Date.now()) {
+      const [decision]=await rows<{id:string}>(sql`SELECT id FROM channel_controls
+        WHERE id=${claim.payload.controlId} AND account_id=${claim.account_id}
+          AND task_id=${claim.task_id} AND binding_id=${claim.binding_id}
+          AND reference=${snapshot.pending.reference} AND binding_hash=${snapshot.pending.bindingHash}
+          AND kind='approval' AND choice IN ('approve','reject') AND consumed_at IS NOT NULL`,tx);
+      if(decision) {
+        await enqueueChannelCancellation(tx,claim.account_id,claim.task_id);
+        if(binding)await enqueueReply(tx,{binding,threadId:claim.thread_id,taskId:claim.task_id,
+          key:`channel-expired:${decision.id}`,reply:{text:"This approval expired in MyEve. Nothing was approved or sent. This request has been cancelled; send a new request if needed."}});
+        await channelAudit(tx,signer,claim.binding,"channel.approval_expired","CANCEL_REQUESTED",{taskId:claim.task_id,controlId:decision.id});
+        return "APPROVAL_EXPIRED";
+      }
+    }
     await tx.execute(sql`UPDATE v2_tasks SET status=${taskState}::v2_task_state,updated_at=now(),completed_at=${terminal?new Date().toISOString():null} WHERE id=${claim.task_id} AND status NOT IN ('CANCELLED','FAILED','SUCCEEDED')`);
     if(binding && terminal)await enqueueReply(tx,{binding,threadId:claim.thread_id,taskId:claim.task_id,key:`channel-result:${claim.task_id}`,reply:snapshotReply(snapshot)});
     if(binding && snapshot.pending) {
@@ -90,5 +108,5 @@ export async function runChannelExecutionCycle(config:ChannelConfiguration,trans
     if(snapshot.state==="RUNNING"||snapshot.pending)await tx.execute(sql`INSERT INTO task_commands(id,account_id,task_id,kind,idempotency_key,run_after) VALUES(${id("cmd")},${claim.account_id},${claim.task_id},'CHANNEL_STATUS',${`channel-poll:${claim.id}`},now()+interval '60 seconds') ON CONFLICT(account_id,idempotency_key) DO NOTHING`);
     await channelAudit(tx,signer,claim.binding,"channel.execution_observed",snapshot.state,{taskId:claim.task_id,runId:snapshot.runId});
   });
-  return {processed:true,state:snapshot.state};
+  return {processed:true,state:outcome??snapshot.state};
 }
