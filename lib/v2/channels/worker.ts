@@ -64,8 +64,9 @@ export async function runChannelExecutionCycle(config:ChannelConfiguration,trans
   })); if(snapshot.requestId!==work.requestId||snapshot.ownerPrincipalId!==work.ownerPrincipalId||snapshot.agentId!==work.agentId||claim.run_id&&snapshot.runId!==claim.run_id)throw new Error("Run identity changed."); }
   catch(error) {
     const notAdmitted=error instanceof ExecutorNotAdmitted && operation==="status" && !claim.run_id;
+    const retrySeconds=operation==="approval"||operation==="recovery"?2:10;
     await withTransaction(async tx=>{
-      await tx.execute(sql`UPDATE task_commands SET status='PENDING',kind=${notAdmitted?'CHANNEL_START':'CHANNEL_STATUS'},lease_until=NULL,run_after=now()+interval '10 seconds',updated_at=now() WHERE id=${claim.id} AND worker_id=${workerId} AND fence_token=${claim.fence_token} AND status='PROCESSING'`);
+      await tx.execute(sql`UPDATE task_commands SET status='PENDING',kind=${notAdmitted?'CHANNEL_START':'CHANNEL_STATUS'},lease_until=NULL,run_after=now()+${retrySeconds}*interval '1 second',updated_at=now() WHERE id=${claim.id} AND worker_id=${workerId} AND fence_token=${claim.fence_token} AND status='PROCESSING'`);
       await channelAudit(tx,signer,claim.binding,"channel.executor_unconfirmed",notAdmitted?"NOT_ADMITTED":"RECONCILE",{taskId:claim.task_id,attempt:claim.attempt});
     });
     return {processed:true,state:notAdmitted?"ADMISSION_RETRY":"RECONCILE"};
@@ -105,7 +106,12 @@ export async function runChannelExecutionCycle(config:ChannelConfiguration,trans
       const choices=pending.kind==="approval"?[{text:"Approve",choice:"approve"},{text:"Reject",choice:"reject"}]:[{text:"It occurred",choice:"occurred"},{text:"It did not occur",choice:"not_occurred"},{text:"Leave unresolved",choice:"unresolved"}];
       await enqueueReply(tx,{binding,threadId:claim.thread_id,taskId:claim.task_id,key:`channel-pending:${control}`,reply:{text:`${binding.agent_name}: ${pending.summary}\nTarget: ${pending.target}\n${pending.consequence}\nCost: ${pending.estimatedCost??"unavailable"}\nExpires: ${pending.expiresAt}\n${pending.kind==="approval"?"No action has occurred. Rejecting will not execute it.":"The outcome is unknown. A recovery decision will not resend it."}`,buttons:choices.map(x=>({text:x.text,data:`${control}:${x.choice}`}))}});
     }
-    if(snapshot.state==="RUNNING"||snapshot.pending)await tx.execute(sql`INSERT INTO task_commands(id,account_id,task_id,kind,idempotency_key,run_after) VALUES(${id("cmd")},${claim.account_id},${claim.task_id},'CHANNEL_STATUS',${`channel-poll:${claim.id}`},now()+interval '60 seconds') ON CONFLICT(account_id,idempotency_key) DO NOTHING`);
+    if(snapshot.state==="RUNNING"||snapshot.pending) {
+      // Running turns often finish in a few seconds. Observe them promptly; a
+      // human decision wakes its own command and needs no aggressive polling.
+      const pollSeconds=snapshot.state==="RUNNING"?2:60;
+      await tx.execute(sql`INSERT INTO task_commands(id,account_id,task_id,kind,idempotency_key,run_after) VALUES(${id("cmd")},${claim.account_id},${claim.task_id},'CHANNEL_STATUS',${`channel-poll:${claim.id}`},now()+${pollSeconds}*interval '1 second') ON CONFLICT(account_id,idempotency_key) DO NOTHING`);
+    }
     await channelAudit(tx,signer,claim.binding,"channel.execution_observed",snapshot.state,{taskId:claim.task_id,runId:snapshot.runId});
   });
   return {processed:true,state:outcome??snapshot.state};

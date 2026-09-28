@@ -18,9 +18,16 @@ async function main(){
     if(current.issues.length||!current.signer||current.endpoint!==config.endpoint||current.audience!==config.audience||current.environment!==config.environment||current.connectionId!==config.connectionId||current.accountId!==config.accountId){
       console.error(JSON.stringify({event:"channel_worker_configuration_changed",code:"STOPPED"}));break;
     }
-    try{await runChannelCancellationCycle(current,executor,current.signer);await runChannelExecutionCycle(current,executor,current.signer);await runChannelDeliveryCycle(current,sender,current.signer);}
+    let processed=false;
+    try{
+      const cancellation=await runChannelCancellationCycle(current,executor,current.signer);
+      const execution=await runChannelExecutionCycle(current,executor,current.signer);
+      const delivery=await runChannelDeliveryCycle(current,sender,current.signer);
+      processed=cancellation.processed||execution.processed||delivery.processed;
+    }
     catch{console.error(JSON.stringify({event:"channel_worker_cycle_failed",code:"UNAVAILABLE"}));}
-    await new Promise(resolve=>setTimeout(resolve,1000));
+    // Drain ready work without a per-command delay; idle/error cycles stay bounded.
+    if(!processed&&!stopped)await new Promise(resolve=>setTimeout(resolve,500));
   }
   await closeDatabase();
 }

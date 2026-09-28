@@ -41,6 +41,29 @@ describe("durable owner channel",()=>{
   expect(await runChannelDeliveryCycle(f.config,{send:async()=>{throw new Error();}},f.signer)).toEqual({processed:false});
   expect(executions).toBe(1);expect(sent).toHaveLength(1);expect((await rows<{status:string}>(sql`SELECT status FROM v2_tasks`))[0].status).toBe("SUCCEEDED");expect(await count("channel_delivery_attempts")).toBe(1);
  });
+ it("delivers a ready result within seconds without another START or manual scheduling",async()=>{
+  const f=await setup();await f.post("Quick research.");
+  const operations:string[]=[];
+  const transport={call:async(c:ExecutionCommand)=>{operations.push(c.operation);return c.operation==="start"?{...completed(c),state:"RUNNING" as const}:completed(c);}};
+  await runChannelExecutionCycle(f.config,transport,f.signer);
+  const readyAt=Date.now();
+  const [scheduled]=await rows<{delay:number}>(sql`SELECT EXTRACT(EPOCH FROM run_after-created_at)::float AS delay FROM task_commands WHERE kind='CHANNEL_STATUS' AND status='PENDING'`);
+  expect(scheduled.delay).toBeGreaterThan(0);expect(scheduled.delay).toBeLessThanOrEqual(2.1);
+  let replies=0;
+  while(Date.now()-readyAt<5000 && !replies){
+    await runChannelExecutionCycle(f.config,transport,f.signer);
+    await runChannelDeliveryCycle(f.config,{send:async()=>{replies++;return {kind:"sent",messageId:"fast-result"};}},f.signer);
+    if(!replies)await new Promise(resolve=>setTimeout(resolve,100));
+  }
+  expect(replies).toBe(1);expect(Date.now()-readyAt).toBeLessThan(5000);
+  expect(operations).toEqual(["start","status"]);
+ });
+ it("keeps a slow poll while waiting for the owner instead of repeatedly querying",async()=>{
+  const f=await setup();await f.post("Proposal.");
+  await runChannelExecutionCycle(f.config,{call:async c=>({...completed(c),state:"WAITING_APPROVAL",pending:{kind:"approval",reference:"waiting",bindingHash:"hash",summary:"Proposal",target:"fixture",consequence:"Requires decision",expiresAt:new Date(Date.now()+3600000).toISOString(),estimatedCost:null}})},f.signer);
+  const [scheduled]=await rows<{delay:number}>(sql`SELECT EXTRACT(EPOCH FROM run_after-created_at)::float AS delay FROM task_commands WHERE kind='CHANNEL_STATUS' AND status='PENDING'`);
+  expect(scheduled.delay).toBeGreaterThan(59);expect(scheduled.delay).toBeLessThanOrEqual(60.1);
+ });
  it("does not start work for disabled execution, Agent or grants",async()=>{
   const f=await setup();f.config.executionEnabled=false;expect((await f.post("request")).status).toBe(200);f.config.executionEnabled=true;
   await db().execute(sql`UPDATE agents SET status='DISABLED' WHERE id=${f.agentId}`);expect((await f.post("request")).status).toBe(200);
@@ -131,6 +154,8 @@ describe("durable owner channel",()=>{
   await f.webhook({update_id:777,callback_query:{id:"expiry-query",from:{id:123,is_bot:false},message:{message_id:999,chat:{id:123,type:"private"}},data}});
   // Unknown approval response: never retry the approval operation.
   await runChannelExecutionCycle(f.config,{call:async c=>{expect(c.operation).toBe("approval");throw new Error("executor denied");}},f.signer);
+  const [retry]=await rows<{delay:number}>(sql`SELECT EXTRACT(EPOCH FROM run_after-updated_at)::float AS delay FROM task_commands WHERE payload->>'controlId' IS NOT NULL`);
+  expect(retry.delay).toBeGreaterThan(0);expect(retry.delay).toBeLessThanOrEqual(2.1);
   await db().execute(sql`UPDATE task_commands SET run_after=now() WHERE payload->>'controlId' IS NOT NULL`);
   const transport={call:async(c:ExecutionCommand)=>{expect(c.operation).toBe("status");return {...completed(c),state:"WAITING_APPROVAL" as const,pending:{...pending,bindingHash:mismatch?"other-hash":pending.bindingHash,expiresAt:new Date(Date.now()-1000).toISOString()}};}};
   const result=await runChannelExecutionCycle(f.config,transport,f.signer);
