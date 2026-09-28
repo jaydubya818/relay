@@ -21,13 +21,15 @@ async function main(){
     let processed=false;
     try{
       const cancellation=await runChannelCancellationCycle(current,executor,current.signer);
+      // A queued-request explanation must not wait behind an executor round trip.
+      const waitingDelivery=await runChannelDeliveryCycle(current,sender,current.signer);
       const execution=await runChannelExecutionCycle(current,executor,current.signer);
       const delivery=await runChannelDeliveryCycle(current,sender,current.signer);
-      processed=cancellation.processed||execution.processed||delivery.processed;
+      processed=cancellation.processed||waitingDelivery.processed||execution.processed||delivery.processed;
     }
     catch{console.error(JSON.stringify({event:"channel_worker_cycle_failed",code:"UNAVAILABLE"}));}
     // Drain ready work without a per-command delay; idle/error cycles stay bounded.
-    if(!processed&&!stopped)await new Promise(resolve=>setTimeout(resolve,500));
+    if(!processed&&!stopped)await new Promise(resolve=>setTimeout(resolve,250));
   }
   await closeDatabase();
 }

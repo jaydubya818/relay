@@ -43,7 +43,13 @@ export async function telegramWebhook(request:Request,config:ChannelConfiguratio
       await consumeTelegramPairingUpdate({connectionId:config.connectionId,rawBody,secretToken:config.webhookSecret},{resolve:async(accountId,handle)=>{if(accountId!==config.accountId||handle!=="vlt_telegram_webhook")throw new Error("Wrong secret scope.");return config.webhookSecret;}},config.signer);
       return Response.json({accepted:true,paired:true});
     }
-    return Response.json(await acceptChannelMessage(update,config,config.signer));
+    const result=await acceptChannelMessage(update,config,config.signer);
+    // Telegram can execute this ephemeral hint from the webhook response itself:
+    // no extra HTTP round trip, model call, durable message or execution authority.
+    // Queued work gets its durable explanation instead of claiming to be typing.
+    if(result.taskId&&!result.duplicate&&"queued" in result&&!result.queued)
+      return Response.json({...result,method:"sendChatAction",chat_id:update.chatId,action:"typing"});
+    return Response.json(result);
   }catch(error){
     if(error instanceof RelayError){
       if(authenticated&&permanentlyRejected(error.status))return acknowledgedRejection(error.code);

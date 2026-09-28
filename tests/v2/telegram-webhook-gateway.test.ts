@@ -12,9 +12,10 @@ import { createWebhookGateway, isDirectRun, WEBHOOK_PATH } from "../../scripts/q
 
 let upstream: Server, gateway: Server, base = "";
 const received: Array<{ method?: string; url?: string; headers: IncomingHttpHeaders; body: string }> = [];
+let responseBody = '{"accepted":true}';
 const port = (s: Server) => (s.address() as AddressInfo).port;
 beforeAll(async () => {
-  upstream = createServer((req, res) => { let body = ""; req.on("data", c => body += c); req.on("end", () => { received.push({ method: req.method, url: req.url, headers: req.headers, body }); res.writeHead(200, { "content-type": "application/json", "set-cookie": "leak=1" }); res.end('{"accepted":true}'); }); });
+  upstream = createServer((req, res) => { let body = ""; req.on("data", c => body += c); req.on("end", () => { received.push({ method: req.method, url: req.url, headers: req.headers, body }); res.writeHead(200, { "content-type": "application/json", "set-cookie": "leak=1" }); res.end(responseBody); }); });
   await new Promise<void>(r => upstream.listen(0, "127.0.0.1", r));
   gateway = createWebhookGateway({ upstreamPort: port(upstream) });
   await new Promise<void>(r => gateway.listen(0, "127.0.0.1", r));
@@ -24,6 +25,15 @@ afterAll(async () => { await new Promise(r => gateway.close(r)); await new Promi
 const hook = { "content-type": "application/json", "x-telegram-bot-api-secret-token": "fixture-secret" };
 
 describe("Telegram qualification webhook gateway", () => {
+  it("preserves the inline typing response through the public gateway", async () => {
+    const typing = { accepted: true, method: "sendChatAction", chat_id: "123", action: "typing" };
+    responseBody = JSON.stringify(typing);
+    try {
+      const response = await fetch(`${base}${WEBHOOK_PATH}`, { method: "POST", headers: hook, body: '{"update_id":2}' });
+      expect(response.headers.get("content-type")).toBe("application/json");
+      expect(await response.json()).toEqual(typing);
+    } finally { responseBody = '{"accepted":true}'; }
+  });
   it("rejects non-loopback upstreams", () => { expect(() => createWebhookGateway({ upstreamPort: 1, upstreamHost: "10.0.0.1" })).toThrow(); });
   it.each([
     ["GET", "/", {}], ["GET", "/login", {}], ["GET", "/v2/connections", {}], ["POST", "/api/v2/operator/telegram", hook],

@@ -33,6 +33,42 @@ const permanentlyRejectedStatus=async(response:Response)=>{expect(response.statu
 function completed(c:ExecutionCommand):ExecutionSnapshot{return {requestId:c.work.requestId,ownerPrincipalId:c.work.ownerPrincipalId,agentId:c.work.agentId,runId:`run_${c.work.requestId}`,state:"COMPLETED",resultId:`result_${c.work.requestId}`,text:"Your active goal is isolated qualification."};}
 describe("durable owner channel",()=>{
  afterEach(cleanupDatabase);
+ it("returns immediate typing feedback only for a newly admitted runnable request",async()=>{
+  const f=await setup();const started=Date.now();
+  const response=await f.post("Hello",123,991);
+  const elapsed=Date.now()-started;
+  expect(await response.json()).toMatchObject({accepted:true,duplicate:false,queued:false,method:"sendChatAction",chat_id:"123",action:"typing"});
+  expect(elapsed).toBeLessThan(500);
+  console.info(JSON.stringify({measurement:"telegram_ingress_feedback_ms",elapsed}));
+  expect(await (await f.post("Hello",123,991)).json()).not.toHaveProperty("method");
+  expect(await (await f.post("/status")).json()).not.toHaveProperty("method");
+  expect(await (await f.post("Hello",456)).json()).not.toHaveProperty("method");
+  expect(await (await f.webhook({},"bad")).json()).not.toHaveProperty("method");
+  f.config.executionEnabled=false;
+  expect(await (await f.post("Hello")).json()).not.toHaveProperty("method");
+  f.config.executionEnabled=true;
+  await disconnectTelegram(f.accountId,f.principalId,f.bindingId,f.config);
+  expect(await (await f.post("Hello")).json()).not.toHaveProperty("method");
+  expect(await count("channel_work_links")).toBe(1);
+ });
+ it.each(["RUNNING","WAITING_APPROVAL"] as const)("explains a queue blocked by %s without accepting a text approval or starting another task",async state=>{
+  const f=await setup();await f.post("Earlier request");
+  await runChannelExecutionCycle(f.config,{call:async c=>({...completed(c),state,...(state==="WAITING_APPROVAL"?{pending:{kind:"approval" as const,reference:"exact-draft",bindingHash:"exact-hash",summary:"Proposal",target:"fixture",consequence:"Requires decision",expiresAt:new Date(Date.now()+60000).toISOString(),estimatedCost:null}}:{})})},f.signer);
+  const response=await (await f.post("approved",123,992)).json();
+  expect(response).toMatchObject({queued:true});expect(response).not.toHaveProperty("method");
+  await f.post("approved",123,992);
+  const notices=await rows<{content:{encrypted:string}}>(sql`SELECT content FROM communication_messages WHERE idempotency_key LIKE 'channel-queued:%'`);
+  expect(notices).toHaveLength(1);
+  const text=decode<Reply>(notices[0].content.encrypted).text;
+  expect(text).toContain(state==="WAITING_APPROVAL"?"Use Approve or Reject":"queued behind");
+  if(state==="WAITING_APPROVAL")expect(text).toContain("Typing 'approved' does not approve it");
+  expect(await rows(sql`SELECT id FROM task_commands WHERE kind='CHANNEL_APPROVAL'`)).toHaveLength(0);
+  expect(await runChannelExecutionCycle(f.config,{call:async()=>{throw new Error("Must stay queued");}},f.signer)).toEqual({processed:false});
+  const sent:Reply[]=[];
+  for(let i=0;i<3;i++)await runChannelDeliveryCycle(f.config,{send:async({reply})=>{sent.push(reply);return {kind:"sent",messageId:String(800+sent.length)};}},f.signer);
+  expect(sent.filter(reply=>reply.text===text)).toHaveLength(1);
+  expect(await count("channel_work_links")).toBe(2);
+ });
  it("deduplicates ingress and resumes delivery without executing work again",async()=>{
   const f=await setup();expect((await Promise.all([f.post("goals",123,999),f.post("goals",123,999)])).map(x=>x.status)).toEqual([200,200]);expect(await count("channel_work_links")).toBe(1);expect(await claimTaskCommand("temporal-worker")).toBeUndefined();
   let executions=0;await runChannelExecutionCycle(f.config,{call:async c=>{executions++;return completed(c);}},f.signer);
@@ -41,21 +77,23 @@ describe("durable owner channel",()=>{
   expect(await runChannelDeliveryCycle(f.config,{send:async()=>{throw new Error();}},f.signer)).toEqual({processed:false});
   expect(executions).toBe(1);expect(sent).toHaveLength(1);expect((await rows<{status:string}>(sql`SELECT status FROM v2_tasks`))[0].status).toBe("SUCCEEDED");expect(await count("channel_delivery_attempts")).toBe(1);
  });
- it("delivers a ready result within seconds without another START or manual scheduling",async()=>{
+ it("collects a ready result in under a second without another START or manual scheduling",async()=>{
   const f=await setup();await f.post("Quick research.");
   const operations:string[]=[];
   const transport={call:async(c:ExecutionCommand)=>{operations.push(c.operation);return c.operation==="start"?{...completed(c),state:"RUNNING" as const}:completed(c);}};
   await runChannelExecutionCycle(f.config,transport,f.signer);
   const readyAt=Date.now();
   const [scheduled]=await rows<{delay:number}>(sql`SELECT EXTRACT(EPOCH FROM run_after-created_at)::float AS delay FROM task_commands WHERE kind='CHANNEL_STATUS' AND status='PENDING'`);
-  expect(scheduled.delay).toBeGreaterThan(0);expect(scheduled.delay).toBeLessThanOrEqual(2.1);
+  expect(scheduled.delay).toBeGreaterThan(0);expect(scheduled.delay).toBeLessThanOrEqual(0.6);
   let replies=0;
-  while(Date.now()-readyAt<5000 && !replies){
+  while(Date.now()-readyAt<1500 && !replies){
     await runChannelExecutionCycle(f.config,transport,f.signer);
     await runChannelDeliveryCycle(f.config,{send:async()=>{replies++;return {kind:"sent",messageId:"fast-result"};}},f.signer);
     if(!replies)await new Promise(resolve=>setTimeout(resolve,100));
   }
-  expect(replies).toBe(1);expect(Date.now()-readyAt).toBeLessThan(5000);
+  const elapsed=Date.now()-readyAt;
+  expect(replies).toBe(1);expect(elapsed).toBeLessThan(1000);
+  console.info(JSON.stringify({measurement:"telegram_ready_result_ms",elapsed}));
   expect(operations).toEqual(["start","status"]);
  });
  it("keeps a slow poll while waiting for the owner instead of repeatedly querying",async()=>{

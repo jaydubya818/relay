@@ -109,7 +109,7 @@ export async function runChannelExecutionCycle(config:ChannelConfiguration,trans
     if(snapshot.state==="RUNNING"||snapshot.pending) {
       // Running turns often finish in a few seconds. Observe them promptly; a
       // human decision wakes its own command and needs no aggressive polling.
-      const pollSeconds=snapshot.state==="RUNNING"?2:60;
+      const pollSeconds=snapshot.state==="RUNNING"?0.5:60;
       await tx.execute(sql`INSERT INTO task_commands(id,account_id,task_id,kind,idempotency_key,run_after) VALUES(${id("cmd")},${claim.account_id},${claim.task_id},'CHANNEL_STATUS',${`channel-poll:${claim.id}`},now()+${pollSeconds}*interval '1 second') ON CONFLICT(account_id,idempotency_key) DO NOTHING`);
     }
     await channelAudit(tx,signer,claim.binding,"channel.execution_observed",snapshot.state,{taskId:claim.task_id,runId:snapshot.runId});
