@@ -746,3 +746,41 @@ Verdict: **TELEGRAM PRIVATE-BETA GOLDEN PATH INCOMPLETE. Do not merge.**
 | R5 | Budget denial (injected limit) | Set the agent limit to 0.0001, send research | Refused; `owner_model_calls` count and provider reservations unchanged (zero provider invocation); limit restored |
 | R6 | Cancel active run via revocation | Research request; while `running`, offline revoke | MyEve run `cancelled` exactly once; no reply delivered after revocation |
 | R7 | Post-revocation message | Owner sends a message after R6 | Acknowledged, no work link, no model call, no reply |
+
+
+### Window 5 — 2026-09-27, 20:00–20:24 PDT: R2–R7 with pin 2
+
+Source heads: Relay `3f88a12a544c13daa368e3152d224b81606befaa`, MyEve `587a0c3d4b456b0127dc6582ce5b75f38abde51c`. No source implementation changed during the window.
+
+- R2 INCOMPLETE: one request exhausted the model output budget and the changed-context guard refused continuation. Another approval was expired before the Relay control existed, so both layers expired: invalid test setup, not a MyEve-only expiry pass. That pending task was cancelled through the canonical cancellation path. The bounded retry produced plain text, not a canonical approval; no textual approval was accepted.
+- R3 NOT_RUN: a new usable canonical prompt was not obtained.
+- R4 PASSED_LIVE: worker SIGKILL during an active provider invocation, restart, one completed MyEve run, one outcome, one CHANNEL_START and one SENT delivery attempt. Owner receipt confirmation was not separately received.
+- R5 PASSED_LIVE_INJECTED_BUDGET: task limit 0.0001 refused work with zero provider-start audit entries, zero model-call rows, unchanged balances. Normal 0.10 limit restored; Relay delivered the failure reply.
+- R6 PASSED_LIVE: offline revocation while the run was running after provider-start; exactly one completed cancel command, MyEve cancelled, no outbound reply. The interrupted call remains unknown with its 37,666 µUSD reservation retained.
+- R7 PASSED_LIVE: post-revocation message reached gateway at 03:22:46.608Z; tasks stayed 6, inbound messages 6, outbound messages 5, model calls 18. No reply or new work.
+
+Window cost: 38,278 µUSD spent across 6 calls, plus 37,666 µUSD newly reserved for the cancelled call. Final ledger: reserved 99,887; spent 82,810; liability 182,697; 18 calls, 3 uncertain; 0 active runs. Phase ceiling remains 1,078,533, leaving 895,836 µUSD; original $5 ceiling leaves 4,817,303 µUSD. Pin 2 attempts remain 0; historical pin 1 attempt remains 1. No accounting reset.
+
+Cleanup verified: binding revoked, no open tasks, webhook URL null and pending updates 0, tunnel/services and both databases stopped, no qualification listeners. A redundant watchdog cleanup followed database shutdown and encountered expected database-unavailable errors; prior successful revocation/accounting evidence is preserved. No restart or time extension.
+
+Evidence: local campaign `live/window5-evidence.json` and append-only `live/evidence.jsonl`, including exact task/run identifiers. Historical window 4 R1 expiry evidence and window 2 successful email evidence remain separate. Both release gates remain false. Overall golden path INCOMPLETE: R2 MyEve-only expiry and R3 owner rejection still need qualification. Do not merge.
+
+
+### Offline fixes after window 5 — R2/R3 retry preparation
+
+R2 now uses `scripts/qualification/expire-myeve-approval.py` with an explicit Relay control id. It requires the exact `channel-pending:<control>` message to be SENT, the binding active, the task waiting for approval, and the unconsumed Relay button valid for at least two minutes. It resolves the matching MyEve run, approval id and binding hash; only an unexpired pending approval with an unused pin may be backdated. The original and new MyEve timestamps are logged. Relay is read-only and its control must remain unchanged after injection. An invalid setup never authorizes tapping Approve. The former `arm-expiry myeve` helper now refuses to run.
+
+Example during a separately authorized live window, after the prompt is delivered:
+
+```sh
+python3 scripts/qualification/expire-myeve-approval.py \
+  --controller "$CAMPAIGN/live/ctl.sh" \
+  --control "$EXACT_CONTROL_ID" --pin email-pin-2 \
+  --evidence "$CAMPAIGN/live/evidence.jsonl"
+```
+
+Only a `phase: verified` result permits instructing the owner to tap Approve. Verify that Relay creates a CHANNEL_APPROVAL command, MyEve refuses on expiry, the approval remains pending, and pin attempts remain zero. Then cancel that expired task through canonical cancellation so it cannot block the fresh R3 request. For R3, do not inject expiry: wait for a fresh valid prompt and ask the owner to tap Reject. Verify denial, cancellation and zero send attempts.
+
+MyEve's scoped Telegram model now describes `send_email` as an Action Gateway proposal requiring canonical approval, removing the shared tool's conflicting request for a chat yes. Only the first step of an exact, complete pinned qualification request selects that tool explicitly; the local qualification predicate, synthetic owner/Agent and effective capability must all permit it. The admitted user text and tool schema remain unchanged; different/extra draft text never gets replaced from the pin. Follow-up steps do not force another proposal. Tool choice is included in the durable model request hash. Budget, private-context isolation, exact draft validation, approval continuation and per-pin send limits remain canonical. Ordinary sessions retain the shared tool definition.
+
+Offline validation: six helper unit regressions, eight disposable PostgreSQL cases, and seven existing watchdog/provider-audit checks passed. MyEve model/pin/config regressions, full non-database suite, root tests, typecheck, governance and build passed; durable email/budget integration tests passed on an isolated disposable database. These are preparation checks, not new live qualification evidence. The 800-token bound is unchanged; provider failure still fails closed, so live R2/R3 remain required.
