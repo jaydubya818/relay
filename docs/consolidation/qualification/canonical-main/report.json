@@ -1,0 +1,91 @@
+{
+  "repository": "relay",
+  "source": "0feb834594c9b25596653894333306d4770345a3",
+  "branch": "main",
+  "origin": "https://github.com/jaydubya818/relay.git",
+  "freshRemoteClone": true,
+  "cases": [
+    {
+      "name": "install",
+      "command": [
+        "pnpm",
+        "install",
+        "--frozen-lockfile"
+      ],
+      "exitCode": 0,
+      "seconds": 5.05
+    },
+    {
+      "name": "test",
+      "command": [
+        "pnpm",
+        "test:ci"
+      ],
+      "exitCode": 0,
+      "seconds": 137.45
+    },
+    {
+      "name": "types",
+      "command": [
+        "pnpm",
+        "typecheck"
+      ],
+      "exitCode": 0,
+      "seconds": 4.07
+    },
+    {
+      "name": "lint",
+      "command": [
+        "pnpm",
+        "lint"
+      ],
+      "exitCode": 0,
+      "seconds": 3.42
+    },
+    {
+      "name": "performance",
+      "command": [
+        "pnpm",
+        "test:performance"
+      ],
+      "exitCode": 0,
+      "seconds": 1.96
+    },
+    {
+      "name": "frontier",
+      "command": [
+        "pnpm",
+        "v2:frontier:check"
+      ],
+      "exitCode": 0,
+      "seconds": 0.71
+    },
+    {
+      "name": "migration-format",
+      "command": [
+        "pnpm",
+        "db:check"
+      ],
+      "exitCode": 0,
+      "seconds": 0.8
+    },
+    {
+      "name": "build",
+      "command": [
+        "pnpm",
+        "build"
+      ],
+      "exitCode": 0,
+      "seconds": 17.08
+    },
+    {
+      "name": "migrations",
+      "command": [
+        "node",
+        "docs/consolidation/qualification/migration-probe.mjs"
+      ],
+      "exitCode": 0,
+      "seconds": 0.9
+    }
+  ]
+}

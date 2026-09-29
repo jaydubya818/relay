@@ -1,0 +1,167 @@
+
+> relay@0.1.0 test:performance /private/tmp/canonical-main-relay-20260929
+> vitest run tests/performance
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90m/private/tmp/canonical-main-relay-20260929[39m
+
+[90mstdout[2m | tests/performance/dashboard.performance.test.ts[2m > [22m[2mlocal dashboard qualification[2m > [22m[2mkeeps common local read models below the V1 p95 target
+[22m[39m{"benchmark":"overview-and-activity-read-models","medianMs":1.318749999999909,"p95Ms":2.641375000000039,"samples":50}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_10ec3bc035d1411ba1ef372299aecd41","agentId":"agt_3ab590500f754ae99bc9f4a0945eb982","capability":"agent.inbox.list","status":"SUCCESS","durationMs":101}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_6b9edbeaf7c2498fb0fca78238b39a60","agentId":"agt_f25c682668684851986a2d71ad842418","capability":"memory.read","status":"SUCCESS","durationMs":98}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_10ec3bc035d1411ba1ef372299aecd41","agentId":"agt_3ab590500f754ae99bc9f4a0945eb982","capability":"agent.inbox.list","status":"SUCCESS","durationMs":89}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_6b9edbeaf7c2498fb0fca78238b39a60","agentId":"agt_f25c682668684851986a2d71ad842418","capability":"agent.inbox.list","status":"SUCCESS","durationMs":92}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_10ec3bc035d1411ba1ef372299aecd41","agentId":"agt_3ab590500f754ae99bc9f4a0945eb982","capability":"memory.read","status":"SUCCESS","durationMs":85}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_6b9edbeaf7c2498fb0fca78238b39a60","agentId":"agt_f25c682668684851986a2d71ad842418","capability":"memory.read","status":"SUCCESS","durationMs":79}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_0117fe1ef3344c83ad827cd58c19e6fe","agentId":"agt_8c9b771d9dbb43b49b3d04252568a582","capability":"memory.read","status":"SUCCESS","durationMs":78}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_10ec3bc035d1411ba1ef372299aecd41","agentId":"agt_3ab590500f754ae99bc9f4a0945eb982","capability":"memory.read","status":"SUCCESS","durationMs":76}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_6b9edbeaf7c2498fb0fca78238b39a60","agentId":"agt_f25c682668684851986a2d71ad842418","capability":"agent.inbox.list","status":"SUCCESS","durationMs":75}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_0117fe1ef3344c83ad827cd58c19e6fe","agentId":"agt_8c9b771d9dbb43b49b3d04252568a582","capability":"agent.inbox.list","status":"SUCCESS","durationMs":74}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_0117fe1ef3344c83ad827cd58c19e6fe","agentId":"agt_8c9b771d9dbb43b49b3d04252568a582","capability":"agent.inbox.list","status":"SUCCESS","durationMs":70}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_e7b1269d382944f9a12eded4a26cd8a2","agentId":"agt_0da3ac93f77b4f8fb0d63e720246f4af","capability":"memory.read","status":"SUCCESS","durationMs":67}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_e7b1269d382944f9a12eded4a26cd8a2","agentId":"agt_0da3ac93f77b4f8fb0d63e720246f4af","capability":"agent.inbox.list","status":"SUCCESS","durationMs":63}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_0117fe1ef3344c83ad827cd58c19e6fe","agentId":"agt_8c9b771d9dbb43b49b3d04252568a582","capability":"memory.read","status":"SUCCESS","durationMs":61}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_2d8f88771e3449d08fca402fb5e0287c","agentId":"agt_3aebdebdcab14abdb4bfb3491d9a294a","capability":"memory.read","status":"SUCCESS","durationMs":61}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_e7b1269d382944f9a12eded4a26cd8a2","agentId":"agt_0da3ac93f77b4f8fb0d63e720246f4af","capability":"agent.inbox.list","status":"SUCCESS","durationMs":58}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_e7b1269d382944f9a12eded4a26cd8a2","agentId":"agt_0da3ac93f77b4f8fb0d63e720246f4af","capability":"memory.read","status":"SUCCESS","durationMs":60}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_4a953c1572d940bc8d7d0b455f663bf0","agentId":"agt_7792ce0d56aa4cadb655169cedad4b45","capability":"agent.inbox.list","status":"SUCCESS","durationMs":50}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_2d8f88771e3449d08fca402fb5e0287c","agentId":"agt_3aebdebdcab14abdb4bfb3491d9a294a","capability":"memory.read","status":"SUCCESS","durationMs":52}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_2d8f88771e3449d08fca402fb5e0287c","agentId":"agt_3aebdebdcab14abdb4bfb3491d9a294a","capability":"agent.inbox.list","status":"SUCCESS","durationMs":46}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_4a953c1572d940bc8d7d0b455f663bf0","agentId":"agt_7792ce0d56aa4cadb655169cedad4b45","capability":"memory.read","status":"SUCCESS","durationMs":48}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_96a2e8e9d06a4e19a8d658398dc3e95d","agentId":"agt_d4e93cdbbb9946c9860eafd34cf066e1","capability":"agent.inbox.list","status":"SUCCESS","durationMs":44}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_2d8f88771e3449d08fca402fb5e0287c","agentId":"agt_3aebdebdcab14abdb4bfb3491d9a294a","capability":"agent.inbox.list","status":"SUCCESS","durationMs":45}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_4a953c1572d940bc8d7d0b455f663bf0","agentId":"agt_7792ce0d56aa4cadb655169cedad4b45","capability":"memory.read","status":"SUCCESS","durationMs":39}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_4a953c1572d940bc8d7d0b455f663bf0","agentId":"agt_7792ce0d56aa4cadb655169cedad4b45","capability":"agent.inbox.list","status":"SUCCESS","durationMs":37}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_107a3f36ee444481a279e8dd0354ca0a","agentId":"agt_ed12cce01034437f9ceb9318f40eb84f","capability":"memory.read","status":"SUCCESS","durationMs":35}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_10ec3bc035d1411ba1ef372299aecd41","agentId":"agt_3ab590500f754ae99bc9f4a0945eb982","capability":"memory.write","status":"SUCCESS","durationMs":108}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_96a2e8e9d06a4e19a8d658398dc3e95d","agentId":"agt_d4e93cdbbb9946c9860eafd34cf066e1","capability":"memory.read","status":"SUCCESS","durationMs":33}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_0117fe1ef3344c83ad827cd58c19e6fe","agentId":"agt_8c9b771d9dbb43b49b3d04252568a582","capability":"memory.write","status":"SUCCESS","durationMs":91}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_10ec3bc035d1411ba1ef372299aecd41","agentId":"agt_3ab590500f754ae99bc9f4a0945eb982","capability":"memory.write","status":"SUCCESS","durationMs":80}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_e7b1269d382944f9a12eded4a26cd8a2","agentId":"agt_0da3ac93f77b4f8fb0d63e720246f4af","capability":"memory.write","status":"SUCCESS","durationMs":77}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_6b9edbeaf7c2498fb0fca78238b39a60","agentId":"agt_f25c682668684851986a2d71ad842418","capability":"memory.write","status":"SUCCESS","durationMs":99}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_0117fe1ef3344c83ad827cd58c19e6fe","agentId":"agt_8c9b771d9dbb43b49b3d04252568a582","capability":"memory.write","status":"SUCCESS","durationMs":74}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_6b9edbeaf7c2498fb0fca78238b39a60","agentId":"agt_f25c682668684851986a2d71ad842418","capability":"memory.write","status":"SUCCESS","durationMs":73}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_2d8f88771e3449d08fca402fb5e0287c","agentId":"agt_3aebdebdcab14abdb4bfb3491d9a294a","capability":"memory.write","status":"SUCCESS","durationMs":63}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_107a3f36ee444481a279e8dd0354ca0a","agentId":"agt_ed12cce01034437f9ceb9318f40eb84f","capability":"agent.inbox.list","status":"SUCCESS","durationMs":32}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_96a2e8e9d06a4e19a8d658398dc3e95d","agentId":"agt_d4e93cdbbb9946c9860eafd34cf066e1","capability":"memory.read","status":"SUCCESS","durationMs":34}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_107a3f36ee444481a279e8dd0354ca0a","agentId":"agt_ed12cce01034437f9ceb9318f40eb84f","capability":"memory.read","status":"SUCCESS","durationMs":29}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_96a2e8e9d06a4e19a8d658398dc3e95d","agentId":"agt_d4e93cdbbb9946c9860eafd34cf066e1","capability":"agent.inbox.list","status":"SUCCESS","durationMs":30}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_107a3f36ee444481a279e8dd0354ca0a","agentId":"agt_ed12cce01034437f9ceb9318f40eb84f","capability":"agent.inbox.list","status":"SUCCESS","durationMs":26}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_4a953c1572d940bc8d7d0b455f663bf0","agentId":"agt_7792ce0d56aa4cadb655169cedad4b45","capability":"memory.write","status":"SUCCESS","durationMs":62}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_e7b1269d382944f9a12eded4a26cd8a2","agentId":"agt_0da3ac93f77b4f8fb0d63e720246f4af","capability":"memory.write","status":"SUCCESS","durationMs":61}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_2d8f88771e3449d08fca402fb5e0287c","agentId":"agt_3aebdebdcab14abdb4bfb3491d9a294a","capability":"memory.write","status":"SUCCESS","durationMs":56}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_96a2e8e9d06a4e19a8d658398dc3e95d","agentId":"agt_d4e93cdbbb9946c9860eafd34cf066e1","capability":"memory.write","status":"SUCCESS","durationMs":55}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_4a953c1572d940bc8d7d0b455f663bf0","agentId":"agt_7792ce0d56aa4cadb655169cedad4b45","capability":"memory.write","status":"SUCCESS","durationMs":48}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_107a3f36ee444481a279e8dd0354ca0a","agentId":"agt_ed12cce01034437f9ceb9318f40eb84f","capability":"memory.write","status":"SUCCESS","durationMs":49}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_96a2e8e9d06a4e19a8d658398dc3e95d","agentId":"agt_d4e93cdbbb9946c9860eafd34cf066e1","capability":"memory.write","status":"SUCCESS","durationMs":43}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_107a3f36ee444481a279e8dd0354ca0a","agentId":"agt_ed12cce01034437f9ceb9318f40eb84f","capability":"memory.write","status":"SUCCESS","durationMs":32}
+
+[90mstdout[2m | tests/performance/v1-load.performance.test.ts[2m > [22m[2mV1 modest concurrency[2m > [22m[2msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks
+[22m[39m{"benchmark":"v1-concurrency","operations":64,"p50Ms":138.55987500000015,"p95Ms":146.81429200000002,"p99Ms":150.66949999999997,"errorRate":0,"pool":{"total":10,"idle":10,"waiting":0,"max":10}}
+
+ [32m✓[39m tests/performance/dashboard.performance.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 938[2mms[22m[39m
+   [33m[2m✓[22m[39m local dashboard qualification[2m > [22mkeeps common local read models below the V1 p95 target [33m 937[2mms[22m[39m
+ [32m✓[39m tests/performance/v1-load.performance.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 751[2mms[22m[39m
+   [33m[2m✓[22m[39m V1 modest concurrency[2m > [22msustains concurrent Agent, MCP, Activity, event, and inbox work without leaks [33m 750[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m   Start at [22m 13:11:47
+[2m   Duration [22m 1.41s[2m (transform 116ms, setup 0ms, collect 736ms, tests 1.69s, environment 0ms, prepare 57ms)[22m
+

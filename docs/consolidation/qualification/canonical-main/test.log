@@ -1,0 +1,563 @@
+
+> relay@0.1.0 test:ci /private/tmp/canonical-main-relay-20260929
+> vitest run --fileParallelism=false --exclude 'tests/e2e/**' --exclude '**/*.performance.test.ts'
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90m/private/tmp/canonical-main-relay-20260929[39m
+
+ [32m✓[39m tests/v2/runners.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 7869[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-14 customer runners and private gateway[2m > [22muses one-time proof-of-possession enrollment and does not trust forged attestation [33m 539[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-14 customer runners and private gateway[2m > [22mpolls outbound with a signed certificate and isolates runner assignments by tenant [33m 545[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-14 customer runners and private gateway[2m > [22mallows only named assignment-scoped private resources and socket-broker handles [33m 519[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-14 customer runners and private gateway[2m > [22maccepts ordered signed runner-reported evidence and rejects stale fences [33m 549[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-14 customer runners and private gateway[2m > [22mrevokes runner, assignments, workloads, leases, and future polling [33m 531[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-14 customer runners and private gateway[2m > [22mmakes Agent input and human takeover mutually exclusive under a race [33m 516[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-14 customer runners and private gateway[2m > [22mproxies short-lived viewer grants and suppresses protected credential frames [33m 519[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-14 customer runners and private gateway[2m > [22mresumes only after policy/integrity checks and rotates fences and viewers [33m 517[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-17 Google Drive and Linear connectors[2m > [22muses one-time tenant-bound OAuth state and stores only broker handles with visible scopes [33m 511[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-17 Google Drive and Linear connectors[2m > [22menforces selected roots and lease hashes, reconciles writes, and detects permission drift [33m 514[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-17 Google Drive and Linear connectors[2m > [22mrevokes provider credentials and fails closed before future connector effects [33m 511[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-17 Google Drive and Linear connectors[2m > [22mrestricts Linear writes to selected teams and the qualified issue fields [33m 515[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-16 Slack and Telegram communications[2m > [22mverifies Slack signatures, rejects replay-window abuse, wakes one task, and suppresses bot echoes [33m 515[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-16 Slack and Telegram communications[2m > [22mverifies Telegram webhook tokens, deduplicates updates, and classifies attachment metadata [33m 533[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-16 Slack and Telegram communications[2m > [22mrequires approval for a new recipient, sends once, isolates tenants, and reconciles ambiguity [33m 534[2mms[22m[39m
+ [32m✓[39m tests/federation/federation.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 13040[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mretires an outgoing peer and cancels its event in the receiving account [33m 686[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mserializes incoming Knowledge requests and publication with retirement [33m 538[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mpersists a metadata-only signed denial receipt after authorization rolls back [33m 529[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mqualifies the two-owner golden path from publication through work and artifact sharing [33m 810[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mrejects caller spoofing, forged registration ownership, sibling agents, and unrelated result readers [33m 564[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mrechecks revoke before delivery [33m 567[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mrechecks version before delivery [33m 544[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mrechecks delete before delivery [33m 560[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mrechecks block before delivery [33m 565[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mrechecks rotate before delivery [33m 537[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mrejects unpublished records, hidden reasoning, and mismatched versions [33m 602[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mdeduplicates concurrent admission, bounds redelivery, and separates offline delivery from acceptance [33m 616[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mreturns written answers only for the exact authorized request and receiving peer [33m 593[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mkeeps message authority separate and allows local refusal [33m 569[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mbounds work, rejects privilege escalation, and returns evidence [33m 664[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22muses shared approvals, denies default policy even with an approval floor, and resumes exact approved delivery [33m 598[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mshares expiring audience-bound artifacts and rejects forged work context [33m 653[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22menforces public query policy and excludes private metadata from discovery [33m 565[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mrejects expired requests and enforces durable rate limits [33m 536[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mpreserves identity through credential rotation and applies owner grants without transferring Agent-specific grants [33m 579[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mkeeps MCP semantics identical and completes authenticated messaging [33m 578[2mms[22m[39m
+   [33m[2m✓[22m[39m federation trust boundaries[2m > [22mindexes only explicitly public profiles and view metadata [33m 554[2mms[22m[39m
+ [32m✓[39m tests/v2/money.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 2786[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-18 financial domain and controlled purchase intents[2m > [22mreserves exact authority, consumes a once approval, fences Agent input, and records a redacted receipt [33m 616[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-18 financial domain and controlled purchase intents[2m > [22minvalidates approval and checkout when merchant, currency, or total changes [33m 557[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-18 financial domain and controlled purchase intents[2m > [22mnever retries an ambiguous effect and marks the purchase budget unknown [33m 569[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-18 financial domain and controlled purchase intents[2m > [22mserializes concurrent purchase intents against the shared hard budget [33m 510[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-18 financial domain and controlled purchase intents[2m > [22misolates purchase, receipt, and aggregator boundaries by account [33m 534[2mms[22m[39m
+ [32m✓[39m tests/federation/authority-inspection.test.ts [2m([22m[2m20 tests[22m[2m)[22m[33m 11128[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22msupports explicit no-expiry grants while rechecking revocation at execution [33m 657[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mdoes not grant no-expiry access to private Knowledge or future grants [33m 539[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22muses the additive command and creates no durable execution authority or signature [33m 564[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mreports exact expired grant without admitting a request [33m 545[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mreports exact revoked grant without admitting a request [33m 543[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mreports exact future grant without admitting a request [33m 509[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mreports a expired replacement rather than a historical revocation [33m 532[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mreports a future replacement rather than a historical revocation [33m 549[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mreports a active replacement rather than a historical revocation [33m 572[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mkeeps missing and private Knowledge indistinguishable even when a grant names it [33m 526[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mdistinguishes a safe messaging resource or capability mismatch without listing grants [33m 533[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mderives caller identity from authentication and rejects identity overrides [33m 548[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mdoes not transfer authority to a namesake peer or another account [33m 526[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mdoes not disclose blocked peer or private resource existence [33m 529[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mreports unavailable only for a caller's exact previously granted peer [33m 560[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mrechecks execution after inspection then revoke [33m 544[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mrechecks execution after inspection then expire [33m 540[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22mevaluates current policy and preserves its approval floor without creating approval [33m 547[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated authority inspection[2m > [22menforces per-agent rate limits [33m 678[2mms[22m[39m
+   [33m[2m✓[22m[39m live local inspection route[2m > [22mreturns active, expired, revoked and missing over HTTP without execution [33m 587[2mms[22m[39m
+ [32m✓[39m tests/v2/delegations.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 3371[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-19 same-account Agent delegation[2m > [22mcreates an acyclic child task with only declared context, bounded authority, and a child budget [33m 594[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-19 same-account Agent delegation[2m > [22mclaims authority once, cannot amplify parent calls, and parent lease revoke cascades [33m 563[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-19 same-account Agent delegation[2m > [22mrejects cycles and already-promised authority or budget amplification [33m 575[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-19 same-account Agent delegation[2m > [22muses only delegation-derived budgets for child reservations [33m 545[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-19 same-account Agent delegation[2m > [22mreturns a signed complete provenance chain and isolates all delegation queries [33m 556[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-19 same-account Agent delegation[2m > [22mcascade revocation cancels child work, leases, authorities, and budgets [33m 538[2mms[22m[39m
+ [32m✓[39m tests/v2/leases.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 5634[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability leases and workload identity[2m > [22muses one-time proof-of-possession workload bootstrap with tenant binding [33m 516[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability leases and workload identity[2m > [22mrequires and atomically binds an action-scoped reservation for metered capabilities [33m 517[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability leases and workload identity[2m > [22mrejects wrong tenant, audience, workload, resource, replay, and exhaustion at the reference PEP [33m 524[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability leases and workload identity[2m > [22matomically consumes approval while issuing a consequential lease [33m 516[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability leases and workload identity[2m > [22mrejects child leases after parent revocation and reserves parent call authority [33m 511[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability leases and workload identity[2m > [22mpropagates emergency revocation within the online five-second SLO [33m 528[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability leases and workload identity[2m > [22mdenies offline financial leases and detects cryptographic expiry [33m 2043[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability leases and workload identity[2m > [22mpermits only short low-risk read leases through an offline local counter [33m 477[2mms[22m[39m
+ [32m✓[39m tests/v2/execution-providers.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 3225[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 execution provider SDK and scheduler[2m > [22mfilters hard security constraints before scoring fast or cheap providers [33m 557[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 execution provider SDK and scheduler[2m > [22mfails over only after an explicit pre-effect failure [33m 524[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 execution provider SDK and scheduler[2m > [22mrequires reconciliation and refuses failover after an ambiguous dispatch [33m 504[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 execution provider SDK and scheduler[2m > [22mopens the shared circuit after repeated provider failures [33m 535[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 execution provider SDK and scheduler[2m > [22mrejects a stored provider manifest whose signed content was tampered [33m 506[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 execution provider SDK and scheduler[2m > [22misolates placement and attempt access by account and prevents concurrent dispatch [33m 598[2mms[22m[39m
+ [32m✓[39m tests/v2/channel-pipeline.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 8928[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mdeduplicates ingress and resumes delivery without executing work again [33m 593[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mdoes not start work for disabled execution, Agent or grants [33m 541[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mdenies forged, unpaired and revoked ingress [33m 518[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mreconciles a crashed start instead of repeating it [33m 536[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mretries admission only with proof and no known Run (known=false) [33m 537[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mretries admission only with proof and no known Run (known=true) [33m 520[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mpersists cancellation through revocation and never converts it back to START [33m 523[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mkeeps cancellation visibly pending when the executor cannot confirm it [33m 506[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mdisabling execution drains cancellation without dispatching work [33m 530[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mretries delivery alone after a known pre-effect rate limit [33m 515[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mnever automatically retries unknown delivery [33m 519[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mnever automatically retries permanent delivery [33m 520[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mnever automatically retries authentication delivery [33m 529[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mretains opaque approval controls and consumes one owner decision [33m 529[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22msuppresses queued delivery after revocation [33m 512[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mbounds work and keeps private text out of audit and receipts [33m 532[2mms[22m[39m
+   [33m[2m✓[22m[39m durable owner channel[2m > [22mdenies signature replay and authority mutations [33m 466[2mms[22m[39m
+ [32m✓[39m tests/beta/lifecycle.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 3465[2mms[22m[39m
+   [33m[2m✓[22m[39m disposable Relay beta lifecycle on PostgreSQL[2m > [22mrevokes a pending invitation once and denies lookup, acceptance, and replay [33m 487[2mms[22m[39m
+   [33m[2m✓[22m[39m disposable Relay beta lifecycle on PostgreSQL[2m > [22mserializes acceptance against revocation with one winner [33m 482[2mms[22m[39m
+   [33m[2m✓[22m[39m disposable Relay beta lifecycle on PostgreSQL[2m > [22mrejects invitation administration and retirement by another owner or an agent [33m 485[2mms[22m[39m
+   [33m[2m✓[22m[39m disposable Relay beta lifecycle on PostgreSQL[2m > [22mretires an invited account, fences authority, scrubs private memory, and keeps signed history [33m 521[2mms[22m[39m
+   [33m[2m✓[22m[39m disposable Relay beta lifecycle on PostgreSQL[2m > [22mserializes retirement against grant creation and cancels queued outbox work [33m 495[2mms[22m[39m
+   [33m[2m✓[22m[39m disposable Relay beta lifecycle on PostgreSQL[2m > [22mkeeps sessions, credentials, invitations, and memory at zero across retirement races [33m 519[2mms[22m[39m
+   [33m[2m✓[22m[39m disposable Relay beta lifecycle on PostgreSQL[2m > [22mblocks terminal retirement while a runtime client still has authority [33m 476[2mms[22m[39m
+ [32m✓[39m tests/v2/developer-platform.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2054[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 REST, MCP, and runtime interoperability[2m > [22mserializes concurrent idempotent submission and durably wakes exactly once [33m 555[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 REST, MCP, and runtime interoperability[2m > [22mfails closed for wrong tenant, OAuth resource/audience, and changed idempotent action [33m 523[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 REST, MCP, and runtime interoperability[2m > [22msupports stateless discovery, legacy negotiation, authenticated listing, and structured MCP results [33m 490[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 REST, MCP, and runtime interoperability[2m > [22mexercises the TypeScript reference client as a Codex integration profile [33m 484[2mms[22m[39m
+ [32m✓[39m tests/federation/signing-envelope-v2.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 105[2mms[22m[39m
+ [32m✓[39m tests/v2/third-party-providers.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m tests/v2/approvals.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 2966[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 approvals[2m > [22mbinds a signed once approval to the exact action and consumes it atomically [33m 520[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 approvals[2m > [22mrejects modified actions, stale policy, wrong approvers, expiry, and cross-account access [33m 494[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 approvals[2m > [22mallows a bounded repeated task scope only for an identical approved template [33m 503[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 approvals[2m > [22mcannot weaken the financial once-approval floor [33m 474[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 approvals[2m > [22mcannot weaken the destructive once-approval floor [33m 483[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 approvals[2m > [22mpersists redacted approval evidence and tenant-scoped notifications [33m 492[2mms[22m[39m
+ [32m✓[39m tests/v2/policy.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 2018[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability registry and policy engine[2m > [22mpersists and reproduces the exact historic decision [33m 518[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability registry and policy engine[2m > [22maccepts an authoritative fact observed while the resolver is running [33m 479[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability registry and policy engine[2m > [22mfails closed for missing, stale, and conflicting authoritative facts [33m 490[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 capability registry and policy engine[2m > [22mrequires action-bound step-up to activate account policy and rejects tenant substitution [33m 515[2mms[22m[39m
+ [32m✓[39m tests/v2/orchestration.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 3530[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 durable event and task orchestration[2m > [22mverifies before persistence and converges duplicate and reordered deliveries [33m 527[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 durable event and task orchestration[2m > [22mallows exactly one concurrent claim and rejects stale coordinator fencing after worker recovery [33m 531[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 durable event and task orchestration[2m > [22mdead-letters poison input and permits a single explicit account-scoped replay [33m 499[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 durable event and task orchestration[2m > [22mnever automatically retries a possibly committed effect after worker death [33m 492[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 durable event and task orchestration[2m > [22mkeeps acknowledged events and outbox messages durable across publisher failure [33m 514[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 durable event and task orchestration[2m > [22mdurably cancels queued work even when Temporal delivery is unavailable [33m 493[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 durable event and task orchestration[2m > [22misolates routes, jobs, history, outbox, and dead letters by tenant [33m 474[2mms[22m[39m
+ [32m✓[39m tests/v2/relay-managed-provider.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/v2/budgets.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 3110[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 budget engine[2m > [22matomically prevents concurrent reservations from exceeding child and parent hard ceilings [33m 718[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 budget engine[2m > [22mrejects a child above parent remainder and enforces scoped authority [33m 472[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 budget engine[2m > [22mmakes reservation and usage retries idempotent and reconciles exact amounts [33m 478[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 budget engine[2m > [22mreleases, expires, and marks unbounded reconciliation drift unknown [33m 488[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 budget engine[2m > [22mfails closed for stale or unknown purchase balances [33m 468[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 budget engine[2m > [22misolates budgets, reservations, status changes, and warning events by account [33m 485[2mms[22m[39m
+ [2m[90m↓[39m[22m tests/v2/channel-myeve.integration.test.mjs [2m([22m[2m1 test[22m[2m | [22m[33m1 skipped[39m[2m)[22m
+ [32m✓[39m tests/federation/signing-provider.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 56[2mms[22m[39m
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"memory.write","status":"SUCCESS","durationMs":4}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"memory.write","status":"SUCCESS","durationMs":3}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_da0e95d40c5b47b4837d62cd154ac3cd","agentId":"agt_a4d61b57e8594b7590f5aaafa33c5d05","capability":"memory.read","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_da0e95d40c5b47b4837d62cd154ac3cd","agentId":"agt_a4d61b57e8594b7590f5aaafa33c5d05","capability":"memory.read","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"github.repo.read","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_da0e95d40c5b47b4837d62cd154ac3cd","agentId":"agt_a4d61b57e8594b7590f5aaafa33c5d05","capability":"github.repo.read","status":"DENIED","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_da0e95d40c5b47b4837d62cd154ac3cd","agentId":"agt_a4d61b57e8594b7590f5aaafa33c5d05","capability":"github.repo.read","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"email.search","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_da0e95d40c5b47b4837d62cd154ac3cd","agentId":"agt_a4d61b57e8594b7590f5aaafa33c5d05","capability":"email.search","status":"DENIED","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_da0e95d40c5b47b4837d62cd154ac3cd","agentId":"agt_a4d61b57e8594b7590f5aaafa33c5d05","capability":"email.search","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"calendar.event.list","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_da0e95d40c5b47b4837d62cd154ac3cd","agentId":"agt_a4d61b57e8594b7590f5aaafa33c5d05","capability":"calendar.event.list","status":"DENIED","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"sandbox.create","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"sandbox.exec","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"sandbox.file.write","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"sandbox.file.read","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_da0e95d40c5b47b4837d62cd154ac3cd","agentId":"agt_a4d61b57e8594b7590f5aaafa33c5d05","capability":"sandbox.exec","status":"DENIED","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"sandbox.destroy","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"browser.create","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"browser.navigate","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"browser.extract","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"browser.screenshot","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"browser.navigate","status":"DENIED","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_85c3e3e8cf2243bfa3bca62ecaef2cb9","agentId":"agt_60b6c001a9cb422093bfc88dc6ac93b3","capability":"browser.close","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_da0e95d40c5b47b4837d62cd154ac3cd","agentId":"agt_a4d61b57e8594b7590f5aaafa33c5d05","capability":"agent.inbox.list","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_da0e95d40c5b47b4837d62cd154ac3cd","agentId":"agt_a4d61b57e8594b7590f5aaafa33c5d05","capability":"agent.inbox.ack","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/v1-golden-path.test.ts[2m > [22m[2mRelay V1 final golden path[2m > [22m[2mqualifies memory, connectors, execution, browser, events, revocation, and Activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_da0e95d40c5b47b4837d62cd154ac3cd","agentId":"agt_a4d61b57e8594b7590f5aaafa33c5d05","capability":"email.search","status":"FAILED","durationMs":1}
+
+ [32m✓[39m tests/integration/v1-golden-path.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 646[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V1 final golden path[2m > [22mqualifies memory, connectors, execution, browser, events, revocation, and Activity [33m 646[2mms[22m[39m
+ [32m✓[39m tests/federation/production-hosted-crypto.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+[90mstdout[2m | tests/google/google-capabilities.test.ts[2m > [22m[2mGoogle read capabilities[2m > [22m[2mprojects and executes only explicitly granted email and calendar reads
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1378c5d828be482e9cc5e605cdde0a5c","agentId":"agt_fd8ef3ac0ffd4a8f8eecf7ea39de47de","capability":"email.search","status":"SUCCESS","durationMs":3}
+
+[90mstdout[2m | tests/google/google-capabilities.test.ts[2m > [22m[2mGoogle read capabilities[2m > [22m[2mprojects and executes only explicitly granted email and calendar reads
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1378c5d828be482e9cc5e605cdde0a5c","agentId":"agt_fd8ef3ac0ffd4a8f8eecf7ea39de47de","capability":"email.read","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/google/google-capabilities.test.ts[2m > [22m[2mGoogle read capabilities[2m > [22m[2mprojects and executes only explicitly granted email and calendar reads
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1378c5d828be482e9cc5e605cdde0a5c","agentId":"agt_fd8ef3ac0ffd4a8f8eecf7ea39de47de","capability":"calendar.event.list","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/google/google-capabilities.test.ts[2m > [22m[2mGoogle read capabilities[2m > [22m[2mprojects and executes only explicitly granted email and calendar reads
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1378c5d828be482e9cc5e605cdde0a5c","agentId":"agt_fd8ef3ac0ffd4a8f8eecf7ea39de47de","capability":"calendar.event.read","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/google/google-capabilities.test.ts[2m > [22m[2mGoogle read capabilities[2m > [22m[2mprojects and executes only explicitly granted email and calendar reads
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1378c5d828be482e9cc5e605cdde0a5c","agentId":"agt_fd8ef3ac0ffd4a8f8eecf7ea39de47de","capability":"calendar.availability.read","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/google/google-capabilities.test.ts[2m > [22m[2mGoogle read capabilities[2m > [22m[2mprojects and executes only explicitly granted email and calendar reads
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_26e848423f0f445fa61f2aeec8d7a42a","agentId":"agt_8a9ef44c044b42ad90097d4a1a4b3af3","capability":"email.search","status":"DENIED","durationMs":1}
+
+[90mstdout[2m | tests/google/google-capabilities.test.ts[2m > [22m[2mGoogle read capabilities[2m > [22m[2mfails cleanly after disconnect and never borrows another account's connection
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_f9440b45e5da4cb5b1bd03d29cc99091","agentId":"agt_0f17d9d261a74104bc838d8179637e5b","capability":"email.search","status":"FAILED","durationMs":1}
+
+[90mstdout[2m | tests/google/google-capabilities.test.ts[2m > [22m[2mGoogle read capabilities[2m > [22m[2mfails cleanly after disconnect and never borrows another account's connection
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_f9440b45e5da4cb5b1bd03d29cc99091","agentId":"agt_0f17d9d261a74104bc838d8179637e5b","capability":"email.search","status":"FAILED","durationMs":1}
+
+[90mstdout[2m | tests/google/google-capabilities.test.ts[2m > [22m[2mGoogle read capabilities[2m > [22m[2mrecovers an ERROR connection when its existing refresh grant succeeds later
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_5fd12634f15d4511b00183d95e98f3bb","agentId":"agt_0feaa2d55d46467c8065cbce4f18b317","capability":"email.search","status":"FAILED","durationMs":3}
+
+[90mstdout[2m | tests/google/google-capabilities.test.ts[2m > [22m[2mGoogle read capabilities[2m > [22m[2mrecovers an ERROR connection when its existing refresh grant succeeds later
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_5fd12634f15d4511b00183d95e98f3bb","agentId":"agt_0feaa2d55d46467c8065cbce4f18b317","capability":"email.search","status":"SUCCESS","durationMs":6}
+
+[90mstdout[2m | tests/google/google-capabilities.test.ts[2m > [22m[2mGoogle read capabilities[2m > [22m[2mrecovers an ERROR connection when its existing refresh grant succeeds later
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_5fd12634f15d4511b00183d95e98f3bb","agentId":"agt_0feaa2d55d46467c8065cbce4f18b317","capability":"calendar.event.list","status":"SUCCESS","durationMs":1}
+
+ [32m✓[39m tests/google/google-capabilities.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 2027[2mms[22m[39m
+   [33m[2m✓[22m[39m Google read capabilities[2m > [22mprojects and executes only explicitly granted email and calendar reads [33m 529[2mms[22m[39m
+   [33m[2m✓[22m[39m Google read capabilities[2m > [22mfails cleanly after disconnect and never borrows another account's connection [33m 484[2mms[22m[39m
+   [33m[2m✓[22m[39m Google read capabilities[2m > [22mrecovers an ERROR connection when its existing refresh grant succeeds later [33m 484[2mms[22m[39m
+   [33m[2m✓[22m[39m Google read capabilities[2m > [22mkeeps a concurrent successful refresh from being overwritten by a late failure [33m 530[2mms[22m[39m
+ [32m✓[39m tests/v2/telegram-pairing.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 3994[2mms[22m[39m
+   [33m[2m✓[22m[39m Telegram owner-controlled pairing[2m > [22mbinds verified user/chat to the owner-selected Agent and retains no challenge plaintext [33m 537[2mms[22m[39m
+   [33m[2m✓[22m[39m Telegram owner-controlled pairing[2m > [22mconsumes a challenge once under concurrent webhook delivery [33m 521[2mms[22m[39m
+   [33m[2m✓[22m[39m Telegram owner-controlled pairing[2m > [22mrejects expired, wrong, and replaced challenges [33m 489[2mms[22m[39m
+   [33m[2m✓[22m[39m Telegram owner-controlled pairing[2m > [22mrejects forged webhooks and unknown identities before task creation [33m 480[2mms[22m[39m
+   [33m[2m✓[22m[39m Telegram owner-controlled pairing[2m > [22mrejects another account's connection, Agent, listing and revocation [33m 495[2mms[22m[39m
+   [33m[2m✓[22m[39m Telegram owner-controlled pairing[2m > [22mdisconnects canonical communications and denies subsequent work or pairing [33m 494[2mms[22m[39m
+   [33m[2m✓[22m[39m Telegram owner-controlled pairing[2m > [22mrechecks Agent availability when consuming the challenge [33m 485[2mms[22m[39m
+   [33m[2m✓[22m[39m Telegram owner-controlled pairing[2m > [22mrechecks Agent availability after pairing, including text that claims other authority [33m 491[2mms[22m[39m
+ [32m✓[39m tests/v2/passports.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2435[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 Agent Passport and runtime attribution[2m > [22mcreates a draft Agent, signs a versioned Passport, and requires it for activation [33m 514[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 Agent Passport and runtime attribution[2m > [22mquarantines a valid imported Passport without creating grants [33m 513[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 Agent Passport and runtime attribution[2m > [22mrejects forged imports and cross-account Passport access [33m 472[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 Agent Passport and runtime attribution[2m > [22mincrements the revocation epoch and invokes incompatible-work revocation on trust downgrade [33m 469[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 Agent Passport and runtime attribution[2m > [22mkeeps product labels self-declared until trusted verification and isolates credentials [33m 467[2mms[22m[39m
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mis agent-private, supports explicit sharing, and remains account-scoped
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1b2f91bf7c6b45f5b2c4f43bd21ec619","agentId":"agt_0172a123de1047e5b479ee71cdf281a9","capability":"browser.create","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mis agent-private, supports explicit sharing, and remains account-scoped
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_8d4447a4e412462e80f13bd47e30a6ce","agentId":"agt_a6cfa4a71e0940a68714a6face07d616","capability":"browser.extract","status":"DENIED","durationMs":2}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mis agent-private, supports explicit sharing, and remains account-scoped
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_8d4447a4e412462e80f13bd47e30a6ce","agentId":"agt_a6cfa4a71e0940a68714a6face07d616","capability":"browser.extract","status":"SUCCESS","durationMs":5}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mis agent-private, supports explicit sharing, and remains account-scoped
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_39ea88badbe64d96a521c489b5f0e289","agentId":"agt_d108ca10e99a4e3a94be9bb966f1578b","capability":"browser.extract","status":"FAILED","durationMs":1}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mnavigates, types, clicks, extracts, screenshots, closes, and audits actions
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1d53832b62c949799e8647b071c9d81c","agentId":"agt_bfae1515f981479098274cf0ff40d6ca","capability":"browser.create","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mnavigates, types, clicks, extracts, screenshots, closes, and audits actions
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1d53832b62c949799e8647b071c9d81c","agentId":"agt_bfae1515f981479098274cf0ff40d6ca","capability":"browser.navigate","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mnavigates, types, clicks, extracts, screenshots, closes, and audits actions
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1d53832b62c949799e8647b071c9d81c","agentId":"agt_bfae1515f981479098274cf0ff40d6ca","capability":"browser.type","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mnavigates, types, clicks, extracts, screenshots, closes, and audits actions
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1d53832b62c949799e8647b071c9d81c","agentId":"agt_bfae1515f981479098274cf0ff40d6ca","capability":"browser.extract","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mnavigates, types, clicks, extracts, screenshots, closes, and audits actions
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1d53832b62c949799e8647b071c9d81c","agentId":"agt_bfae1515f981479098274cf0ff40d6ca","capability":"browser.click","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mnavigates, types, clicks, extracts, screenshots, closes, and audits actions
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1d53832b62c949799e8647b071c9d81c","agentId":"agt_bfae1515f981479098274cf0ff40d6ca","capability":"browser.screenshot","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mnavigates, types, clicks, extracts, screenshots, closes, and audits actions
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1d53832b62c949799e8647b071c9d81c","agentId":"agt_bfae1515f981479098274cf0ff40d6ca","capability":"browser.close","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mrejects unsafe URL schemes and destroys expired provider sessions
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_41c0b1126bfd48ddbc52eef7b967d458","agentId":"agt_7baa8a3f598549c9bb0b55c3a8eaafe1","capability":"browser.create","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mrejects unsafe URL schemes and destroys expired provider sessions
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_41c0b1126bfd48ddbc52eef7b967d458","agentId":"agt_7baa8a3f598549c9bb0b55c3a8eaafe1","capability":"browser.navigate","status":"FAILED","durationMs":1}
+
+[90mstdout[2m | tests/browser/browser.test.ts[2m > [22m[2mgoverned browser sessions[2m > [22m[2mrejects unsafe URL schemes and destroys expired provider sessions
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_41c0b1126bfd48ddbc52eef7b967d458","agentId":"agt_7baa8a3f598549c9bb0b55c3a8eaafe1","capability":"browser.extract","status":"FAILED","durationMs":1}
+
+ [32m✓[39m tests/browser/browser.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 2000[2mms[22m[39m
+   [33m[2m✓[22m[39m governed browser sessions[2m > [22mdepends on BrowserProvider without leaking Playwright into the domain service [33m 502[2mms[22m[39m
+   [33m[2m✓[22m[39m governed browser sessions[2m > [22mis agent-private, supports explicit sharing, and remains account-scoped [33m 513[2mms[22m[39m
+   [33m[2m✓[22m[39m governed browser sessions[2m > [22mnavigates, types, clicks, extracts, screenshots, closes, and audits actions [33m 506[2mms[22m[39m
+   [33m[2m✓[22m[39m governed browser sessions[2m > [22mrejects unsafe URL schemes and destroys expired provider sessions [33m 478[2mms[22m[39m
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mis private by default, supports explicit sharing, and denies cross-account access
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_c8b46c5380614b2f97f7e35696f664f4","agentId":"agt_f186fcd00bdc403c896e1a43fbc706e1","capability":"sandbox.create","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mis private by default, supports explicit sharing, and denies cross-account access
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_98f6cd65b754456fb43b1229b2fdc7bc","agentId":"agt_17f830a817dd4873a6503da3b90c707a","capability":"sandbox.exec","status":"DENIED","durationMs":2}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mis private by default, supports explicit sharing, and denies cross-account access
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_98f6cd65b754456fb43b1229b2fdc7bc","agentId":"agt_17f830a817dd4873a6503da3b90c707a","capability":"sandbox.exec","status":"SUCCESS","durationMs":4}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mis private by default, supports explicit sharing, and denies cross-account access
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_13e5a84ce67a4898b0a9aac61c79f378","agentId":"agt_abaa035d7a854db88d0a46d5a4fb6989","capability":"sandbox.exec","status":"FAILED","durationMs":1}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mreads, writes, lists, destroys, and records command failures and timeouts
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_c94ea169940c4a008e851a5fe4adda9f","agentId":"agt_6fa2f89aac85443a9ea64a7c8b6a0b3d","capability":"sandbox.create","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mreads, writes, lists, destroys, and records command failures and timeouts
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_c94ea169940c4a008e851a5fe4adda9f","agentId":"agt_6fa2f89aac85443a9ea64a7c8b6a0b3d","capability":"sandbox.file.write","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mreads, writes, lists, destroys, and records command failures and timeouts
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_c94ea169940c4a008e851a5fe4adda9f","agentId":"agt_6fa2f89aac85443a9ea64a7c8b6a0b3d","capability":"sandbox.file.read","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mreads, writes, lists, destroys, and records command failures and timeouts
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_c94ea169940c4a008e851a5fe4adda9f","agentId":"agt_6fa2f89aac85443a9ea64a7c8b6a0b3d","capability":"sandbox.file.list","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mreads, writes, lists, destroys, and records command failures and timeouts
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_c94ea169940c4a008e851a5fe4adda9f","agentId":"agt_6fa2f89aac85443a9ea64a7c8b6a0b3d","capability":"sandbox.exec","status":"FAILED","durationMs":1}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mreads, writes, lists, destroys, and records command failures and timeouts
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_c94ea169940c4a008e851a5fe4adda9f","agentId":"agt_6fa2f89aac85443a9ea64a7c8b6a0b3d","capability":"sandbox.exec","status":"BLOCKED","durationMs":1}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mreads, writes, lists, destroys, and records command failures and timeouts
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_c94ea169940c4a008e851a5fe4adda9f","agentId":"agt_6fa2f89aac85443a9ea64a7c8b6a0b3d","capability":"sandbox.destroy","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mexpires and cleans up a provider resource before allowing reuse
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_76a0a5e8ae03425b9c40e268a96061e5","agentId":"agt_5862d4490ac14f4e84459ccc2b39c036","capability":"sandbox.create","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/sandbox/sandbox.test.ts[2m > [22m[2mgoverned sandboxes[2m > [22m[2mexpires and cleans up a provider resource before allowing reuse
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_76a0a5e8ae03425b9c40e268a96061e5","agentId":"agt_5862d4490ac14f4e84459ccc2b39c036","capability":"sandbox.exec","status":"FAILED","durationMs":2}
+
+ [32m✓[39m tests/sandbox/sandbox.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 1986[2mms[22m[39m
+   [33m[2m✓[22m[39m governed sandboxes[2m > [22mdepends on the provider contract without leaking Docker into the domain service [33m 497[2mms[22m[39m
+   [33m[2m✓[22m[39m governed sandboxes[2m > [22mis private by default, supports explicit sharing, and denies cross-account access [33m 508[2mms[22m[39m
+   [33m[2m✓[22m[39m governed sandboxes[2m > [22mreads, writes, lists, destroys, and records command failures and timeouts [33m 491[2mms[22m[39m
+   [33m[2m✓[22m[39m governed sandboxes[2m > [22mexpires and cleans up a provider resource before allowing reuse [33m 489[2mms[22m[39m
+ [32m✓[39m tests/federation/production-crypto.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m tests/federation/envelope-bound.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 65[2mms[22m[39m
+[90mstdout[2m | tests/security/v1-boundaries.test.ts[2m > [22m[2mV1 security boundaries[2m > [22m[2mdenies cross-account Agent, sandbox, browser, event, and inbox access
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_c7d958a44a9d464a82368597063f9db7","agentId":"agt_ac769a8b14e045a289eba92b2e620dcd","capability":"sandbox.create","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/security/v1-boundaries.test.ts[2m > [22m[2mV1 security boundaries[2m > [22m[2mdenies cross-account Agent, sandbox, browser, event, and inbox access
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_c7d958a44a9d464a82368597063f9db7","agentId":"agt_ac769a8b14e045a289eba92b2e620dcd","capability":"browser.create","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/security/v1-boundaries.test.ts[2m > [22m[2mV1 security boundaries[2m > [22m[2mdenies cross-account Agent, sandbox, browser, event, and inbox access
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_eae65298b8b14c47967d3148c0cb1d23","agentId":"agt_e1aaab79a8c742948cfe07613136faa8","capability":"sandbox.exec","status":"FAILED","durationMs":1}
+
+[90mstdout[2m | tests/security/v1-boundaries.test.ts[2m > [22m[2mV1 security boundaries[2m > [22m[2mdenies cross-account Agent, sandbox, browser, event, and inbox access
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_eae65298b8b14c47967d3148c0cb1d23","agentId":"agt_e1aaab79a8c742948cfe07613136faa8","capability":"browser.extract","status":"FAILED","durationMs":1}
+
+[90mstdout[2m | tests/security/v1-boundaries.test.ts[2m > [22m[2mV1 security boundaries[2m > [22m[2mdenies cross-account Agent, sandbox, browser, event, and inbox access
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_eae65298b8b14c47967d3148c0cb1d23","agentId":"agt_e1aaab79a8c742948cfe07613136faa8","capability":"agent.inbox.list","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/security/v1-boundaries.test.ts[2m > [22m[2mV1 security boundaries[2m > [22m[2menforces credential and connector revocation immediately
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_29bdf149aac34589b24344205dc82012","agentId":"agt_a569e940f0d64fe7bb81e010eda723c2","capability":"email.search","status":"FAILED","durationMs":1}
+
+ [32m✓[39m tests/security/v1-boundaries.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 2055[2mms[22m[39m
+   [33m[2m✓[22m[39m V1 security boundaries[2m > [22mdenies cross-account Agent, sandbox, browser, event, and inbox access [33m 519[2mms[22m[39m
+   [33m[2m✓[22m[39m V1 security boundaries[2m > [22mnever logs provider tokens or email content [33m 473[2mms[22m[39m
+   [33m[2m✓[22m[39m V1 security boundaries[2m > [22menforces credential and connector revocation immediately [33m 482[2mms[22m[39m
+   [33m[2m✓[22m[39m V1 security boundaries[2m > [22mrate limits one credential without affecting another [33m 581[2mms[22m[39m
+ [32m✓[39m tests/v2/evidence.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 2600[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 evidence and audit[2m > [22mserializes concurrent appends into a verifiable account chain [33m 529[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 evidence and audit[2m > [22mredacts secrets before persistence and supports offline key rotation verification [33m 497[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 evidence and audit[2m > [22mrejects tampering, deletion, reordering, tenant substitution, and wrong keys [33m 510[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 evidence and audit[2m > [22misolates audit queries and encrypted artifacts by account [33m 561[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 evidence and audit[2m > [22menforces retention and account scope when deleting artifacts [33m 503[2mms[22m[39m
+ [32m✓[39m tests/federation/message-delegations.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1561[2mms[22m[39m
+   [33m[2m✓[22m[39m seven-day peer message delegations[2m > [22missues a revocable opaque credential with an exact Agent and peer scope [33m 554[2mms[22m[39m
+   [33m[2m✓[22m[39m seven-day peer message delegations[2m > [22mrejects other capabilities, identities, resources, duration, and higher message rate [33m 516[2mms[22m[39m
+   [33m[2m✓[22m[39m seven-day peer message delegations[2m > [22monly revokes grants within the same message scope [33m 491[2mms[22m[39m
+[90mstdout[2m | tests/events/events.test.ts[2m > [22m[2mdurable events and Agent inbox[2m > [22m[2mexposes only the owning Agent's inbox and acknowledges durably
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_d5f7ebcb2f05473287d13f8c7c6b833c","agentId":"agt_d1203c0d13a74db3b87f7cc351f8e2d1","capability":"agent.inbox.list","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/events/events.test.ts[2m > [22m[2mdurable events and Agent inbox[2m > [22m[2mexposes only the owning Agent's inbox and acknowledges durably
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_01333be041f740318bfb24b31a9ec821","agentId":"agt_4fa5245fa0e74d6bb170a54b327bf195","capability":"agent.inbox.list","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/events/events.test.ts[2m > [22m[2mdurable events and Agent inbox[2m > [22m[2mexposes only the owning Agent's inbox and acknowledges durably
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_01333be041f740318bfb24b31a9ec821","agentId":"agt_4fa5245fa0e74d6bb170a54b327bf195","capability":"agent.inbox.get","status":"FAILED","durationMs":1}
+
+[90mstdout[2m | tests/events/events.test.ts[2m > [22m[2mdurable events and Agent inbox[2m > [22m[2mexposes only the owning Agent's inbox and acknowledges durably
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_d5f7ebcb2f05473287d13f8c7c6b833c","agentId":"agt_d1203c0d13a74db3b87f7cc351f8e2d1","capability":"agent.inbox.ack","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/events/events.test.ts[2m > [22m[2mdurable events and Agent inbox[2m > [22m[2mrejects routing to another account and exposes searchable capability metadata
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_1d0d7da743f747da84a09eb82e396347","agentId":"agt_9a83cd46e5054bec82336a3faf37624c","capability":"capabilities.search","status":"SUCCESS","durationMs":2}
+
+ [32m✓[39m tests/events/events.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 1989[2mms[22m[39m
+   [33m[2m✓[22m[39m durable events and Agent inbox[2m > [22mingests idempotently and transactionally routes inbox and wake records [33m 516[2mms[22m[39m
+   [33m[2m✓[22m[39m durable events and Agent inbox[2m > [22mdeduplicates concurrent provider retries without duplicating inbox delivery [33m 490[2mms[22m[39m
+   [33m[2m✓[22m[39m durable events and Agent inbox[2m > [22mexposes only the owning Agent's inbox and acknowledges durably [33m 488[2mms[22m[39m
+   [33m[2m✓[22m[39m durable events and Agent inbox[2m > [22mrejects routing to another account and exposes searchable capability metadata [33m 494[2mms[22m[39m
+ [32m✓[39m tests/v2/qualification-signing-admission.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+ [32m✓[39m tests/v2/release-qualification.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 507[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 release qualification gate[2m > [22mrequires an account column on every tenant-owned database table [33m 502[2mms[22m[39m
+ [32m✓[39m tests/v2/qualification-client.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/v2/identity.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 1988[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 identity and tenancy[2m > [22menforces account membership and baseline roles [33m 506[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 identity and tenancy[2m > [22missues one-time service credentials without returning their hash [33m 462[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 identity and tenancy[2m > [22mbinds step-up authentication to account, principal, action, and one use [33m 547[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V2 identity and tenancy[2m > [22msuspends the principal and rejects future membership checks [33m 471[2mms[22m[39m
+ [32m✓[39m tests/v2/communication-providers.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/federation/google-wrapper.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/v2/contracts.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/federation/production-secret-crypto.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m tests/federation/production-instrumentation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 74[2mms[22m[39m
+[90mstdout[2m | tests/integration/golden-path.test.ts[2m > [22m[2mRelay V0 golden path[2m > [22m[2mshares authorized memory across agents while private memory remains isolated
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_65d2f29e29ad4ca8b679888b3ae77ef2","agentId":"agt_f27c5f3671344276a63624a515a7ee5d","capability":"memory.write","status":"SUCCESS","durationMs":4}
+
+[90mstdout[2m | tests/integration/golden-path.test.ts[2m > [22m[2mRelay V0 golden path[2m > [22m[2mshares authorized memory across agents while private memory remains isolated
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_8f9967ab383e4e48a05051af47c82998","agentId":"agt_6bb51576c55a41d29b1fd4fa89a70a22","capability":"memory.read","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/integration/golden-path.test.ts[2m > [22m[2mRelay V0 golden path[2m > [22m[2mshares authorized memory across agents while private memory remains isolated
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_65d2f29e29ad4ca8b679888b3ae77ef2","agentId":"agt_f27c5f3671344276a63624a515a7ee5d","capability":"memory.write","status":"SUCCESS","durationMs":3}
+
+[90mstdout[2m | tests/integration/golden-path.test.ts[2m > [22m[2mRelay V0 golden path[2m > [22m[2mshares authorized memory across agents while private memory remains isolated
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_8f9967ab383e4e48a05051af47c82998","agentId":"agt_6bb51576c55a41d29b1fd4fa89a70a22","capability":"memory.read","status":"SUCCESS","durationMs":1}
+
+[90mstdout[2m | tests/integration/golden-path.test.ts[2m > [22m[2mRelay V0 golden path[2m > [22m[2muses one GitHub connection with per-agent authorization and auditable denial
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_11d187b5619d416485b8b52623e96151","agentId":"agt_a4129065e67f4aa3921b1c5af8b33e5f","capability":"github.repo.read","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/integration/golden-path.test.ts[2m > [22m[2mRelay V0 golden path[2m > [22m[2muses one GitHub connection with per-agent authorization and auditable denial
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_9ad8148293404f3cb642547d4600a14a","agentId":"agt_b6f420a7ffd04a7183b298ba5681438f","capability":"github.repo.read","status":"DENIED","durationMs":1}
+
+[90mstdout[2m | tests/integration/golden-path.test.ts[2m > [22m[2mRelay V0 golden path[2m > [22m[2muses one GitHub connection with per-agent authorization and auditable denial
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_9ad8148293404f3cb642547d4600a14a","agentId":"agt_b6f420a7ffd04a7183b298ba5681438f","capability":"github.repo.read","status":"SUCCESS","durationMs":1}
+
+ [32m✓[39m tests/integration/golden-path.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1551[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V0 golden path[2m > [22mshares authorized memory across agents while private memory remains isolated [33m 545[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V0 golden path[2m > [22muses one GitHub connection with per-agent authorization and auditable denial [33m 539[2mms[22m[39m
+   [33m[2m✓[22m[39m Relay V0 golden path[2m > [22mrevokes a credential immediately without a process restart [33m 467[2mms[22m[39m
+ [32m✓[39m tests/v2/telegram-input.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/auth/beta-invites.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1503[2mms[22m[39m
+   [33m[2m✓[22m[39m private beta invitations[2m > [22mrequires an allowlisted owner and consumes an email-bound invitation once [33m 534[2mms[22m[39m
+   [33m[2m✓[22m[39m private beta invitations[2m > [22mrefuses an expired invitation and an unlisted issuer [33m 491[2mms[22m[39m
+   [33m[2m✓[22m[39m private beta invitations[2m > [22muses the existing admin identity when an explicit inviter list is absent [33m 478[2mms[22m[39m
+ [32m✓[39m tests/oauth/google-oauth.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1058[2mms[22m[39m
+   [33m[2m✓[22m[39m Google OAuth[2m > [22mbinds state to the account/user, uses PKCE, and encrypts both tokens [33m 533[2mms[22m[39m
+   [33m[2m✓[22m[39m Google OAuth[2m > [22mrejects state tampering and cross-account completion [33m 525[2mms[22m[39m
+ [32m✓[39m tests/oauth/github-oauth.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1080[2mms[22m[39m
+   [33m[2m✓[22m[39m GitHub OAuth[2m > [22muses account-bound state and PKCE, then stores only encrypted tokens [33m 543[2mms[22m[39m
+   [33m[2m✓[22m[39m GitHub OAuth[2m > [22mrejects an OAuth callback completed under another account [33m 537[2mms[22m[39m
+ [32m✓[39m tests/v2/dashboard.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 552[2mms[22m[39m
+   [33m[2m✓[22m[39m WO-21 operator dashboard boundary[2m > [22mprojects only the authenticated account and omits durable credentials [33m 551[2mms[22m[39m
+ [32m✓[39m tests/v2/connector-providers.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/auth/authentication.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 2160[2mms[22m[39m
+   [33m[2m✓[22m[39m production dashboard authentication[2m > [22mcreates isolated account owners and authenticates normalized email [33m 606[2mms[22m[39m
+   [33m[2m✓[22m[39m production dashboard authentication[2m > [22muses opaque durable sessions and revokes them on logout [33m 495[2mms[22m[39m
+   [33m[2m✓[22m[39m production dashboard authentication[2m > [22mrejects duplicate email ownership [33m 498[2mms[22m[39m
+   [33m[2m✓[22m[39m production dashboard authentication[2m > [22mkeeps a Gmail plus alias in a separate Relay account [33m 560[2mms[22m[39m
+ [32m✓[39m tests/v2/telegram-migration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1384[2mms[22m[39m
+   [33m[2m✓[22m[39m upgrades schema 20 to channel execution and permits repeated migration [33m 476[2mms[22m[39m
+   [33m[2m✓[22m[39m upgrades schema 21 to channel execution and permits repeated migration [33m 463[2mms[22m[39m
+   [33m[2m✓[22m[39m upgrades schema 22 to channel execution and permits repeated migration [33m 444[2mms[22m[39m
+ [2m[90m↓[39m[22m tests/browser/playwright-live.test.ts [2m([22m[2m3 tests[22m[2m | [22m[33m3 skipped[39m[2m)[22m
+ [32m✓[39m tests/federation/signing-lifecycle.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 508[2mms[22m[39m
+   [33m[2m✓[22m[39m exports historical receipts after rotation without access to the historical private key [33m 508[2mms[22m[39m
+ [32m✓[39m tests/federation/google-sts.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+[90mstdout[2m | tests/factory/mcp.test.ts[2m > [22m[2menforces the create grant even if a caller guesses a hidden tool
+[22m[39m{"level":"info","event":"capability_call","requestId":"session","agentId":"agent","capability":"factory.workorder.create","status":"DENIED","durationMs":0}
+
+[90mstdout[2m | tests/factory/mcp.test.ts[2m > [22m[2mroutes an authorized agent through the same account-bound action as the owner UI
+[22m[39m{"level":"info","event":"capability_call","requestId":"session","agentId":"agent","capability":"factory.workorder.create","status":"SUCCESS","durationMs":0}
+
+ [32m✓[39m tests/factory/mcp.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/v2/bootstrap.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 2081[2mms[22m[39m
+   [33m[2m✓[22m[39m private-preview owner bootstrap[2m > [22mcreates only the owner identity in an empty database [33m 553[2mms[22m[39m
+   [33m[2m✓[22m[39m private-preview owner bootstrap[2m > [22mis idempotent and does not reset the existing password [33m 528[2mms[22m[39m
+   [33m[2m✓[22m[39m private-preview owner bootstrap[2m > [22mfails closed on unexpected existing tenant state [33m 508[2mms[22m[39m
+   [33m[2m✓[22m[39m private-preview owner bootstrap[2m > [22mcannot run outside private-preview mode [33m 491[2mms[22m[39m
+ [32m✓[39m tests/v2/deployment.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [2m[90m↓[39m[22m tests/v2/relay-managed-provider-live.test.ts [2m([22m[2m1 test[22m[2m | [22m[33m1 skipped[39m[2m)[22m
+ [32m✓[39m tests/database/migrations.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1401[2mms[22m[39m
+   [33m[2m✓[22m[39m PostgreSQL migrations[2m > [22mcreates the V1 schema and canonical capability registry [33m 503[2mms[22m[39m
+   [33m[2m✓[22m[39m PostgreSQL migrations[2m > [22mrolls back authority-sensitive writes atomically [33m 457[2mms[22m[39m
+   [33m[2m✓[22m[39m PostgreSQL migrations[2m > [22mcreates the additive V2 principal and membership boundary [33m 441[2mms[22m[39m
+ [32m✓[39m tests/v2/channel-executor-http.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [2m[90m↓[39m[22m tests/sandbox/docker-live.test.ts [2m([22m[2m1 test[22m[2m | [22m[33m1 skipped[39m[2m)[22m
+ [32m✓[39m tests/factory/owner-route.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/v2/federation-trust.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/browser/playwright-provider.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/factory/routing.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+[90mstdout[2m | tests/sessions/agent-sessions.test.ts[2m > [22m[2mdurable Agent sessions[2m > [22m[2mreuses a credential/runtime session and correlates capability activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_d5327dcf84c242568cff28cea83f06df","agentId":"agt_79ad6e118684442cb78e154d850a8c90","capability":"memory.read","status":"SUCCESS","durationMs":2}
+
+[90mstdout[2m | tests/sessions/agent-sessions.test.ts[2m > [22m[2mdurable Agent sessions[2m > [22m[2mreuses a credential/runtime session and correlates capability activity
+[22m[39m{"level":"info","event":"capability_call","requestId":"ags_d5327dcf84c242568cff28cea83f06df","agentId":"agt_79ad6e118684442cb78e154d850a8c90","capability":"memory.read","status":"SUCCESS","durationMs":1}
+
+ [32m✓[39m tests/sessions/agent-sessions.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 492[2mms[22m[39m
+   [33m[2m✓[22m[39m durable Agent sessions[2m > [22mreuses a credential/runtime session and correlates capability activity [33m 492[2mms[22m[39m
+ [32m✓[39m tests/federation/production-maintenance-route.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/auth/session-cookie.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 514[2mms[22m[39m
+   [33m[2m✓[22m[39m production dashboard session cookie[2m > [22mreads the same __Host- cookie name that production login writes [33m 513[2mms[22m[39m
+ [32m✓[39m tests/v2/channel-callback-answer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/mcp/projection.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 498[2mms[22m[39m
+   [33m[2m✓[22m[39m MCP tool projection[2m > [22monly projects tools backed by allowed grants [33m 498[2mms[22m[39m
+ [32m✓[39m tests/unit/crypto.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1007[2mms[22m[39m
+   [33m[2m✓[22m[39m credential security[2m > [22mhashes passwords and agent credentials without storing their plaintext [33m 573[2mms[22m[39m
+   [33m[2m✓[22m[39m credential security[2m > [22mencrypts and decrypts provider credentials [33m 434[2mms[22m[39m
+ [32m✓[39m tests/v2/security-architecture.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m tests/unit/repository-hygiene.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m tests/security/isolation.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 489[2mms[22m[39m
+   [33m[2m✓[22m[39m account isolation[2m > [22mdoes not permit cross-account memory access by ID [33m 488[2mms[22m[39m
+ [32m✓[39m tests/operations/health.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 482[2mms[22m[39m
+   [33m[2m✓[22m[39m health and readiness[2m > [22mreports liveness and migration-backed readiness without connector dependencies [33m 482[2mms[22m[39m
+ [32m✓[39m tests/operations/worker.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 516[2mms[22m[39m
+   [33m[2m✓[22m[39m maintenance worker lifecycle[2m > [22mstarts and stops without running another maintenance cycle [33m 516[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m71 passed[39m[22m[2m | [22m[33m4 skipped[39m[90m (75)[39m
+[2m      Tests [22m [1m[32m450 passed[39m[22m[2m | [22m[33m6 skipped[39m[90m (456)[39m
+[2m   Start at [22m 13:09:23
+[2m   Duration [22m 136.37s[2m (transform 532ms, setup 0ms, collect 12.08s, tests 114.72s, environment 4ms, prepare 1.59s)[22m
+
