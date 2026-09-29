@@ -1,12 +1,7 @@
-# Current qualification index
+# Current qualification evidence
 
-Implementation checkpoint `5053693d5d6352caad4c98df9c8d22b297d5f9c8`; current status is [CANONICAL-STATUS.md](CANONICAL-STATUS.md).
+Reviewed source: `aaa10405afb89a41624b081a40c0282b70697e8b`. [Independent review](INDEPENDENT-REVIEW.md): PASS. PostgreSQL suite 450 PASS / 6 optional live skips; performance 2 PASS. Types, lint, Drizzle check, frontier and build PASS. Populated immutable 26-to-29 migration upgrade and replay PASS.
 
-- PostgreSQL suite: **450 PASS / 6 optional live skips**; performance **2 PASS**. Typecheck, lint, Drizzle check, V1/V2 frontier and production build PASS.
-- Preserved populated 26→29 migration/replay PASS, with account data and original ledger retained.
-- Independent fresh remote-candidate clone repeats **450 PASS / 6 skips**, typecheck and build PASS.
-- Credentialed optional browser/sandbox/provider journeys remain unrun. No hosted service was changed.
+The `qualification/` directory preserves timestamped attempts. For MyEve, `review-successor-*` resolves the intermediate scope/stage2 failures; `canonical-premerge-*` is the full post-review suite. The final CANONICAL-RECEIPT.json points to exact post-merge remote source and fresh-clone evidence. Older logs do not become current merely because they are retained.
 
-MyEve final-* logs and controlled-check summary supersede the initial failing environment/setup attempts. Initial logs remain historical; no passed component evidence is relabeled as final-system acceptance. Reports identify fixtures, exact producer pins and explicit unrun gates. Historical source dossiers retain their original bytes.
-
-Independent final review PENDING. Post-merge canonical evidence NOT_RUN.
+Component UX evidence includes Product Expansion 32 browser checks / 136 accessibility scans and canonical API/UI checks; shared scope adds real signed A/B browser checks. Fixture PASS is never relabeled live PASS. Production deployment and real provider execution remain NOT_RUN.

@@ -1,7 +1,7 @@
 # Relay
 
 <!-- CANONICAL-CONSOLIDATION-STATUS -->
-**Consolidation candidate qualified locally; canonical merge pending.** See [current status](docs/consolidation/CANONICAL-STATUS.md), [source manifest](docs/consolidation/PRIVATE-ALPHA-SOURCE-MANIFEST.md), and [development/migration policy](docs/consolidation/DEVELOPMENT-POLICY.md). Shared-business acceptance and final independent review remain open. Historical qualification below stays scoped to its original source and environment.
+**Private-alpha consolidation: independent review PASS; canonical target `main`.** The [current status](docs/consolidation/CANONICAL-STATUS.md), [source manifest](docs/consolidation/PRIVATE-ALPHA-SOURCE-MANIFEST.md), and final canonical receipt identify exact source and qualification. MyEve supports explicit private, shared-business and Work-scoped context for two partners. Controlled verification is qualified; live providers and deployment remain separate gates. [Development/migration policy](docs/consolidation/DEVELOPMENT-POLICY.md).
 <!-- /CANONICAL-CONSOLIDATION-STATUS -->
 
 Relay is a governed control plane for personal AI agents that act in the real world.
