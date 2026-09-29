@@ -7,7 +7,7 @@ import { createLocalEd25519Signer } from "@/lib/v2/evidence/crypto";
 import { activateV2Agent,createV2Agent,issueAgentPassport } from "@/lib/v2/passports";
 import { channelConfiguration,type ChannelConfiguration } from "@/lib/v2/channels/config";
 import { setupTelegramPairing,disconnectTelegram,telegramManagement } from "@/lib/v2/channels/management";
-import { telegramWebhook,telegramReadiness } from "@/lib/v2/channels/http";
+import { permanentlyRejected,telegramWebhook,telegramReadiness } from "@/lib/v2/channels/http";
 import { runChannelExecutionCycle } from "@/lib/v2/channels/worker";
 import { runChannelDeliveryCycle,TelegramOwnerSender } from "@/lib/v2/channels/delivery";
 import { rows,decode,type Reply } from "@/lib/v2/channels/store";
@@ -20,7 +20,7 @@ async function setup(){
  const {agentId}=await createV2Agent({accountId:owner.accountId,ownerPrincipalId:owner.principalId,name:"Channel Agent"},signer);
  await issueAgentPassport({accountId:owner.accountId,agentId,ownerPrincipalId:owner.principalId,policy:{trustTier:"REGISTERED",capabilityEligibility:[],policyReferences:[],budgetReferences:[],allowedEnvironments:{providerIds:["relay-managed"],minimumAssurance:"registered"},dataAccess:[],expiresAt:"2099-01-01T00:00:00.000Z"}},signer);
  await activateV2Agent({accountId:owner.accountId,agentId,actorPrincipalId:owner.principalId},signer);
- const config:ChannelConfiguration={enabled:true,executionEnabled:true,environment:"preview",accountId:owner.accountId,ownerPrincipalId:owner.principalId,agentId,connectionId:"test-channel",botUsername:"fixture_bot",botToken:"synthetic-no-network",webhookSecret:"fixture-webhook-secret-1234567890",endpoint:"https://executor.invalid/owner",audience:"fixture",signer,issues:[]};
+ const config:ChannelConfiguration={enabled:true,executionEnabled:true,localQualification:null,environment:"preview",accountId:owner.accountId,ownerPrincipalId:owner.principalId,agentId,connectionId:"test-channel",botUsername:"fixture_bot",botToken:"synthetic-no-network",webhookSecret:"fixture-webhook-secret-1234567890",endpoint:"https://executor.invalid/owner",audience:"fixture",signer,issues:[]};
  const challenge=await setupTelegramPairing(owner.accountId,owner.principalId,config);let sequence=10;const acknowledgements:string[]=[];
  const webhook=(body:unknown,secret=config.webhookSecret)=>telegramWebhook(new Request("https://relay.invalid/api/channels/telegram/webhook",{method:"POST",headers:{"content-type":"application/json","x-telegram-bot-api-secret-token":secret},body:JSON.stringify(body)}),config,async(_id,text)=>{acknowledgements.push(text);return true;});
  const post=(text:string,user=123,updateId=sequence++)=>webhook({update_id:updateId,message:{message_id:updateId,date:Math.floor(Date.now()/1000),from:{id:user,is_bot:false},chat:{id:user,type:"private"},text}});
@@ -29,9 +29,46 @@ async function setup(){
  return {...owner,agentId,signer,config,post,webhook,bindingId:binding.id,acknowledgements};
 }
 const count=async(table:string)=>(await rows<{count:number}>(sql.raw(`SELECT count(*)::int AS count FROM ${table}`)))[0].count;
+const permanentlyRejectedStatus=async(response:Response)=>{expect(response.status).toBe(200);expect(await response.json()).toMatchObject({accepted:false,acknowledged:true});};
 function completed(c:ExecutionCommand):ExecutionSnapshot{return {requestId:c.work.requestId,ownerPrincipalId:c.work.ownerPrincipalId,agentId:c.work.agentId,runId:`run_${c.work.requestId}`,state:"COMPLETED",resultId:`result_${c.work.requestId}`,text:"Your active goal is isolated qualification."};}
 describe("durable owner channel",()=>{
  afterEach(cleanupDatabase);
+ it("returns immediate typing feedback only for a newly admitted runnable request",async()=>{
+  const f=await setup();const started=Date.now();
+  const response=await f.post("Hello",123,991);
+  const elapsed=Date.now()-started;
+  expect(await response.json()).toMatchObject({accepted:true,duplicate:false,queued:false,method:"sendChatAction",chat_id:"123",action:"typing"});
+  expect(elapsed).toBeLessThan(500);
+  console.info(JSON.stringify({measurement:"telegram_ingress_feedback_ms",elapsed}));
+  expect(await (await f.post("Hello",123,991)).json()).not.toHaveProperty("method");
+  expect(await (await f.post("/status")).json()).not.toHaveProperty("method");
+  expect(await (await f.post("Hello",456)).json()).not.toHaveProperty("method");
+  expect(await (await f.webhook({},"bad")).json()).not.toHaveProperty("method");
+  f.config.executionEnabled=false;
+  expect(await (await f.post("Hello")).json()).not.toHaveProperty("method");
+  f.config.executionEnabled=true;
+  await disconnectTelegram(f.accountId,f.principalId,f.bindingId,f.config);
+  expect(await (await f.post("Hello")).json()).not.toHaveProperty("method");
+  expect(await count("channel_work_links")).toBe(1);
+ });
+ it.each(["RUNNING","WAITING_APPROVAL"] as const)("explains a queue blocked by %s without accepting a text approval or starting another task",async state=>{
+  const f=await setup();await f.post("Earlier request");
+  await runChannelExecutionCycle(f.config,{call:async c=>({...completed(c),state,...(state==="WAITING_APPROVAL"?{pending:{kind:"approval" as const,reference:"exact-draft",bindingHash:"exact-hash",summary:"Proposal",target:"fixture",consequence:"Requires decision",expiresAt:new Date(Date.now()+60000).toISOString(),estimatedCost:null}}:{})})},f.signer);
+  const response=await (await f.post("approved",123,992)).json();
+  expect(response).toMatchObject({queued:true});expect(response).not.toHaveProperty("method");
+  await f.post("approved",123,992);
+  const notices=await rows<{content:{encrypted:string}}>(sql`SELECT content FROM communication_messages WHERE idempotency_key LIKE 'channel-queued:%'`);
+  expect(notices).toHaveLength(1);
+  const text=decode<Reply>(notices[0].content.encrypted).text;
+  expect(text).toContain(state==="WAITING_APPROVAL"?"Use Approve or Reject":"queued behind");
+  if(state==="WAITING_APPROVAL")expect(text).toContain("Typing 'approved' does not approve it");
+  expect(await rows(sql`SELECT id FROM task_commands WHERE kind='CHANNEL_APPROVAL'`)).toHaveLength(0);
+  expect(await runChannelExecutionCycle(f.config,{call:async()=>{throw new Error("Must stay queued");}},f.signer)).toEqual({processed:false});
+  const sent:Reply[]=[];
+  for(let i=0;i<3;i++)await runChannelDeliveryCycle(f.config,{send:async({reply})=>{sent.push(reply);return {kind:"sent",messageId:String(800+sent.length)};}},f.signer);
+  expect(sent.filter(reply=>reply.text===text)).toHaveLength(1);
+  expect(await count("channel_work_links")).toBe(2);
+ });
  it("deduplicates ingress and resumes delivery without executing work again",async()=>{
   const f=await setup();expect((await Promise.all([f.post("goals",123,999),f.post("goals",123,999)])).map(x=>x.status)).toEqual([200,200]);expect(await count("channel_work_links")).toBe(1);expect(await claimTaskCommand("temporal-worker")).toBeUndefined();
   let executions=0;await runChannelExecutionCycle(f.config,{call:async c=>{executions++;return completed(c);}},f.signer);
@@ -40,14 +77,58 @@ describe("durable owner channel",()=>{
   expect(await runChannelDeliveryCycle(f.config,{send:async()=>{throw new Error();}},f.signer)).toEqual({processed:false});
   expect(executions).toBe(1);expect(sent).toHaveLength(1);expect((await rows<{status:string}>(sql`SELECT status FROM v2_tasks`))[0].status).toBe("SUCCEEDED");expect(await count("channel_delivery_attempts")).toBe(1);
  });
+ it("collects a ready result in under a second without another START or manual scheduling",async()=>{
+  const f=await setup();await f.post("Quick research.");
+  const operations:string[]=[];
+  const transport={call:async(c:ExecutionCommand)=>{operations.push(c.operation);return c.operation==="start"?{...completed(c),state:"RUNNING" as const}:completed(c);}};
+  await runChannelExecutionCycle(f.config,transport,f.signer);
+  const readyAt=Date.now();
+  const [scheduled]=await rows<{delay:number}>(sql`SELECT EXTRACT(EPOCH FROM run_after-created_at)::float AS delay FROM task_commands WHERE kind='CHANNEL_STATUS' AND status='PENDING'`);
+  expect(scheduled.delay).toBeGreaterThan(0);expect(scheduled.delay).toBeLessThanOrEqual(0.6);
+  let replies=0;
+  while(Date.now()-readyAt<1500 && !replies){
+    await runChannelExecutionCycle(f.config,transport,f.signer);
+    await runChannelDeliveryCycle(f.config,{send:async()=>{replies++;return {kind:"sent",messageId:"fast-result"};}},f.signer);
+    if(!replies)await new Promise(resolve=>setTimeout(resolve,100));
+  }
+  const elapsed=Date.now()-readyAt;
+  expect(replies).toBe(1);expect(elapsed).toBeLessThan(1000);
+  console.info(JSON.stringify({measurement:"telegram_ready_result_ms",elapsed}));
+  expect(operations).toEqual(["start","status"]);
+ });
+ it("keeps a slow poll while waiting for the owner instead of repeatedly querying",async()=>{
+  const f=await setup();await f.post("Proposal.");
+  await runChannelExecutionCycle(f.config,{call:async c=>({...completed(c),state:"WAITING_APPROVAL",pending:{kind:"approval",reference:"waiting",bindingHash:"hash",summary:"Proposal",target:"fixture",consequence:"Requires decision",expiresAt:new Date(Date.now()+3600000).toISOString(),estimatedCost:null}})},f.signer);
+  const [scheduled]=await rows<{delay:number}>(sql`SELECT EXTRACT(EPOCH FROM run_after-created_at)::float AS delay FROM task_commands WHERE kind='CHANNEL_STATUS' AND status='PENDING'`);
+  expect(scheduled.delay).toBeGreaterThan(59);expect(scheduled.delay).toBeLessThanOrEqual(60.1);
+ });
  it("does not start work for disabled execution, Agent or grants",async()=>{
   const f=await setup();f.config.executionEnabled=false;expect((await f.post("request")).status).toBe(200);f.config.executionEnabled=true;
   await db().execute(sql`UPDATE agents SET status='DISABLED' WHERE id=${f.agentId}`);expect((await f.post("request")).status).toBe(200);
   await db().execute(sql`UPDATE agents SET status='ACTIVE' WHERE id=${f.agentId}`);await db().execute(sql`UPDATE capability_grants SET effect='DENY' WHERE agent_id=${f.agentId}`);expect((await f.post("request")).status).toBe(200);expect(await count("channel_work_links")).toBe(0);
  });
+ it("acknowledges a replayed /start without executing it so later updates are not blocked",async()=>{
+  const f=await setup();const replay=`/start ${"A".repeat(43)}`;
+  // Telegram redelivers non-2xx updates before any later one: permanent rejections must be 200.
+  await permanentlyRejectedStatus(await f.post(replay));await permanentlyRejectedStatus(await f.post(replay));
+  await permanentlyRejectedStatus(await f.post(`/start ${"b".repeat(43)}`,456));
+  expect(await count("telegram_bindings")).toBe(1);expect(await count("channel_work_links")).toBe(0);
+  const next=await f.post("What are my active goals?");expect(next.status).toBe(200);expect(await count("channel_work_links")).toBe(1);
+ });
+ it("keeps webhook authentication failures rejected and transient failures retryable",async()=>{
+  const f=await setup();
+  expect((await f.webhook({update_id:1},"wrong-secret-wrong-secret-wrong-secret")).status).toBe(401);
+  expect((await f.webhook({update_id:2},"")).status).toBe(401);
+  // Execution temporarily disabled is transient: the decision must be redelivered, not acknowledged.
+  f.config.executionEnabled=false;
+  const disabled=await f.webhook({update_id:3,callback_query:{id:"q",from:{id:123,is_bot:false},message:{message_id:5,chat:{id:123,type:"private"}},data:`ctl_${"a".repeat(32)}:approve`}});
+  expect(disabled.status).toBe(503);expect(await count("task_commands")).toBe(0);
+  expect([400,403,404,409,413,415,422].every(permanentlyRejected)).toBe(true);
+  expect([401,408,429,500,502,503].some(permanentlyRejected)).toBe(false);
+ });
  it("denies forged, unpaired and revoked ingress",async()=>{
-  const f=await setup();expect((await f.webhook({},"bad")).status).toBe(401);expect((await f.post("request",456)).status).toBe(403);
-  await disconnectTelegram(f.accountId,f.principalId,f.bindingId,f.config);expect((await f.post("request")).status).toBe(403);expect(await count("channel_work_links")).toBe(0);expect((await telegramManagement(f.accountId,f.principalId,f.config)).state).toBe("REVOKED");
+  const f=await setup();expect((await f.webhook({},"bad")).status).toBe(401);const unpaired=await f.post("request",456);expect(unpaired.status).toBe(200);expect(await unpaired.json()).toMatchObject({accepted:false,acknowledged:true});
+  await disconnectTelegram(f.accountId,f.principalId,f.bindingId,f.config);const revoked=await f.post("request");expect(revoked.status).toBe(200);expect(await revoked.json()).toMatchObject({accepted:false,acknowledged:true});expect(await count("channel_work_links")).toBe(0);expect((await telegramManagement(f.accountId,f.principalId,f.config)).state).toBe("REVOKED");
  });
  it("reconciles a crashed start instead of repeating it",async()=>{
   const f=await setup();await f.post("request");await db().execute(sql`UPDATE task_commands SET status='PROCESSING',lease_until=now()-interval '1 second' WHERE kind='CHANNEL_START'`);
@@ -99,8 +180,32 @@ describe("durable owner channel",()=>{
   await runChannelExecutionCycle(f.config,{call:async c=>{commands.push(c);return {...completed(c),state:"WAITING_APPROVAL",pending:{kind:"approval",reference:"canonical-approval",bindingHash:"exact-hash",summary:"Write isolated artifact",target:"test workspace",consequence:"Creates one test artifact",expiresAt:new Date(Date.now()+60000).toISOString(),estimatedCost:null}};}},f.signer);
   const [out]=await rows<{content:{encrypted:string}}>(sql`SELECT content FROM communication_messages WHERE direction='OUTBOUND'`);const data=decode<Reply>(out.content.encrypted).buttons![0].data;expect(data).not.toContain("canonical-approval");expect(data.length).toBeLessThanOrEqual(64);
   const callback=(user:number)=>f.webhook({update_id:555,callback_query:{id:"query",from:{id:user,is_bot:false},message:{message_id:999,chat:{id:user,type:"private"}},data}});
-  expect((await callback(456)).status).toBe(403);expect((await callback(123)).status).toBe(200);expect((await callback(123)).status).toBe(200);expect(f.acknowledgements).toHaveLength(3);expect(f.acknowledgements[2]).toContain("already recorded");
+  const wrong=await callback(456);expect(wrong.status).toBe(200);expect(await wrong.json()).toMatchObject({accepted:false,acknowledged:true});expect((await callback(123)).status).toBe(200);expect((await callback(123)).status).toBe(200);expect(f.acknowledgements).toHaveLength(3);expect(f.acknowledgements[2]).toContain("already recorded");
   await runChannelExecutionCycle(f.config,{call:async c=>{commands.push(c);return completed(c);}},f.signer);expect(commands.map(c=>c.operation)).toEqual(["start","approval"]);expect(commands[1].decision).toEqual({reference:"canonical-approval",bindingHash:"exact-hash",choice:"approve"});expect(commands[1].work).toEqual(commands[0].work);
+ });
+ it.each([false,true])("reconciles expired decisions only for the exact consumed control (mismatch=%s)",async mismatch=>{
+  const f=await setup();await f.post("Send the exact draft.");
+  const pending={kind:"approval" as const,reference:"approval-exact",bindingHash:"hash-exact",summary:"Send pinned email",target:"fixture inbox",consequence:"One email",expiresAt:new Date(Date.now()+60000).toISOString(),estimatedCost:null};
+  await runChannelExecutionCycle(f.config,{call:async c=>({...completed(c),state:"WAITING_APPROVAL",pending})},f.signer);
+  const [out]=await rows<{content:{encrypted:string}}>(sql`SELECT content FROM communication_messages WHERE direction='OUTBOUND'`);
+  const data=decode<Reply>(out.content.encrypted).buttons![0].data;
+  await f.webhook({update_id:777,callback_query:{id:"expiry-query",from:{id:123,is_bot:false},message:{message_id:999,chat:{id:123,type:"private"}},data}});
+  // Unknown approval response: never retry the approval operation.
+  await runChannelExecutionCycle(f.config,{call:async c=>{expect(c.operation).toBe("approval");throw new Error("executor denied");}},f.signer);
+  const [retry]=await rows<{delay:number}>(sql`SELECT EXTRACT(EPOCH FROM run_after-updated_at)::float AS delay FROM task_commands WHERE payload->>'controlId' IS NOT NULL`);
+  expect(retry.delay).toBeGreaterThan(0);expect(retry.delay).toBeLessThanOrEqual(2.1);
+  await db().execute(sql`UPDATE task_commands SET run_after=now() WHERE payload->>'controlId' IS NOT NULL`);
+  const transport={call:async(c:ExecutionCommand)=>{expect(c.operation).toBe("status");return {...completed(c),state:"WAITING_APPROVAL" as const,pending:{...pending,bindingHash:mismatch?"other-hash":pending.bindingHash,expiresAt:new Date(Date.now()-1000).toISOString()}};}};
+  const result=await runChannelExecutionCycle(f.config,transport,f.signer);
+  const expired=await rows<{content:{encrypted:string}}>(sql`SELECT content FROM communication_messages WHERE idempotency_key LIKE 'channel-expired:%'`);
+  if(mismatch){expect(expired).toHaveLength(0);expect((await rows<{status:string}>(sql`SELECT status FROM v2_tasks`))[0].status).toBe("WAITING_APPROVAL");return;}
+  expect(result.state).toBe("APPROVAL_EXPIRED");expect(expired).toHaveLength(1);
+  expect(decode<Reply>(expired[0].content.encrypted).text).toContain("Nothing was approved or sent");
+  expect((await rows<{status:string}>(sql`SELECT status FROM v2_tasks`))[0].status).toBe("CANCELLED");
+  expect(await rows(sql`SELECT id FROM task_commands WHERE kind='CHANNEL_CANCEL'`)).toHaveLength(1);
+  let cancels=0;await runChannelCancellationCycle(f.config,{call:async c=>{cancels++;expect(c.operation).toBe("cancel");return {...completed(c),state:"CANCELLED"};}},f.signer);
+  await runChannelExecutionCycle(f.config,transport,f.signer);
+  expect(cancels).toBe(1);expect(await rows(sql`SELECT id FROM communication_messages WHERE idempotency_key LIKE 'channel-expired:%'`)).toHaveLength(1);
  });
  it("suppresses queued delivery after revocation",async()=>{
   const f=await setup();await f.post("request");await runChannelExecutionCycle(f.config,{call:async c=>completed(c)},f.signer);await disconnectTelegram(f.accountId,f.principalId,f.bindingId,f.config);

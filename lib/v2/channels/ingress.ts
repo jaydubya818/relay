@@ -20,7 +20,7 @@ export async function acceptChannelMessage(update: ReturnType<typeof parsePrivat
     const [duplicate] = await rows<{id:string;task_id:string|null}>(sql`SELECT id,task_id FROM communication_messages WHERE connection_id=${config.connectionId} AND direction='INBOUND' AND (provider_event_id=${update.updateId} OR (provider_message_id=${update.messageId} AND sender_id=${update.userId}))`,tx);
     if (duplicate) return { accepted:true,duplicate:true,messageId:duplicate.id,taskId:duplicate.task_id };
     const [{count}] = await rows<{count:number}>(sql`SELECT count(*)::int AS count FROM communication_messages WHERE connection_id=${config.connectionId} AND direction='INBOUND' AND created_at>now()-interval '1 minute'`,tx);
-    const [{pending}] = await rows<{pending:number}>(sql`SELECT count(*)::int AS pending FROM channel_work_links w JOIN v2_tasks t ON t.id=w.task_id WHERE w.binding_id=${binding.id} AND t.status NOT IN ('SUCCEEDED','FAILED','CANCELLED','DEAD_LETTERED')`,tx);
+    const [{pending,blocking_status}] = await rows<{pending:number;blocking_status:string|null}>(sql`SELECT count(*)::int AS pending,(array_agg(t.status ORDER BY w.created_at))[1] AS blocking_status FROM channel_work_links w JOIN v2_tasks t ON t.id=w.task_id WHERE w.binding_id=${binding.id} AND t.status NOT IN ('SUCCEEDED','FAILED','CANCELLED','DEAD_LETTERED')`,tx);
     if (count>=10 || pending>=4 && !update.text.startsWith("/")) throw new RelayError("RATE_LIMITED","Please wait for your current requests.",undefined,429);
     let [thread] = await rows<{id:string}>(sql`SELECT id FROM communication_threads WHERE connection_id=${config.connectionId} AND external_conversation_id=${update.chatId} AND external_thread_id=''`,tx);
     if (!thread) { thread={id:id("cmt")}; await tx.execute(sql`INSERT INTO communication_threads(id,account_id,connection_id,external_conversation_id,external_thread_id,recipient_id,known_recipient) VALUES(${thread.id},${binding.account_id},${config.connectionId},${update.chatId},'',${update.userId},true)`); }
@@ -50,7 +50,10 @@ export async function acceptChannelMessage(update: ReturnType<typeof parsePrivat
     await tx.execute(sql`UPDATE task_commands SET kind='CHANNEL_START' WHERE account_id=${binding.account_id} AND task_id=${taskId} AND kind='START_TASK'`);
     await tx.execute(sql`INSERT INTO channel_work_links(task_id,account_id,binding_id,message_id,expires_at) VALUES(${taskId},${binding.account_id},${binding.id},${messageId},now()+interval '24 hours')`);
     await tx.execute(sql`UPDATE communication_messages SET status='ROUTED',task_id=${taskId} WHERE id=${messageId}`);
+    if(pending>0)await enqueueReply(tx,{binding,threadId:thread.id,taskId,key:`channel-queued:${messageId}`,reply:{text:blocking_status==="WAITING_APPROVAL"
+      ?"Received. Your earlier request is waiting for a decision. Use Approve or Reject on that request so I can continue. Typing 'approved' does not approve it."
+      :"Received. This is queued behind your earlier request. Use /status to check its progress."}});
     await channelAudit(tx,signer,binding,"channel.ingress_accepted","QUEUED",{messageId,taskId,threadId:thread.id});
-    return {accepted:true,duplicate:false,messageId,taskId};
+    return {accepted:true,duplicate:false,messageId,taskId,queued:pending>0};
   });
 }

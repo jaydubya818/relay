@@ -12,9 +12,24 @@ async function main(){
   const sender=new TelegramOwnerSender(config.botToken);let stopped=false;
   process.once("SIGTERM",()=>{stopped=true;});process.once("SIGINT",()=>{stopped=true;});
   while(!stopped){
-    try{await runChannelCancellationCycle(config,executor,config.signer);await runChannelExecutionCycle(config,executor,config.signer);await runChannelDeliveryCycle(config,sender,config.signer);}
+    // Execution authority is time-dependent (local qualification expiry), so it is
+    // re-evaluated every cycle. A changed executor/identity binding stops the worker.
+    const current=channelConfiguration();
+    if(current.issues.length||!current.signer||current.endpoint!==config.endpoint||current.audience!==config.audience||current.environment!==config.environment||current.connectionId!==config.connectionId||current.accountId!==config.accountId){
+      console.error(JSON.stringify({event:"channel_worker_configuration_changed",code:"STOPPED"}));break;
+    }
+    let processed=false;
+    try{
+      const cancellation=await runChannelCancellationCycle(current,executor,current.signer);
+      // A queued-request explanation must not wait behind an executor round trip.
+      const waitingDelivery=await runChannelDeliveryCycle(current,sender,current.signer);
+      const execution=await runChannelExecutionCycle(current,executor,current.signer);
+      const delivery=await runChannelDeliveryCycle(current,sender,current.signer);
+      processed=cancellation.processed||waitingDelivery.processed||execution.processed||delivery.processed;
+    }
     catch{console.error(JSON.stringify({event:"channel_worker_cycle_failed",code:"UNAVAILABLE"}));}
-    await new Promise(resolve=>setTimeout(resolve,1000));
+    // Drain ready work without a per-command delay; idle/error cycles stay bounded.
+    if(!processed&&!stopped)await new Promise(resolve=>setTimeout(resolve,250));
   }
   await closeDatabase();
 }
