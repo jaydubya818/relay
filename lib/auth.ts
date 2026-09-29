@@ -8,12 +8,13 @@ import { hashPassword, hashSecret, verifyPassword } from "@/lib/crypto";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import type { AgentPrincipal, SessionUser } from "@/lib/types";
+import { lockActiveAccount } from "@/lib/account-fence";
 
 const SESSION_COOKIE = "relay_session";
 const SESSION_SECONDS = 60 * 60 * 12;
 
 export async function authenticateDashboardUser(email: string, password: string) {
-  const [user] = await db().select({ id: users.id, accountId: users.accountId, email: users.email, name: users.name, role: users.role, passwordHash: users.passwordHash }).from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
+  const [user] = await db().select({ id: users.id, accountId: users.accountId, email: users.email, name: users.name, role: users.role, passwordHash: users.passwordHash }).from(users).innerJoin(accounts, eq(accounts.id, users.accountId)).where(and(eq(users.email, email.trim().toLowerCase()), isNull(accounts.retiredAt))).limit(1);
   if (!user || !verifyPassword(password, user.passwordHash)) return null;
   return { id: user.id, accountId: user.accountId, email: user.email, name: user.name, role: user.role } satisfies SessionUser;
 }
@@ -36,13 +37,39 @@ export async function issueBetaInvite(user: SessionUser, emailInput: string) {
   if (existing) throw new RelayError("INVALID_INPUT", "An account already exists for this email.", undefined, 409);
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  await db().insert(betaInvites).values({ id: id("inv"), accountId: user.accountId, email, tokenHash: hashSecret(token), createdBy: user.id, expiresAt });
+  await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, user.accountId);
+    await transaction.insert(betaInvites).values({ id: id("inv"), accountId: user.accountId, email, tokenHash: hashSecret(token), createdBy: user.id, expiresAt });
+  });
   return { token, email, expiresAt };
+}
+
+export async function listBetaInvites(user: SessionUser) {
+  if (!canIssueBetaInvites(user)) throw new RelayError("INVALID_CREDENTIAL", "Beta invitation access required.", undefined, 403);
+  const rows = await db().select({ id: betaInvites.id, email: betaInvites.email, createdAt: betaInvites.createdAt, expiresAt: betaInvites.expiresAt, consumedAt: betaInvites.consumedAt, revokedAt: betaInvites.revokedAt, revokedByUserId: betaInvites.revokedByUserId })
+    .from(betaInvites).where(eq(betaInvites.accountId, user.accountId));
+  return rows.map((row) => ({ ...row, status: row.revokedAt ? "REVOKED" : row.consumedAt ? "ACCEPTED" : Date.parse(row.expiresAt) <= Date.now() ? "EXPIRED" : "PENDING" }));
+}
+
+export async function revokeBetaInvite(user: SessionUser, inviteId: string) {
+  if (!canIssueBetaInvites(user)) throw new RelayError("INVALID_CREDENTIAL", "Beta invitation access required.", undefined, 403);
+  return withTransaction(async (transaction) => {
+    const timestamp = now();
+    const [revoked] = await transaction.update(betaInvites).set({ revokedAt: timestamp, revokedByUserId: user.id })
+      .where(and(eq(betaInvites.id, inviteId), eq(betaInvites.accountId, user.accountId), isNull(betaInvites.consumedAt), isNull(betaInvites.revokedAt), gt(betaInvites.expiresAt, timestamp)))
+      .returning({ id: betaInvites.id, revokedAt: betaInvites.revokedAt, revokedByUserId: betaInvites.revokedByUserId });
+    if (revoked) return { ...revoked, status: "REVOKED" as const, idempotentReplay: false };
+    const [existing] = await transaction.select({ id: betaInvites.id, consumedAt: betaInvites.consumedAt, revokedAt: betaInvites.revokedAt, revokedByUserId: betaInvites.revokedByUserId, expiresAt: betaInvites.expiresAt })
+      .from(betaInvites).where(and(eq(betaInvites.id, inviteId), eq(betaInvites.accountId, user.accountId))).limit(1);
+    if (!existing) throw new RelayError("INVALID_INPUT", "Invitation was not found.", undefined, 404);
+    if (existing.revokedAt) return { id: existing.id, status: "REVOKED" as const, revokedAt: existing.revokedAt, revokedByUserId: existing.revokedByUserId, idempotentReplay: true };
+    throw new RelayError("INVALID_INPUT", existing.consumedAt ? "Accepted invitation cannot be revoked." : "Expired invitation cannot be revoked.", undefined, 409);
+  });
 }
 
 export async function lookupBetaInvite(token: string) {
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
-  const [invite] = await db().select({ email: betaInvites.email, expiresAt: betaInvites.expiresAt }).from(betaInvites).where(and(eq(betaInvites.tokenHash, hashSecret(token)), isNull(betaInvites.consumedAt), gt(betaInvites.expiresAt, now()))).limit(1);
+  const [invite] = await db().select({ email: betaInvites.email, expiresAt: betaInvites.expiresAt }).from(betaInvites).where(and(eq(betaInvites.tokenHash, hashSecret(token)), isNull(betaInvites.consumedAt), isNull(betaInvites.revokedAt), gt(betaInvites.expiresAt, now()))).limit(1);
   return invite ?? null;
 }
 
@@ -59,16 +86,19 @@ export async function createAccountOwner(input: { accountName: string; name: str
   const timestamp = now();
   try {
     await withTransaction(async (transaction) => {
-      if (!signupEnabled()) {
+      if (input.inviteToken || !signupEnabled()) {
         const [claimed] = await transaction.update(betaInvites).set({ consumedAt: timestamp }).where(and(
           eq(betaInvites.tokenHash, hashSecret(input.inviteToken ?? "")),
           eq(betaInvites.email, email),
           isNull(betaInvites.consumedAt),
+          isNull(betaInvites.revokedAt),
           gt(betaInvites.expiresAt, timestamp),
         )).returning({ id: betaInvites.id });
         if (!claimed) throw new RelayError("INVALID_INPUT", "This invitation is invalid, expired, or already used.", undefined, 403);
       }
-      await transaction.insert(accounts).values({ id: accountId, name: accountName, createdAt: timestamp, updatedAt: timestamp });
+      await transaction.insert(accounts).values({ id: accountId, name: accountName, disposableBeta: Boolean(input.inviteToken), createdAt: timestamp, updatedAt: timestamp });
+      if (input.inviteToken) await transaction.update(betaInvites).set({ acceptedAccountId: accountId })
+        .where(and(eq(betaInvites.tokenHash, hashSecret(input.inviteToken)), eq(betaInvites.email, email), eq(betaInvites.consumedAt, timestamp)));
       await transaction.insert(users).values({ id: userId, accountId, email, name, role: "OWNER", passwordHash: hashPassword(input.password), createdAt: timestamp });
       const principalId = id("prn");
       await transaction.insert(principals).values({ id: principalId, type: "HUMAN", userId, displayName: name, createdAt: timestamp, updatedAt: timestamp });
@@ -85,13 +115,16 @@ export async function createSession(user: SessionUser) {
   const token = randomBytes(32).toString("base64url");
   const timestamp = now();
   const expiresAt = new Date(Date.now() + SESSION_SECONDS * 1000).toISOString();
-  await db().insert(userSessions).values({ id: id("ses"), accountId: user.accountId, userId: user.id, tokenHash: hashSecret(token), createdAt: timestamp, lastSeenAt: timestamp, expiresAt });
+  await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, user.accountId);
+    await transaction.insert(userSessions).values({ id: id("ses"), accountId: user.accountId, userId: user.id, tokenHash: hashSecret(token), createdAt: timestamp, lastSeenAt: timestamp, expiresAt });
+  });
   return token;
 }
 
 export async function parseSession(value?: string): Promise<SessionUser | null> {
   if (!value) return null;
-  const [session] = await db().select({ sessionId: userSessions.id, id: users.id, accountId: users.accountId, email: users.email, name: users.name, role: users.role }).from(userSessions).innerJoin(users, and(eq(users.id, userSessions.userId), eq(users.accountId, userSessions.accountId))).where(and(eq(userSessions.tokenHash, hashSecret(value)), isNull(userSessions.revokedAt), gt(userSessions.expiresAt, now()))).limit(1);
+  const [session] = await db().select({ sessionId: userSessions.id, id: users.id, accountId: users.accountId, email: users.email, name: users.name, role: users.role }).from(userSessions).innerJoin(users, and(eq(users.id, userSessions.userId), eq(users.accountId, userSessions.accountId))).innerJoin(accounts, and(eq(accounts.id, users.accountId), isNull(accounts.retiredAt))).where(and(eq(userSessions.tokenHash, hashSecret(value)), isNull(userSessions.revokedAt), gt(userSessions.expiresAt, now()))).limit(1);
   if (!session) return null;
   await db().update(userSessions).set({ lastSeenAt: now() }).where(eq(userSessions.id, session.sessionId));
   return { id: session.id, accountId: session.accountId, email: session.email, name: session.name, role: session.role };
@@ -127,7 +160,7 @@ export type AgentAuthResult =
   | { ok: false; code: "INVALID_CREDENTIAL" | "REVOKED_CREDENTIAL"; principal?: AgentPrincipal };
 
 export async function authenticateAgent(secret: string): Promise<AgentAuthResult> {
-  const [row] = await db().select({ credentialId: agentCredentials.id, accountId: agentCredentials.accountId, agentId: agentCredentials.agentId, revokedAt: agentCredentials.revokedAt, expiresAt: agentCredentials.expiresAt, agentName: agents.name, status: agents.status }).from(agentCredentials).innerJoin(agents, and(eq(agents.id, agentCredentials.agentId), eq(agents.accountId, agentCredentials.accountId))).where(eq(agentCredentials.secretHash, hashSecret(secret))).limit(1);
+  const [row] = await db().select({ credentialId: agentCredentials.id, accountId: agentCredentials.accountId, agentId: agentCredentials.agentId, revokedAt: agentCredentials.revokedAt, expiresAt: agentCredentials.expiresAt, agentName: agents.name, status: agents.status }).from(agentCredentials).innerJoin(agents, and(eq(agents.id, agentCredentials.agentId), eq(agents.accountId, agentCredentials.accountId))).innerJoin(accounts, and(eq(accounts.id, agents.accountId), isNull(accounts.retiredAt))).where(eq(agentCredentials.secretHash, hashSecret(secret))).limit(1);
   if (!row) return { ok: false, code: "INVALID_CREDENTIAL" };
   const principal = { credentialId: row.credentialId, agentId: row.agentId, accountId: row.accountId, agentName: row.agentName };
   if (row.revokedAt || row.status !== "ACTIVE" || (row.expiresAt && row.expiresAt <= now())) {

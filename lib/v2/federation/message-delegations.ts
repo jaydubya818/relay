@@ -32,7 +32,7 @@ export async function issueMessageDelegation(user: SessionUser, value: unknown, 
   const delegationId = id("fmd");
   const expiresAt = new Date(Date.now() + DURATION_MS).toISOString();
   await withTransaction(async (transaction) => {
-    await lockOwners(transaction, [user.accountId]);
+    await lockOwners(transaction, [user.accountId, input.granteeOwnerId]);
     await transaction.update(federationMessageDelegations).set({ revokedAt: now() }).where(and(
       eq(federationMessageDelegations.ownerId, user.accountId),
       eq(federationMessageDelegations.agentId, input.agentId),

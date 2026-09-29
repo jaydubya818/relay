@@ -2,7 +2,7 @@ import { messageResponseSchema } from "./contracts";
 import { and, asc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, withTransaction, type RelayDatabase } from "@/lib/db";
-import { accountMemberships, agentCredentials, agents, approvalRequests, budgetReservations, budgets, controlOutbox, federationAgents, federationAttempts, federationGrants, federationRateWindows, federationRelationships, federationRequests, policyDecisions, publishedViews } from "@/lib/db/schema";
+import { accountMemberships, accounts, agentCredentials, agents, approvalRequests, budgetReservations, budgets, controlOutbox, federationAgents, federationAttempts, federationGrants, federationRateWindows, federationRelationships, federationRequests, policyDecisions, publishedViews } from "@/lib/db/schema";
 import { hashSecret } from "@/lib/crypto";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
@@ -27,11 +27,14 @@ export async function authenticateFederationAgent(secret: string): Promise<Authe
   const [row] = await db().select({ ownerId: agents.accountId, agentId: agents.id, credentialId: agentCredentials.id, expiresAt: agentCredentials.expiresAt, address: federationAgents.address, availability: federationAgents.availability })
     .from(agentCredentials).innerJoin(agents, and(eq(agents.id, agentCredentials.agentId), eq(agents.accountId, agentCredentials.accountId), eq(agents.status, "ACTIVE")))
     .innerJoin(federationAgents, and(eq(federationAgents.agentId, agents.id), eq(federationAgents.ownerId, agents.accountId)))
+    .innerJoin(accounts, and(eq(accounts.id, agents.accountId), isNull(accounts.retiredAt)))
     .where(and(eq(agentCredentials.secretHash, hashSecret(secret)), isNull(agentCredentials.revokedAt))).limit(1);
   if (!row || (row.expiresAt && Date.parse(row.expiresAt) <= Date.now()) || ["REVOKED", "PAUSED"].includes(row.availability)) throw new RelayError("INVALID_CREDENTIAL", "Federation credential is unavailable.", undefined, 401);
   return { ownerId: row.ownerId, agentId: row.agentId, credentialId: row.credentialId, address: row.address };
 }
 async function identityStillActive(transaction: RelayDatabase, row: RequestRow) {
+  const owners = await transaction.select({ id: accounts.id }).from(accounts).where(and(inArray(accounts.id, [row.callerOwnerId, row.targetOwnerId]), isNull(accounts.retiredAt)));
+  if (owners.length !== 2) denied();
   const [credential] = await transaction.select().from(agentCredentials).where(and(eq(agentCredentials.id, row.callerCredentialId), eq(agentCredentials.agentId, row.callerAgentId), eq(agentCredentials.accountId, row.callerOwnerId), isNull(agentCredentials.revokedAt)));
   if (!credential || (credential.expiresAt && Date.parse(credential.expiresAt) <= Date.now())) denied();
   const identities = await transaction.select({ id: agents.id, status: agents.status, availability: federationAgents.availability }).from(agents).innerJoin(federationAgents, eq(federationAgents.agentId, agents.id)).where(inArray(agents.id, [row.callerAgentId, row.targetAgentId]));

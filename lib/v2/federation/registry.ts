@@ -1,7 +1,7 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { withTransaction, type RelayDatabase } from "@/lib/db";
-import { agents, federationAgents, federationGrants, federationRelationships, publicationVersions, publishedViews } from "@/lib/db/schema";
+import { accounts, agents, federationAgents, federationGrants, federationRelationships, publicationVersions, publishedViews } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { requireMembership } from "@/lib/v2/identity";
@@ -12,7 +12,10 @@ import { availabilitySchema, grantSchema, publicationStatusSchema, registrationS
 export type OwnerActor = { accountId: string; principalId: string };
 export function denied(): never { throw new RelayError("CAPABILITY_DENIED", "Federation resource or authority is unavailable.", undefined, 403); }
 export async function lockOwners(transaction: RelayDatabase, owners: string[]) {
-  for (const owner of [...new Set(owners)].sort()) await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`federation:${owner}`}, 0))`);
+  const uniqueOwners = [...new Set(owners)].sort();
+  for (const owner of uniqueOwners) await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`federation:${owner}`}, 0))`);
+  const active = await transaction.select({ id: accounts.id }).from(accounts).where(and(inArray(accounts.id, uniqueOwners), isNull(accounts.retiredAt)));
+  if (active.length !== uniqueOwners.length) denied();
 }
 export async function requireOwner(actor: OwnerActor) { return requireMembership({ ...actor, allowedRoles: ["OWNER"] }); }
 export async function ownedAgent(transaction: RelayDatabase, accountId: string, agentId: string) {

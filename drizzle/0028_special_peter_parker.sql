@@ -1,0 +1,2 @@
+ALTER TABLE "beta_invites" ADD COLUMN "accepted_account_id" text;--> statement-breakpoint
+ALTER TABLE "beta_invites" ADD CONSTRAINT "beta_invites_accepted_account_id_accounts_id_fk" FOREIGN KEY ("accepted_account_id") REFERENCES "public"."accounts"("id") ON DELETE no action ON UPDATE no action;

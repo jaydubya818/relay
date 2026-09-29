@@ -15,6 +15,15 @@ message has reached Sofie's authorized inbox; Sofie's configured automatic
 reply is therefore **not live-qualified**. Reciprocal communication is not a
 pass. See the [live qualification record](docs/federation/orchis-sofie-beta-qualification.md).
 
+**Managed MyEve beta status:** The combined disposable Ava/Sofie Golden Journey
+is **not qualified**. The last release-candidate run stopped at the dedicated
+MyEve Beta team's AI Gateway payment prerequisite before reciprocal peer and
+governed Knowledge exchange. The disposable Relay accounts were retired with
+zero active sessions and grants; both candidate PRs remain draft and global
+managed provisioning is disabled. See the
+[beta identity lifecycle](docs/beta-identity-lifecycle.md) for the exact
+retirement boundary, unrun gates, and evidence links.
+
 ## Hosted private preview
 
 The current `main` branch is deployed at [relay-jaydubya818.vercel.app](https://relay-jaydubya818.vercel.app) as an owner-only private preview.
