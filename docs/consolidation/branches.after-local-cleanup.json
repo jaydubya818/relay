@@ -1,0 +1,308 @@
+[
+  {
+    "ref": "refs/heads/codex/canonical-consolidation",
+    "name": "codex/canonical-consolidation",
+    "sha": "749c553b37a55c47dd31add72a760a439fbb0ab0",
+    "uniqueCommits": 0,
+    "disposition": "KEEP_CANONICAL_OR_CONSOLIDATION",
+    "priorClassification": "CANONICAL_INPUT",
+    "reason": "Task-owned integration checkpoint; not yet final qualified canonical source."
+  },
+  {
+    "ref": "refs/heads/codex/myfactory-hosted-routing",
+    "name": "codex/myfactory-hosted-routing",
+    "sha": "fac4dede019d0b60aacc1a7c5901a413e38206d4",
+    "uniqueCommits": 8,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "SUPERSEDED",
+    "reason": "Factory routing was integrated through canonical merge/squash. Stateless invite alternative fac4ded conflicts with canonical durable invitation lifecycle; do not reintroduce it."
+  },
+  {
+    "ref": "refs/heads/codex/myfactory-relay-live",
+    "name": "codex/myfactory-relay-live",
+    "sha": "86c558d6e52081cfbb425920d560ed8024731bb4",
+    "uniqueCommits": 1,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Factory-only credential option is present; later invite UI is additive. Current lint ignore lib/**/*.d.mts subsumes the old specific generated declaration ignore."
+  },
+  {
+    "ref": "refs/heads/codex/relay-federation",
+    "name": "codex/relay-federation",
+    "sha": "614c638d6fc4099db8064540326f5de4438e93a1",
+    "uniqueCommits": 4,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "All four unique commits have patch-equivalent canonical commits, including signed denials and the two-owner HTTPS qualification."
+  },
+  {
+    "ref": "refs/heads/codex/relay-v1-rc-soak",
+    "name": "codex/relay-v1-rc-soak",
+    "sha": "6ca798d5a677e0b7d9563692fb9ccbe1fa91a4ad",
+    "uniqueCommits": 5,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "HISTORICAL_EVIDENCE_ONLY",
+    "reason": "Frozen V1 frontier check requires this ref; soak evidence retained."
+  },
+  {
+    "ref": "refs/heads/feat/authority-inspection-v1",
+    "name": "feat/authority-inspection-v1",
+    "sha": "31ab0eec3d02d660f81bc156f1eea4535c2f5764",
+    "uniqueCommits": 1,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Unique authority-inspection patch is equivalent to canonical implementation; later service adds expiry and message behavior."
+  },
+  {
+    "ref": "refs/heads/feat/relay-v1",
+    "name": "feat/relay-v1",
+    "sha": "43e0160eb2b9552f71154d18369e4626e0e79339",
+    "uniqueCommits": 0,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Frozen V1 frontier check requires this branch and release tag."
+  },
+  {
+    "ref": "refs/heads/feat/relay-v2-telegram-private-beta",
+    "name": "feat/relay-v2-telegram-private-beta",
+    "sha": "89d6b053196566486648c3bbc7ac36d196a0e0c1",
+    "uniqueCommits": 0,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "HISTORICAL_EVIDENCE_ONLY",
+    "reason": "Unique later commits record older Telegram qualification; active implementation is retained by the newer local-qualification branch and canonical channel baseline."
+  },
+  {
+    "ref": "refs/heads/main",
+    "name": "main",
+    "sha": "e2eb350f5655427d55cc204264020a9295173f96",
+    "uniqueCommits": 0,
+    "disposition": "KEEP_CANONICAL_OR_CONSOLIDATION",
+    "priorClassification": "CANONICAL_INPUT",
+    "reason": "Actual origin default branch is main; preserve canonical checkout, including local divergence."
+  },
+  {
+    "ref": "refs/remotes/origin/HEAD",
+    "name": "HEAD",
+    "sha": "0feb834594c9b25596653894333306d4770345a3",
+    "uniqueCommits": 0,
+    "disposition": "KEEP_CANONICAL_OR_CONSOLIDATION",
+    "priorClassification": "CANONICAL_INPUT",
+    "reason": "Actual origin default branch is main; preserve canonical checkout, including local divergence."
+  },
+  {
+    "ref": "refs/remotes/origin/claude/telegram-local-qualification",
+    "name": "claude/telegram-local-qualification",
+    "sha": "b4fe4bd390bfbd53069ef92232af09c96d7c5526",
+    "uniqueCommits": 11,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "UNIQUE_WORK_TO_INTEGRATE",
+    "reason": "Offline-tested channel improvements; latest report retains INCOMPLETE live Golden Journey. Keep separate until MyEve channel pair and release boundaries are reconciled."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/authority-expiry-diagnostics",
+    "name": "codex/authority-expiry-diagnostics",
+    "sha": "36b79399b9906208cc0784f7f613e8dd5ce5489f",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/canonical-consolidation",
+    "name": "codex/canonical-consolidation",
+    "sha": "749c553b37a55c47dd31add72a760a439fbb0ab0",
+    "uniqueCommits": 0,
+    "disposition": "KEEP_CANONICAL_OR_CONSOLIDATION",
+    "priorClassification": "CANONICAL_INPUT",
+    "reason": "Task-owned integration checkpoint; not yet final qualified canonical source."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/fq-relay-6384519e0e01",
+    "name": "codex/fq-relay-6384519e0e01",
+    "sha": "73d9104fbe8a2c102258dc593ce61d0f23d9254f",
+    "uniqueCommits": 1,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "HISTORICAL_EVIDENCE_ONLY",
+    "reason": "Unique delta is documentation/evidence; preserve source/report history."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/grant-never-expire",
+    "name": "codex/grant-never-expire",
+    "sha": "b8be9352780b3d49cc8e4eae45d1be47a57919e0",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/myeve-federation-preprovision",
+    "name": "codex/myeve-federation-preprovision",
+    "sha": "c910c9debc1f92acd60649431a6466243a711c33",
+    "uniqueCommits": 5,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "UNIQUE_WORK_TO_INTEGRATE",
+    "reason": "Versioned commitment signature protocol needs paired MyEve verifier and independent security review. Qualification report explicitly says NO-GO; preserve and defer coordinated protocol rollout."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/myfactory-hosted-routing",
+    "name": "codex/myfactory-hosted-routing",
+    "sha": "fac4dede019d0b60aacc1a7c5901a413e38206d4",
+    "uniqueCommits": 8,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "SUPERSEDED",
+    "reason": "Factory routing was integrated through canonical merge/squash. Stateless invite alternative fac4ded conflicts with canonical durable invitation lifecycle; do not reintroduce it."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/myfactory-relay-live",
+    "name": "codex/myfactory-relay-live",
+    "sha": "e2dfb5b4480f9bc2c2e5c7642dbf38f36a3f8404",
+    "uniqueCommits": 2,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Factory-only credential option is present; later invite UI is additive. Current lint ignore lib/**/*.d.mts subsumes the old specific generated declaration ignore."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/peer-message-answers",
+    "name": "codex/peer-message-answers",
+    "sha": "381918e5ce6a24ecdf5ba5d74daec02663728662",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/prod-relay-release",
+    "name": "codex/prod-relay-release",
+    "sha": "b453652e3efa7db18e06cd5fe42cba4a518b4c63",
+    "uniqueCommits": 1,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Every file in the branch delta has the identical blob in the candidate; history differs through cherry-pick/squash. Cleanup remains gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-beta-identity-lifecycle",
+    "name": "codex/relay-beta-identity-lifecycle",
+    "sha": "416dee9b2faf4e206deb75ff93f9d284c0c1439d",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-beta-trust-onboarding",
+    "name": "codex/relay-beta-trust-onboarding",
+    "sha": "9e3903aa19c11337f078297397d5cda821a7d5e8",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-final-integration",
+    "name": "codex/relay-final-integration",
+    "sha": "88bd2e88ce2253b092847c1dc7aaaac55099fb3f",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-owner-preview-consolidation",
+    "name": "codex/relay-owner-preview-consolidation",
+    "sha": "f8f30ccd1db769aee7751c6eef56ea09a7152290",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-owner-preview-qualification",
+    "name": "codex/relay-owner-preview-qualification",
+    "sha": "2405e33eca5131d846044c2c811c15126b2d39a2",
+    "uniqueCommits": 14,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "SUPERSEDED",
+    "reason": "Patch equivalence covers qualification changes; unique dashboard fix 5680056 is explicitly reverted by f39288e. Preserve historical performance evidence."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-private-preview",
+    "name": "codex/relay-private-preview",
+    "sha": "2b49e1584e9b595f745df4ef5c56c51255c7221b",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-signing-envelope-v2",
+    "name": "codex/relay-signing-envelope-v2",
+    "sha": "31f878a6c420a1b9889bb4921bc8eefb4cb996ce",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-v1-soak-consolidation",
+    "name": "codex/relay-v1-soak-consolidation",
+    "sha": "f77a9c15d3d3838e207be53cbc6192a9207ff88f",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/telegram-current-integration",
+    "name": "codex/telegram-current-integration",
+    "sha": "0bcb8777e45e57b52cf8e536b6f5a12c90b811ad",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/feat/authority-inspection-v1",
+    "name": "feat/authority-inspection-v1",
+    "sha": "31ab0eec3d02d660f81bc156f1eea4535c2f5764",
+    "uniqueCommits": 1,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Unique authority-inspection patch is equivalent to canonical implementation; later service adds expiry and message behavior."
+  },
+  {
+    "ref": "refs/remotes/origin/feat/relay-v1",
+    "name": "feat/relay-v1",
+    "sha": "43e0160eb2b9552f71154d18369e4626e0e79339",
+    "uniqueCommits": 0,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Frozen V1 frontier check requires this branch and release tag."
+  },
+  {
+    "ref": "refs/remotes/origin/feat/relay-v2",
+    "name": "feat/relay-v2",
+    "sha": "23950ebfa7fd08e0fc00c8067183cbcbf1cab9ac",
+    "uniqueCommits": 0,
+    "disposition": "DELETE_REMOTE_PENDING_APPROVAL",
+    "priorClassification": "ALREADY_CONTAINED",
+    "reason": "Exact main ancestry; inventory identified obsolete; no existing worktree uses branch."
+  },
+  {
+    "ref": "refs/remotes/origin/feat/relay-v2-telegram-private-beta",
+    "name": "feat/relay-v2-telegram-private-beta",
+    "sha": "e3b981a787476416005a555a5ac9c58b24c00300",
+    "uniqueCommits": 3,
+    "disposition": "KEEP_INTENTIONAL_SOURCE_OR_CHECKOUT",
+    "priorClassification": "HISTORICAL_EVIDENCE_ONLY",
+    "reason": "Unique later commits record older Telegram qualification; active implementation is retained by the newer local-qualification branch and canonical channel baseline."
+  },
+  {
+    "ref": "refs/remotes/origin/main",
+    "name": "main",
+    "sha": "0feb834594c9b25596653894333306d4770345a3",
+    "uniqueCommits": 0,
+    "disposition": "KEEP_CANONICAL_OR_CONSOLIDATION",
+    "priorClassification": "CANONICAL_INPUT",
+    "reason": "Actual origin default branch is main; preserve canonical checkout, including local divergence."
+  }
+]

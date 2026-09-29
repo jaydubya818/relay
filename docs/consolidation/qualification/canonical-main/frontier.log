@@ -1,0 +1,7 @@
+
+> relay@0.1.0 v2:frontier:check /private/tmp/canonical-main-relay-20260929
+> tsx scripts/verify-v2-frontier.ts
+
+fatal: Needed a single revision
+fatal: Needed a single revision
+{"status":"PASS","check":"v2_frontier","branch":"main","baseTag":"relay-v1.0.0-rc.1","baseCommit":"43e0160eb2b9552f71154d18369e4626e0e79339","head":"0feb834594c9b25596653894333306d4770345a3","frozenBranches":["feat/relay-v1","codex/relay-v1-rc-soak"],"verifiedFrozenRefs":["refs/heads/feat/relay-v1","refs/remotes/origin/feat/relay-v1","refs/heads/codex/relay-v1-rc-soak"]}

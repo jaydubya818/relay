@@ -1,0 +1,4 @@
+
+> relay@0.1.0 typecheck /private/tmp/canonical-main-relay-20260929
+> tsc --noEmit
+

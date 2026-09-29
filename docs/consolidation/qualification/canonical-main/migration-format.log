@@ -1,0 +1,7 @@
+
+> relay@0.1.0 db:check /private/tmp/canonical-main-relay-20260929
+> drizzle-kit check
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/private/tmp/canonical-main-relay-20260929/drizzle.config.ts'
+Everything's fine 🐶🔥
