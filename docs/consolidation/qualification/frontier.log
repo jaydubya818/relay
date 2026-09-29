@@ -1,0 +1,5 @@
+
+> relay@0.1.0 v2:frontier:check /private/tmp/canonical-consolidation-relay
+> tsx scripts/verify-v2-frontier.ts
+
+{"status":"PASS","check":"v2_frontier","branch":"codex/canonical-consolidation","baseTag":"relay-v1.0.0-rc.1","baseCommit":"43e0160eb2b9552f71154d18369e4626e0e79339","head":"ed8bb0f11543c2b82a61cf65fc9ed697aae21df4","frozenBranches":["feat/relay-v1","codex/relay-v1-rc-soak"],"verifiedFrozenRefs":["refs/heads/feat/relay-v1","refs/remotes/origin/feat/relay-v1","refs/heads/codex/relay-v1-rc-soak"]}

@@ -1,0 +1,547 @@
+[
+  {
+    "ref": "refs/heads/codex/authority-expiry-diagnostics",
+    "sha": "36b79399b9906208cc0784f7f613e8dd5ce5489f",
+    "base": "36b79399b9906208cc0784f7f613e8dd5ce5489f",
+    "counts": "47\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/heads/codex/canonical-consolidation",
+    "sha": "ed8bb0f11543c2b82a61cf65fc9ed697aae21df4",
+    "base": "1da025e4dc234acdc1e6546c4770ccf733611967",
+    "counts": "0\t8",
+    "unique": [
+      "ed8bb0f11543c2b82a61cf65fc9ed697aae21df4 Integrate qualified beta identity retirement and authority fencing",
+      "416dee9b2faf4e206deb75ff93f9d284c0c1439d docs: record managed beta Golden Journey gate",
+      "2936218a7dc71d5fa74e59ce6760da1afbde9be5 Fence remaining runtime authority before beta retirement",
+      "6a7c029ded77975d1fc973aec3fab27c71f4404a Record reviewed retirement regression evidence",
+      "9cec381a28dac90be4458c3f387e2441b4c9e046 Fence disposable account authority during retirement",
+      "5fad9d77dc42e3715ccc4fc8e588d23862329e5a Close peer outbox retirement races and document lifecycle evidence",
+      "56fe9de1bbf7d1a85bd113e1c6381a196908083a Retire disposable Relay beta accounts with authority fencing",
+      "673022d03680cd154c2bdf485b522cc1478affc4 Add beta invite revocation and disposable account markers"
+    ],
+    "classification": "CANONICAL_INPUT",
+    "cleanup": "KEEP_ACTIVE",
+    "reason": "Task-owned integration checkpoint; not yet final qualified canonical source."
+  },
+  {
+    "ref": "refs/heads/codex/grant-never-expire",
+    "sha": "b8be9352780b3d49cc8e4eae45d1be47a57919e0",
+    "base": "b8be9352780b3d49cc8e4eae45d1be47a57919e0",
+    "counts": "45\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/heads/codex/myfactory-hosted-routing",
+    "sha": "fac4dede019d0b60aacc1a7c5901a413e38206d4",
+    "base": "a0e6b3ca297836aba442c43c975d4fd267614346",
+    "counts": "25\t8",
+    "unique": [
+      "fac4dede019d0b60aacc1a7c5901a413e38206d4 Use short-lived signed beta invites without production migration",
+      "d9be7376b0f3da2f8239a5bf3bd91aa51056ec9c Expose active Relay delivery verification key for reviewed onboarding",
+      "404c67ec8104f716793ff261aff74dd38b362c49 Add invite-only Relay beta registration",
+      "ae00cab7d3b9d774db5cc6b2fed04de0edf64d77 fix: allow factory-only agent credentials from owner UI",
+      "a4386eac506f0d8a6338b27a0a18ce28f37abaa4 fix: bound hosted factory request size before publishing intake",
+      "fd74ba5f33ff7ead3b8b52fa45ded78763433eff test: qualify factory MCP grants and reject invalid input before provider access",
+      "707e05c5a67df1ca9e0d32d78d076064e5ec798b fix: read Linear-normalized signed factory envelopes",
+      "9cc1cb1d46f8c6790b4e4b6d6d2603c9d6c608ea feat: add scoped MyFactory routing to owner UI and MCP"
+    ],
+    "classification": "SUPERSEDED",
+    "cleanup": "KEEP_ARCHIVE",
+    "reason": "Factory routing was integrated through canonical merge/squash. Stateless invite alternative fac4ded conflicts with canonical durable invitation lifecycle; do not reintroduce it."
+  },
+  {
+    "ref": "refs/heads/codex/myfactory-relay-live",
+    "sha": "86c558d6e52081cfbb425920d560ed8024731bb4",
+    "base": "69672613264018c6f1ad3dd4fceec61d05aaf936",
+    "counts": "62\t1",
+    "unique": [
+      "86c558d6e52081cfbb425920d560ed8024731bb4 fix: allow factory-only agent credentials from owner UI"
+    ],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Factory-only credential option is present; later invite UI is additive. Current lint ignore lib/**/*.d.mts subsumes the old specific generated declaration ignore."
+  },
+  {
+    "ref": "refs/heads/codex/peer-message-answers",
+    "sha": "381918e5ce6a24ecdf5ba5d74daec02663728662",
+    "base": "381918e5ce6a24ecdf5ba5d74daec02663728662",
+    "counts": "43\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/heads/codex/relay-beta-trust-onboarding",
+    "sha": "9e3903aa19c11337f078297397d5cda821a7d5e8",
+    "base": "9e3903aa19c11337f078297397d5cda821a7d5e8",
+    "counts": "4\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/heads/codex/relay-federation",
+    "sha": "614c638d6fc4099db8064540326f5de4438e93a1",
+    "base": "acaf711ad9be16f3fc1557c03e49e9d61a5ef13f",
+    "counts": "84\t4",
+    "unique": [
+      "614c638d6fc4099db8064540326f5de4438e93a1 docs: record live disposable federation qualification and receipts",
+      "b81a95cf61752c6279321f6fdded7122647988e5 test: add isolated two-owner HTTPS federation qualification",
+      "efc4b3af91bed7118777b6bee92dd260988321c1 fix: preserve signed federation authorization denial receipts",
+      "194b3a074e85e8300d9d510b3016fb00290378cb feat: checkpoint gated Relay federation implementation"
+    ],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "All four unique commits have patch-equivalent canonical commits, including signed denials and the two-owner HTTPS qualification."
+  },
+  {
+    "ref": "refs/heads/codex/relay-owner-preview-consolidation",
+    "sha": "f8f30ccd1db769aee7751c6eef56ea09a7152290",
+    "base": "f8f30ccd1db769aee7751c6eef56ea09a7152290",
+    "counts": "67\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/heads/codex/relay-private-preview",
+    "sha": "2b49e1584e9b595f745df4ef5c56c51255c7221b",
+    "base": "2b49e1584e9b595f745df4ef5c56c51255c7221b",
+    "counts": "98\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/heads/codex/relay-v1-rc-soak",
+    "sha": "6ca798d5a677e0b7d9563692fb9ccbe1fa91a4ad",
+    "base": "43e0160eb2b9552f71154d18369e4626e0e79339",
+    "counts": "146\t5",
+    "unique": [
+      "6ca798d5a677e0b7d9563692fb9ccbe1fa91a4ad docs(relay): record RC1 soak cycle 2",
+      "69e089203db134e4cbe4f43ba9375b9d34ab3ac3 docs(relay): record RC1 soak cycle",
+      "a4c692d25169d37ddd5ab6b74cb9f3e7c264c327 fix(browser): enforce context TTL in owner process",
+      "90e6897e8385dce52e42f08ae0ae4fd9a319d69f fix(google): recover connection after token refresh",
+      "c0f13bc29cda68a96db32c78e576451a5462da75 chore(relay): add RC1 soak qualification"
+    ],
+    "classification": "HISTORICAL_EVIDENCE_ONLY",
+    "cleanup": "DO_NOT_DELETE \u2014 UNIQUE/HISTORICAL REQUIREMENT",
+    "reason": "Frozen V1 frontier check requires this ref; soak evidence retained."
+  },
+  {
+    "ref": "refs/heads/codex/relay-v1-soak-consolidation",
+    "sha": "f77a9c15d3d3838e207be53cbc6192a9207ff88f",
+    "base": "f77a9c15d3d3838e207be53cbc6192a9207ff88f",
+    "counts": "79\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/heads/feat/authority-inspection-v1",
+    "sha": "31ab0eec3d02d660f81bc156f1eea4535c2f5764",
+    "base": "e2eb350f5655427d55cc204264020a9295173f96",
+    "counts": "49\t1",
+    "unique": [
+      "31ab0eec3d02d660f81bc156f1eea4535c2f5764 feat: inspect exact Federation authority without execution"
+    ],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Unique authority-inspection patch is equivalent to canonical implementation; later service adds expiry and message behavior."
+  },
+  {
+    "ref": "refs/heads/feat/relay-v1",
+    "sha": "43e0160eb2b9552f71154d18369e4626e0e79339",
+    "base": "43e0160eb2b9552f71154d18369e4626e0e79339",
+    "counts": "146\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DO_NOT_DELETE \u2014 UNIQUE/HISTORICAL REQUIREMENT",
+    "reason": "Frozen V1 frontier check requires this branch and release tag."
+  },
+  {
+    "ref": "refs/heads/feat/relay-v2",
+    "sha": "23950ebfa7fd08e0fc00c8067183cbcbf1cab9ac",
+    "base": "23950ebfa7fd08e0fc00c8067183cbcbf1cab9ac",
+    "counts": "101\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/heads/feat/relay-v2-telegram-private-beta",
+    "sha": "89d6b053196566486648c3bbc7ac36d196a0e0c1",
+    "base": "89d6b053196566486648c3bbc7ac36d196a0e0c1",
+    "counts": "62\t0",
+    "unique": [],
+    "classification": "HISTORICAL_EVIDENCE_ONLY",
+    "cleanup": "KEEP_ARCHIVE",
+    "reason": "Unique later commits record older Telegram qualification; active implementation is retained by the newer local-qualification branch and canonical channel baseline."
+  },
+  {
+    "ref": "refs/heads/main",
+    "sha": "e2eb350f5655427d55cc204264020a9295173f96",
+    "base": "e2eb350f5655427d55cc204264020a9295173f96",
+    "counts": "49\t0",
+    "unique": [],
+    "classification": "CANONICAL_INPUT",
+    "cleanup": "KEEP_ACTIVE",
+    "reason": "Actual origin default branch is main; preserve canonical checkout, including local divergence."
+  },
+  {
+    "ref": "refs/remotes/origin/HEAD",
+    "sha": "1da025e4dc234acdc1e6546c4770ccf733611967",
+    "base": "1da025e4dc234acdc1e6546c4770ccf733611967",
+    "counts": "0\t0",
+    "unique": [],
+    "classification": "CANONICAL_INPUT",
+    "cleanup": "KEEP_ACTIVE",
+    "reason": "Actual origin default branch is main; preserve canonical checkout, including local divergence."
+  },
+  {
+    "ref": "refs/remotes/origin/claude/telegram-local-qualification",
+    "sha": "b4fe4bd390bfbd53069ef92232af09c96d7c5526",
+    "base": "aa76782f1cc39c796f0b3914695a2489c55f51c0",
+    "counts": "2\t11",
+    "unique": [
+      "b4fe4bd390bfbd53069ef92232af09c96d7c5526 Make Telegram feedback immediate and explain queued requests",
+      "e548de59f16c0aec21f4892be1c53d0d000a1eee perf: collect Telegram execution results without minute-long polling delay",
+      "9cb9efe38bfad406fb3f82e46827e3eae459ecb9 fix: explain expired owner approvals and cancel their blocked tasks",
+      "e8d1d6f7b823e580732f9747a06f44d6872c89ca fix: scope MyEve expiry injection to a delivered Telegram control",
+      "3f88a12a544c13daa368e3152d224b81606befaa Record durable pin ledger and window-3 controls",
+      "56980707effe12d86b9727be5003cbcd32dd5d30 Acknowledge permanently rejected Telegram updates; fix gateway entry guard",
+      "8a9567f95388fb12d05b36d8ad25457c8505ed8d Add offline emergency revocation for Telegram qualification",
+      "f06d84f8a926c450983d7fcc14e6c4ad919da45e feat(telegram): pin the dedicated qualification bot identity",
+      "4cfd6c92810dd6603d7234ec79f9b8dfdd2e421a Merge current main into claude/telegram-local-qualification",
+      "ed9b5f99efc5d33fb641321ef55db56bbac62a29 feat(telegram): local live topology tooling and canonical identities",
+      "8a08f94f7f7b1a96d09e57747e2d21a0a3e25bee feat(telegram): bounded expiring local executor qualification"
+    ],
+    "classification": "UNIQUE_WORK_TO_INTEGRATE",
+    "cleanup": "KEEP_ARCHIVE",
+    "reason": "Offline-tested channel improvements; latest report retains INCOMPLETE live Golden Journey. Keep separate until MyEve channel pair and release boundaries are reconciled."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/authority-expiry-diagnostics",
+    "sha": "36b79399b9906208cc0784f7f613e8dd5ce5489f",
+    "base": "36b79399b9906208cc0784f7f613e8dd5ce5489f",
+    "counts": "47\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/canonical-consolidation",
+    "sha": "ed8bb0f11543c2b82a61cf65fc9ed697aae21df4",
+    "base": "1da025e4dc234acdc1e6546c4770ccf733611967",
+    "counts": "0\t8",
+    "unique": [
+      "ed8bb0f11543c2b82a61cf65fc9ed697aae21df4 Integrate qualified beta identity retirement and authority fencing",
+      "416dee9b2faf4e206deb75ff93f9d284c0c1439d docs: record managed beta Golden Journey gate",
+      "2936218a7dc71d5fa74e59ce6760da1afbde9be5 Fence remaining runtime authority before beta retirement",
+      "6a7c029ded77975d1fc973aec3fab27c71f4404a Record reviewed retirement regression evidence",
+      "9cec381a28dac90be4458c3f387e2441b4c9e046 Fence disposable account authority during retirement",
+      "5fad9d77dc42e3715ccc4fc8e588d23862329e5a Close peer outbox retirement races and document lifecycle evidence",
+      "56fe9de1bbf7d1a85bd113e1c6381a196908083a Retire disposable Relay beta accounts with authority fencing",
+      "673022d03680cd154c2bdf485b522cc1478affc4 Add beta invite revocation and disposable account markers"
+    ],
+    "classification": "CANONICAL_INPUT",
+    "cleanup": "KEEP_ACTIVE",
+    "reason": "Task-owned integration checkpoint; not yet final qualified canonical source."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/fq-relay-6384519e0e01",
+    "sha": "73d9104fbe8a2c102258dc593ce61d0f23d9254f",
+    "base": "",
+    "counts": "183\t1",
+    "unique": [
+      "73d9104fbe8a2c102258dc593ce61d0f23d9254f chore: reserve disabled synthetic qualification branch slots"
+    ],
+    "classification": "HISTORICAL_EVIDENCE_ONLY",
+    "cleanup": "KEEP_ARCHIVE",
+    "reason": "Unique delta is documentation/evidence; preserve source/report history."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/grant-never-expire",
+    "sha": "b8be9352780b3d49cc8e4eae45d1be47a57919e0",
+    "base": "b8be9352780b3d49cc8e4eae45d1be47a57919e0",
+    "counts": "45\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/myeve-federation-preprovision",
+    "sha": "c910c9debc1f92acd60649431a6466243a711c33",
+    "base": "d817c848a7f6797fe04787e28ac96081b69359ae",
+    "counts": "54\t5",
+    "unique": [
+      "c910c9debc1f92acd60649431a6466243a711c33 Freeze v2 signature regression evidence and remaining source-publication blocker",
+      "c30250ef1ac154b80765c617c83ed371cc57391e Record live KMS qualification of bounded v2 commitments through maximum envelope",
+      "d4fcf48ec4cf45e5721326e36251c81bf611b88b Qualify adversarial and historical versioned signature verification",
+      "11a6964861b135e2f6ae038555591cffe0867a72 Sign bounded versioned delivery commitments and isolate oversized requests",
+      "3a76ffccc5273b7f9807ea2700ae8833e202a8c1 Specify versioned federation signature commitment and design vectors"
+    ],
+    "classification": "UNIQUE_WORK_TO_INTEGRATE",
+    "cleanup": "KEEP_ARCHIVE",
+    "reason": "Versioned commitment signature protocol needs paired MyEve verifier and independent security review. Qualification report explicitly says NO-GO; preserve and defer coordinated protocol rollout."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/myfactory-hosted-routing",
+    "sha": "fac4dede019d0b60aacc1a7c5901a413e38206d4",
+    "base": "a0e6b3ca297836aba442c43c975d4fd267614346",
+    "counts": "25\t8",
+    "unique": [
+      "fac4dede019d0b60aacc1a7c5901a413e38206d4 Use short-lived signed beta invites without production migration",
+      "d9be7376b0f3da2f8239a5bf3bd91aa51056ec9c Expose active Relay delivery verification key for reviewed onboarding",
+      "404c67ec8104f716793ff261aff74dd38b362c49 Add invite-only Relay beta registration",
+      "ae00cab7d3b9d774db5cc6b2fed04de0edf64d77 fix: allow factory-only agent credentials from owner UI",
+      "a4386eac506f0d8a6338b27a0a18ce28f37abaa4 fix: bound hosted factory request size before publishing intake",
+      "fd74ba5f33ff7ead3b8b52fa45ded78763433eff test: qualify factory MCP grants and reject invalid input before provider access",
+      "707e05c5a67df1ca9e0d32d78d076064e5ec798b fix: read Linear-normalized signed factory envelopes",
+      "9cc1cb1d46f8c6790b4e4b6d6d2603c9d6c608ea feat: add scoped MyFactory routing to owner UI and MCP"
+    ],
+    "classification": "SUPERSEDED",
+    "cleanup": "KEEP_ARCHIVE",
+    "reason": "Factory routing was integrated through canonical merge/squash. Stateless invite alternative fac4ded conflicts with canonical durable invitation lifecycle; do not reintroduce it."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/myfactory-relay-live",
+    "sha": "e2dfb5b4480f9bc2c2e5c7642dbf38f36a3f8404",
+    "base": "69672613264018c6f1ad3dd4fceec61d05aaf936",
+    "counts": "62\t2",
+    "unique": [
+      "e2dfb5b4480f9bc2c2e5c7642dbf38f36a3f8404 Exclude generated factory declaration from lint",
+      "86c558d6e52081cfbb425920d560ed8024731bb4 fix: allow factory-only agent credentials from owner UI"
+    ],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Factory-only credential option is present; later invite UI is additive. Current lint ignore lib/**/*.d.mts subsumes the old specific generated declaration ignore."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/peer-message-answers",
+    "sha": "381918e5ce6a24ecdf5ba5d74daec02663728662",
+    "base": "381918e5ce6a24ecdf5ba5d74daec02663728662",
+    "counts": "43\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/prod-relay-release",
+    "sha": "b453652e3efa7db18e06cd5fe42cba4a518b4c63",
+    "base": "aa76782f1cc39c796f0b3914695a2489c55f51c0",
+    "counts": "2\t1",
+    "unique": [
+      "b453652e3efa7db18e06cd5fe42cba4a518b4c63 test(auth): verify Gmail plus alias account isolation"
+    ],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Every file in the branch delta has the identical blob in the candidate; history differs through cherry-pick/squash. Cleanup remains gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-beta-identity-lifecycle",
+    "sha": "416dee9b2faf4e206deb75ff93f9d284c0c1439d",
+    "base": "3fdeeb4ce43ef34ff88c8abdf308c77d4ef83f0d",
+    "counts": "1\t7",
+    "unique": [
+      "416dee9b2faf4e206deb75ff93f9d284c0c1439d docs: record managed beta Golden Journey gate",
+      "2936218a7dc71d5fa74e59ce6760da1afbde9be5 Fence remaining runtime authority before beta retirement",
+      "6a7c029ded77975d1fc973aec3fab27c71f4404a Record reviewed retirement regression evidence",
+      "9cec381a28dac90be4458c3f387e2441b4c9e046 Fence disposable account authority during retirement",
+      "5fad9d77dc42e3715ccc4fc8e588d23862329e5a Close peer outbox retirement races and document lifecycle evidence",
+      "56fe9de1bbf7d1a85bd113e1c6381a196908083a Retire disposable Relay beta accounts with authority fencing",
+      "673022d03680cd154c2bdf485b522cc1478affc4 Add beta invite revocation and disposable account markers"
+    ],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-beta-trust-onboarding",
+    "sha": "9e3903aa19c11337f078297397d5cda821a7d5e8",
+    "base": "9e3903aa19c11337f078297397d5cda821a7d5e8",
+    "counts": "4\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-final-integration",
+    "sha": "88bd2e88ce2253b092847c1dc7aaaac55099fb3f",
+    "base": "88bd2e88ce2253b092847c1dc7aaaac55099fb3f",
+    "counts": "50\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-owner-preview-consolidation",
+    "sha": "f8f30ccd1db769aee7751c6eef56ea09a7152290",
+    "base": "f8f30ccd1db769aee7751c6eef56ea09a7152290",
+    "counts": "67\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-owner-preview-qualification",
+    "sha": "2405e33eca5131d846044c2c811c15126b2d39a2",
+    "base": "46fdf9bc6aa247811d7ed4b04fd9fc944c41c879",
+    "counts": "78\t14",
+    "unique": [
+      "2405e33eca5131d846044c2c811c15126b2d39a2 docs(v2): qualify exact owner preview",
+      "de727a5f74442ec8db1dee44974ebd5bd70af446 fix(v2): focus skip-link target",
+      "3cdd5671edbd385d14b4ea64b7523218d7469130 docs(v2): record hosted performance remediation",
+      "ee3a5e345d8d0183724844300c614733e4b6e2fa fix(platform): align Vercel with Neon region",
+      "122d60395ad9125463a8a13a61cd31b3a2185bff chore(v2): capture hosted timing distributions",
+      "f7b5daa1b3ed5df8f950a8e03059a4f540d300ec chore(v2): instrument preview performance",
+      "8d6ee6dd0602d002b6c6fefcb3f73c4e09209d65 docs(v2): record owner preview completion evidence",
+      "f39288e74c74bc3764457bbc52d8f3961bc47e11 Revert \"fix(dashboard): render missing agents as not found\"",
+      "5680056cc693ea898537c1f641fe490eccce9cd9 fix(dashboard): render missing agents as not found",
+      "9777afc44f8b20366bdb8f0eca380a518aa86afc fix(v2): preserve external qualification status",
+      "70648264c3c11eb669546d3ef004e2609a1448ff Merge remote-tracking branch 'origin/main' into codex/relay-owner-preview-qualification",
+      "1c63ab60787ca20b96c564fe117753ccd1c2bc34 test(performance): gate production dashboard routes",
+      "8a9ba35475af83075c46202e62e98c9631c24de8 fix(auth): read production session cookie",
+      "d3c29f29b6a0f341b5906b64c3fd7d34278d7a93 docs(v2): record owner preview qualification blocker"
+    ],
+    "classification": "SUPERSEDED",
+    "cleanup": "KEEP_ARCHIVE",
+    "reason": "Patch equivalence covers qualification changes; unique dashboard fix 5680056 is explicitly reverted by f39288e. Preserve historical performance evidence."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-private-preview",
+    "sha": "2b49e1584e9b595f745df4ef5c56c51255c7221b",
+    "base": "2b49e1584e9b595f745df4ef5c56c51255c7221b",
+    "counts": "98\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-signing-envelope-v2",
+    "sha": "31f878a6c420a1b9889bb4921bc8eefb4cb996ce",
+    "base": "31f878a6c420a1b9889bb4921bc8eefb4cb996ce",
+    "counts": "52\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/relay-v1-soak-consolidation",
+    "sha": "f77a9c15d3d3838e207be53cbc6192a9207ff88f",
+    "base": "f77a9c15d3d3838e207be53cbc6192a9207ff88f",
+    "counts": "79\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/codex/telegram-current-integration",
+    "sha": "0bcb8777e45e57b52cf8e536b6f5a12c90b811ad",
+    "base": "0bcb8777e45e57b52cf8e536b6f5a12c90b811ad",
+    "counts": "26\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/feat/authority-inspection-v1",
+    "sha": "31ab0eec3d02d660f81bc156f1eea4535c2f5764",
+    "base": "e2eb350f5655427d55cc204264020a9295173f96",
+    "counts": "49\t1",
+    "unique": [
+      "31ab0eec3d02d660f81bc156f1eea4535c2f5764 feat: inspect exact Federation authority without execution"
+    ],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Unique authority-inspection patch is equivalent to canonical implementation; later service adds expiry and message behavior."
+  },
+  {
+    "ref": "refs/remotes/origin/feat/relay-v1",
+    "sha": "43e0160eb2b9552f71154d18369e4626e0e79339",
+    "base": "43e0160eb2b9552f71154d18369e4626e0e79339",
+    "counts": "146\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DO_NOT_DELETE \u2014 UNIQUE/HISTORICAL REQUIREMENT",
+    "reason": "Frozen V1 frontier check requires this branch and release tag."
+  },
+  {
+    "ref": "refs/remotes/origin/feat/relay-v2",
+    "sha": "23950ebfa7fd08e0fc00c8067183cbcbf1cab9ac",
+    "base": "23950ebfa7fd08e0fc00c8067183cbcbf1cab9ac",
+    "counts": "101\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "DELETE_LOCAL_AND_REMOTE",
+    "reason": "Exact ancestry containment in consolidation candidate; cleanup still gated."
+  },
+  {
+    "ref": "refs/remotes/origin/feat/relay-v2-telegram-private-beta",
+    "sha": "e3b981a787476416005a555a5ac9c58b24c00300",
+    "base": "b867b90b9134a6f46aeea7398af5b4118edfec3a",
+    "counts": "29\t3",
+    "unique": [
+      "e3b981a787476416005a555a5ac9c58b24c00300 Record Eve 0.66 real-provider Telegram qualification evidence",
+      "90bbc498fd4071d396ebece0fea4f68549de2306 docs(telegram): record integration publication and ledger recovery blocker",
+      "56bc256e2a2f7647c547cb46b68e3a05f286256c fix(telegram): integrate current main and preserve migration history"
+    ],
+    "classification": "HISTORICAL_EVIDENCE_ONLY",
+    "cleanup": "KEEP_ARCHIVE",
+    "reason": "Unique later commits record older Telegram qualification; active implementation is retained by the newer local-qualification branch and canonical channel baseline."
+  },
+  {
+    "ref": "refs/remotes/origin/main",
+    "sha": "1da025e4dc234acdc1e6546c4770ccf733611967",
+    "base": "1da025e4dc234acdc1e6546c4770ccf733611967",
+    "counts": "0\t0",
+    "unique": [],
+    "classification": "CANONICAL_INPUT",
+    "cleanup": "KEEP_ACTIVE",
+    "reason": "Actual origin default branch is main; preserve canonical checkout, including local divergence."
+  },
+  {
+    "ref": "refs/tags/relay-v0.1.0",
+    "sha": "fccf8a6cb883547f6d53c486ef1f20f099f42c26",
+    "base": "9fbdca418c37f0187cb4ea3a30ff0fc21cac39d9",
+    "counts": "170\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "KEEP_ARCHIVE",
+    "reason": "Existing immutable tag; do not move or delete."
+  },
+  {
+    "ref": "refs/tags/relay-v1.0.0-rc.1",
+    "sha": "435960cf5a5de4f4b877fcf2f16bfd25968823b0",
+    "base": "43e0160eb2b9552f71154d18369e4626e0e79339",
+    "counts": "146\t0",
+    "unique": [],
+    "classification": "ALREADY_CONTAINED",
+    "cleanup": "KEEP_ARCHIVE",
+    "reason": "Existing immutable tag; do not move or delete."
+  }
+]

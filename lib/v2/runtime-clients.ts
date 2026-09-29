@@ -8,6 +8,8 @@ import { id, now } from "@/lib/ids";
 import { appendAuditRecordInTransaction } from "@/lib/v2/evidence/audit";
 import type { AuditSigner } from "@/lib/v2/evidence/crypto";
 import { requireMembership } from "@/lib/v2/identity";
+import { lockActiveAccount } from "@/lib/account-fence";
+import { accounts } from "@/lib/db/schema";
 
 export interface RuntimeAttestationVerifier {
   verify(proof: string): Promise<{ product: string; evidence: Record<string, unknown> }>;
@@ -24,6 +26,7 @@ export async function registerRuntimeClient(input: { accountId: string; actorPri
   const secret = `rrtc_${randomBytes(32).toString("base64url")}`;
   const runtimeClientId = id("rtc");
   await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, input.accountId);
     await transaction.insert(runtimeClients).values({ id: runtimeClientId, accountId: input.accountId, displayName: input.displayName.trim(), selfDeclaredProduct: input.selfDeclaredProduct.trim(), secretHash: hashSecret(secret), prefix: secret.slice(0, 14) });
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.actorPrincipalId, runtimeClientId, eventType: "runtime_client.registered", outcome: "SUCCESS", details: { selfDeclaredProduct: input.selfDeclaredProduct, verificationStatus: "SELF_DECLARED" } }, signer);
   });
@@ -32,8 +35,10 @@ export async function registerRuntimeClient(input: { accountId: string; actorPri
 
 export async function authenticateRuntimeClient(accountId: string, secret: string) {
   const prefix = secret.slice(0, 14);
-  const candidates = await db().select().from(runtimeClients).where(and(eq(runtimeClients.accountId, accountId), eq(runtimeClients.prefix, prefix), isNull(runtimeClients.revokedAt)));
-  const client = candidates.find((candidate) => secretsEqual(candidate.secretHash, hashSecret(secret)));
+  const candidates = await db().select({ client: runtimeClients }).from(runtimeClients)
+    .innerJoin(accounts, and(eq(accounts.id, runtimeClients.accountId), isNull(accounts.retiredAt)))
+    .where(and(eq(runtimeClients.accountId, accountId), eq(runtimeClients.prefix, prefix), isNull(runtimeClients.revokedAt)));
+  const client = candidates.map((entry) => entry.client).find((candidate) => secretsEqual(candidate.secretHash, hashSecret(secret)));
   if (!client) throw new RelayError("INVALID_CREDENTIAL", "Invalid runtime credential.", undefined, 401);
   return { runtimeClientId: client.id, verificationStatus: client.verificationStatus, selfDeclaredProduct: client.selfDeclaredProduct, verifiedProduct: client.verifiedProduct };
 }

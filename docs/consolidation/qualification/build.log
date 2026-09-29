@@ -1,0 +1,99 @@
+
+> relay@0.1.0 build /private/tmp/canonical-consolidation-relay
+> next build
+
+   ▲ Next.js 15.5.24
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 4.1s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/40) ...
+   Generating static pages (10/40)
+   Generating static pages (20/40)
+   Generating static pages (30/40)
+ ✓ Generating static pages (40/40)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                        Size  First Load JS
+┌ ƒ /                                             168 B         106 kB
+├ ○ /_not-found                                   998 B         103 kB
+├ ƒ /.well-known/oauth-protected-resource         260 B         102 kB
+├ ƒ /activity                                     260 B         102 kB
+├ ƒ /agents                                       177 B         110 kB
+├ ƒ /agents/[id]                                  162 B         106 kB
+├ ƒ /api/account/retire                           260 B         102 kB
+├ ƒ /api/activity                                 260 B         102 kB
+├ ƒ /api/agents                                   260 B         102 kB
+├ ƒ /api/agents/[id]                              260 B         102 kB
+├ ƒ /api/agents/[id]/capabilities/[capability]    260 B         102 kB
+├ ƒ /api/agents/[id]/credentials                  260 B         102 kB
+├ ƒ /api/auth/login                               260 B         102 kB
+├ ƒ /api/auth/logout                              260 B         102 kB
+├ ƒ /api/auth/signup                              260 B         102 kB
+├ ƒ /api/beta-invites                             260 B         102 kB
+├ ƒ /api/beta-invites/lifecycle                   260 B         102 kB
+├ ƒ /api/beta-invites/lookup                      260 B         102 kB
+├ ƒ /api/browsers                                 260 B         102 kB
+├ ƒ /api/browsers/screenshot                      260 B         102 kB
+├ ƒ /api/channels/telegram/ready                  260 B         102 kB
+├ ƒ /api/channels/telegram/webhook                260 B         102 kB
+├ ƒ /api/connections/github                       260 B         102 kB
+├ ƒ /api/connections/github/oauth/callback        260 B         102 kB
+├ ƒ /api/connections/github/oauth/start           260 B         102 kB
+├ ƒ /api/connections/google                       260 B         102 kB
+├ ƒ /api/connections/google/oauth/callback        260 B         102 kB
+├ ƒ /api/connections/google/oauth/start           260 B         102 kB
+├ ƒ /api/events/inbox/ack                         260 B         102 kB
+├ ƒ /api/federation/trust                         260 B         102 kB
+├ ƒ /api/health                                   260 B         102 kB
+├ ƒ /api/health/providers                         260 B         102 kB
+├ ƒ /api/health/ready                             260 B         102 kB
+├ ƒ /api/internal/federation-maintenance          260 B         102 kB
+├ ƒ /api/memories                                 260 B         102 kB
+├ ƒ /api/memories/[id]                            260 B         102 kB
+├ ƒ /api/sandboxes                                260 B         102 kB
+├ ƒ /api/v2/federation                            260 B         102 kB
+├ ƒ /api/v2/federation/mcp                        260 B         102 kB
+├ ƒ /api/v2/mcp                                   260 B         102 kB
+├ ƒ /api/v2/operator/approvals                    260 B         102 kB
+├ ƒ /api/v2/operator/computers                    260 B         102 kB
+├ ƒ /api/v2/operator/factory                      260 B         102 kB
+├ ƒ /api/v2/operator/federation                   260 B         102 kB
+├ ƒ /api/v2/operator/message-delegations          260 B         102 kB
+├ ƒ /api/v2/operator/runners                      260 B         102 kB
+├ ƒ /api/v2/operator/tasks                        260 B         102 kB
+├ ƒ /api/v2/operator/telegram                     260 B         102 kB
+├ ƒ /api/v2/qualification/performance             260 B         102 kB
+├ ƒ /api/v2/runtime/actions                       260 B         102 kB
+├ ƒ /api/v2/runtime/actions/[commandId]           260 B         102 kB
+├ ƒ /browsers                                     162 B         106 kB
+├ ƒ /connections                                  162 B         106 kB
+├ ƒ /developer                                    161 B         106 kB
+├ ƒ /events                                       162 B         106 kB
+├ ƒ /factory                                    1.33 kB         104 kB
+├ ƒ /login                                        179 B         110 kB
+├ ƒ /mcp                                          260 B         102 kB
+├ ƒ /memory                                       162 B         106 kB
+├ ƒ /sandboxes                                    161 B         106 kB
+├ ƒ /settings                                   2.05 kB         104 kB
+├ ƒ /signup                                     1.07 kB         111 kB
+├ ƒ /v2                                           168 B         106 kB
+├ ƒ /v2/activity                                  260 B         102 kB
+├ ƒ /v2/agents                                    260 B         102 kB
+├ ƒ /v2/approvals                               1.27 kB         103 kB
+├ ƒ /v2/computers                               1.28 kB         103 kB
+├ ƒ /v2/connections                             2.04 kB         104 kB
+├ ƒ /v2/governance                                260 B         102 kB
+├ ƒ /v2/infrastructure                          1.28 kB         103 kB
+├ ƒ /v2/settings                                  260 B         102 kB
+└ ƒ /v2/tasks                                   1.28 kB         103 kB
++ First Load JS shared by all                    102 kB
+  ├ chunks/2413-3a526c3dd8cae0ae.js             46.1 kB
+  ├ chunks/3044d97a-06ce6e536891da54.js         54.2 kB
+  └ other shared chunks (total)                 1.93 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

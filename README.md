@@ -1,5 +1,9 @@
 # Relay
 
+<!-- CANONICAL-CONSOLIDATION-STATUS -->
+**Private-alpha consolidation: independent review PASS; canonical target `main`.** The [current status](docs/consolidation/CANONICAL-STATUS.md), [source manifest](docs/consolidation/PRIVATE-ALPHA-SOURCE-MANIFEST.md), and final canonical receipt identify exact source and qualification. MyEve supports explicit private, shared-business and Work-scoped context for two partners. Controlled verification is qualified; live providers and deployment remain separate gates. [Development/migration policy](docs/consolidation/DEVELOPMENT-POLICY.md).
+<!-- /CANONICAL-CONSOLIDATION-STATUS -->
+
 Relay is a governed control plane for personal AI agents that act in the real world.
 
 It gives Agents durable identity, bounded authority, human approvals, budgets, event-driven execution, and provider-neutral computers and connectors—without handing runtimes durable credentials or allowing execution providers to become independent control planes.
@@ -14,6 +18,15 @@ messages/hour, and its signed grant audit was verified. No tester-originated
 message has reached Sofie's authorized inbox; Sofie's configured automatic
 reply is therefore **not live-qualified**. Reciprocal communication is not a
 pass. See the [live qualification record](docs/federation/orchis-sofie-beta-qualification.md).
+
+**Managed MyEve beta status:** The combined disposable Ava/Sofie Golden Journey
+is **not qualified**. The last release-candidate run stopped at the dedicated
+MyEve Beta team's AI Gateway payment prerequisite before reciprocal peer and
+governed Knowledge exchange. The disposable Relay accounts were retired with
+zero active sessions and grants; both candidate PRs remain draft and global
+managed provisioning is disabled. See the
+[beta identity lifecycle](docs/beta-identity-lifecycle.md) for the exact
+retirement boundary, unrun gates, and evidence links.
 
 ## Hosted private preview
 

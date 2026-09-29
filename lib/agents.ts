@@ -5,6 +5,7 @@ import { agentCredentials, agents, capabilityGrants } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { CAPABILITIES, type CapabilityName } from "@/lib/types";
+import { lockActiveAccount } from "@/lib/account-fence";
 
 export async function listAgents(accountId: string) {
   return db()
@@ -43,6 +44,7 @@ export async function createAgent(accountId: string, input: { name: string; desc
   const timestamp = now();
   const agentId = id("agt");
   return withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, accountId);
     await transaction.insert(agents).values({ id: agentId, accountId, name: input.name.trim(), description: input.description?.trim() ?? "", status: "ACTIVE", createdAt: timestamp, updatedAt: timestamp });
     for (const capability of input.capabilities ?? ["memory.read", "memory.write"]) {
       await transaction.insert(capabilityGrants).values({ id: id("grant"), accountId, agentId, capability, effect: "ALLOW", createdAt: timestamp });
@@ -62,15 +64,21 @@ function createCredentialRecord(accountId: string, agentId: string, name: string
 }
 
 export async function issueCredential(accountId: string, agentId: string, name: string) {
-  await getAgent(accountId, agentId);
   const credential = createCredentialRecord(accountId, agentId, name);
-  await db().insert(agentCredentials).values(credential.record);
+  await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, accountId);
+    const [agent] = await transaction.select({ id: agents.id }).from(agents)
+      .where(and(eq(agents.id, agentId), eq(agents.accountId, accountId), eq(agents.status, "ACTIVE"))).limit(1);
+    if (!agent) throw new RelayError("INVALID_INPUT", "Active Agent not found.", undefined, 404);
+    await transaction.insert(agentCredentials).values(credential.record);
+  });
   return { id: credential.record.id, secret: credential.secret, prefix: credential.record.prefix };
 }
 
 export async function rotateCredential(accountId: string, agentId: string) {
   return withTransaction(async (transaction) => {
-    const [agent] = await transaction.select({ id: agents.id }).from(agents).where(and(eq(agents.id, agentId), eq(agents.accountId, accountId))).limit(1);
+    await lockActiveAccount(transaction, accountId);
+    const [agent] = await transaction.select({ id: agents.id }).from(agents).where(and(eq(agents.id, agentId), eq(agents.accountId, accountId), eq(agents.status, "ACTIVE"))).limit(1);
     if (!agent) throw new RelayError("INVALID_INPUT", "Agent not found.", undefined, 404);
     const timestamp = now();
     await transaction.update(agentCredentials).set({ revokedAt: timestamp }).where(and(eq(agentCredentials.accountId, accountId), eq(agentCredentials.agentId, agentId), isNull(agentCredentials.revokedAt)));
@@ -88,13 +96,19 @@ export async function revokeCredential(accountId: string, agentId: string, crede
 }
 
 export async function updateAgentStatus(accountId: string, agentId: string, status: "ACTIVE" | "DISABLED") {
-  const updated = await db().update(agents).set({ status, updatedAt: now() }).where(and(eq(agents.id, agentId), eq(agents.accountId, accountId))).returning({ id: agents.id });
-  if (!updated.length) throw new RelayError("INVALID_INPUT", "Agent not found.", undefined, 404);
+  await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, accountId);
+    const updated = await transaction.update(agents).set({ status, updatedAt: now() }).where(and(eq(agents.id, agentId), eq(agents.accountId, accountId))).returning({ id: agents.id });
+    if (!updated.length) throw new RelayError("INVALID_INPUT", "Agent not found.", undefined, 404);
+  });
 }
 
 export async function setCapabilityGrant(accountId: string, agentId: string, capability: CapabilityName, effect: "ALLOW" | "DENY") {
   if (!CAPABILITIES.includes(capability)) throw new RelayError("INVALID_INPUT", "Unknown capability.");
-  const [agent] = await db().select({ id: agents.id }).from(agents).where(and(eq(agents.id, agentId), eq(agents.accountId, accountId))).limit(1);
-  if (!agent) throw new RelayError("INVALID_INPUT", "Agent not found.", undefined, 404);
-  await db().insert(capabilityGrants).values({ id: id("grant"), accountId, agentId, capability, effect, createdAt: now() }).onConflictDoUpdate({ target: [capabilityGrants.agentId, capabilityGrants.capability], set: { effect } });
+  await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, accountId);
+    const [agent] = await transaction.select({ id: agents.id }).from(agents).where(and(eq(agents.id, agentId), eq(agents.accountId, accountId))).limit(1);
+    if (!agent) throw new RelayError("INVALID_INPUT", "Agent not found.", undefined, 404);
+    await transaction.insert(capabilityGrants).values({ id: id("grant"), accountId, agentId, capability, effect, createdAt: now() }).onConflictDoUpdate({ target: [capabilityGrants.agentId, capabilityGrants.capability], set: { effect } });
+  });
 }
