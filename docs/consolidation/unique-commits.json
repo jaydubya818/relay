@@ -1,0 +1,950 @@
+[
+  {
+    "sha": "11a6964861b135e2f6ae038555591cffe0867a72",
+    "subject": "Sign bounded versioned delivery commitments and isolate oversized requests",
+    "files": [
+      "lib/v2/federation/service.ts",
+      "lib/v2/federation/signature.ts",
+      "lib/v2/federation/transport.ts",
+      "tests/federation/envelope-bound.test.ts",
+      "tests/federation/federation.test.ts",
+      "tests/federation/signing-provider.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "122d60395ad9125463a8a13a61cd31b3a2185bff",
+    "subject": "chore(v2): capture hosted timing distributions",
+    "files": [
+      "app/api/v2/qualification/performance/route.ts"
+    ],
+    "categories": [
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "194b3a074e85e8300d9d510b3016fb00290378cb",
+    "subject": "feat: checkpoint gated Relay federation implementation",
+    "files": [
+      ".env.example",
+      ".gitignore",
+      "README.md",
+      "app/api/v2/federation/mcp/route.ts",
+      "app/api/v2/federation/route.ts",
+      "app/api/v2/operator/federation/route.ts",
+      "docs/federation/architecture.md",
+      "docs/federation/platform-contract.md",
+      "docs/federation/qualification.md",
+      "drizzle/0021_violet_captain_stacy.sql",
+      "drizzle/meta/0021_snapshot.json",
+      "drizzle/meta/_journal.json",
+      "lib/db/schema.ts",
+      "lib/v2/budgets.ts",
+      "lib/v2/federation/api.ts",
+      "lib/v2/federation/capabilities.ts",
+      "lib/v2/federation/contracts.ts",
+      "lib/v2/federation/discovery.ts",
+      "lib/v2/federation/mcp.ts",
+      "lib/v2/federation/platform-adapter.ts",
+      "lib/v2/federation/registry.ts",
+      "lib/v2/federation/service.ts",
+      "lib/v2/federation/transport.ts",
+      "lib/v2/platform-bindings.ts",
+      "lib/v2/policy/service.ts",
+      "lib/worker.ts",
+      "tests/federation/federation.test.ts",
+      "vitest.config.mts"
+    ],
+    "categories": [
+      "migration/schema",
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "1c63ab60787ca20b96c564fe117753ccd1c2bc34",
+    "subject": "test(performance): gate production dashboard routes",
+    "files": [
+      "docs/v2/qualification/dashboard-performance-contract.md",
+      "package.json",
+      "playwright.config.ts",
+      "playwright.production.config.ts",
+      "tests/e2e/dashboard-performance.spec.ts",
+      "tests/e2e/dashboard.spec.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "2405e33eca5131d846044c2c811c15126b2d39a2",
+    "subject": "docs(v2): qualify exact owner preview",
+    "files": [
+      "docs/v2-implementation.md",
+      "docs/v2/qualification/hosted-performance-2026-09-19.md",
+      "docs/v2/qualification/owner-authenticated-preview-2026-09-18.md",
+      "docs/v2/qualification/private-preview-2026-09-14.md",
+      "docs/v2/qualification/wo22-release-dossier.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "2936218a7dc71d5fa74e59ce6760da1afbde9be5",
+    "subject": "Fence remaining runtime authority before beta retirement",
+    "files": [
+      "lib/beta-account-retirement.ts",
+      "lib/v2/identity.ts",
+      "lib/v2/runners.ts",
+      "lib/v2/runtime-clients.ts",
+      "tests/beta/lifecycle.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "ANCESTRY_CONTAINED"
+  },
+  {
+    "sha": "31ab0eec3d02d660f81bc156f1eea4535c2f5764",
+    "subject": "feat: inspect exact Federation authority without execution",
+    "files": [
+      "docs/federation/authority-inspection-review.md",
+      "docs/federation/authority-inspection.md",
+      "lib/v2/federation/api.ts",
+      "lib/v2/federation/service.ts",
+      "lib/v2/policy/service.ts",
+      "tests/federation/authority-inspection.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "3a76ffccc5273b7f9807ea2700ae8833e202a8c1",
+    "subject": "Specify versioned federation signature commitment and design vectors",
+    "files": [
+      "docs/security/federation-signature-v2.md",
+      "tests/federation/signature-contract.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "3cdd5671edbd385d14b4ea64b7523218d7469130",
+    "subject": "docs(v2): record hosted performance remediation",
+    "files": [
+      "docs/v2-implementation.md",
+      "docs/v2/qualification/hosted-performance-2026-09-19.md",
+      "docs/v2/qualification/owner-authenticated-preview-2026-09-18.md",
+      "docs/v2/qualification/private-preview-2026-09-14.md",
+      "docs/v2/qualification/wo22-release-dossier.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "3f88a12a544c13daa368e3152d224b81606befaa",
+    "subject": "Record durable pin ledger and window-3 controls",
+    "files": [
+      "docs/v2/qualification/telegram-private-beta-golden-path.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "404c67ec8104f716793ff261aff74dd38b362c49",
+    "subject": "Add invite-only Relay beta registration",
+    "files": [
+      ".env.example",
+      "app/(dashboard)/settings/page.tsx",
+      "app/api/auth/signup/route.ts",
+      "app/api/beta-invites/route.ts",
+      "app/signup/page.tsx",
+      "components/actions.tsx",
+      "components/beta-invite-form.tsx",
+      "drizzle/0024_mature_blob.sql",
+      "drizzle/meta/0024_snapshot.json",
+      "drizzle/meta/_journal.json",
+      "eslint.config.mjs",
+      "lib/auth.ts",
+      "lib/db/schema.ts",
+      "tests/auth/beta-invites.test.ts"
+    ],
+    "categories": [
+      "migration/schema",
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "416dee9b2faf4e206deb75ff93f9d284c0c1439d",
+    "subject": "docs: record managed beta Golden Journey gate",
+    "files": [
+      "README.md",
+      "docs/beta-identity-lifecycle.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "ANCESTRY_CONTAINED"
+  },
+  {
+    "sha": "4cfd6c92810dd6603d7234ec79f9b8dfdd2e421a",
+    "subject": "Merge current main into claude/telegram-local-qualification",
+    "files": [],
+    "categories": [
+      "merge/metadata"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "5680056cc693ea898537c1f641fe490eccce9cd9",
+    "subject": "fix(dashboard): render missing agents as not found",
+    "files": [
+      "app/(dashboard)/agents/[id]/page.tsx",
+      "lib/dashboard-agent.ts",
+      "tests/security/v1-boundaries.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "56980707effe12d86b9727be5003cbcd32dd5d30",
+    "subject": "Acknowledge permanently rejected Telegram updates; fix gateway entry guard",
+    "files": [
+      "docs/v2/qualification/telegram-private-beta-golden-path.md",
+      "lib/v2/channels/http.ts",
+      "scripts/qualification/telegram-webhook-gateway.mjs",
+      "tests/v2/channel-local-qualification.test.ts",
+      "tests/v2/channel-pipeline.test.ts",
+      "tests/v2/telegram-webhook-gateway.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "56bc256e2a2f7647c547cb46b68e3a05f286256c",
+    "subject": "fix(telegram): integrate current main and preserve migration history",
+    "files": [],
+    "categories": [
+      "merge/metadata"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "56fe9de1bbf7d1a85bd113e1c6381a196908083a",
+    "subject": "Retire disposable Relay beta accounts with authority fencing",
+    "files": [
+      "app/(dashboard)/settings/page.tsx",
+      "app/api/account/retire/route.ts",
+      "app/api/beta-invites/lifecycle/route.ts",
+      "drizzle/0027_lean_wild_child.sql",
+      "drizzle/0028_special_peter_parker.sql",
+      "drizzle/meta/0027_snapshot.json",
+      "drizzle/meta/0028_snapshot.json",
+      "drizzle/meta/_journal.json",
+      "lib/auth.ts",
+      "lib/beta-account-retirement.ts",
+      "lib/db/schema.ts",
+      "lib/v2/federation/discovery.ts",
+      "lib/v2/federation/message-delegations.ts",
+      "lib/v2/federation/registry.ts",
+      "lib/v2/federation/service.ts",
+      "lib/v2/identity.ts",
+      "lib/v2/orchestration.ts",
+      "tests/beta/lifecycle.test.ts"
+    ],
+    "categories": [
+      "migration/schema",
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "ANCESTRY_CONTAINED"
+  },
+  {
+    "sha": "5fad9d77dc42e3715ccc4fc8e588d23862329e5a",
+    "subject": "Close peer outbox retirement races and document lifecycle evidence",
+    "files": [
+      "components/beta-account-retirement.tsx",
+      "docs/beta-identity-lifecycle.md",
+      "lib/beta-account-retirement.ts",
+      "lib/v2/orchestration.ts",
+      "tests/beta/lifecycle.test.ts",
+      "tests/federation/federation.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "ANCESTRY_CONTAINED"
+  },
+  {
+    "sha": "614c638d6fc4099db8064540326f5de4438e93a1",
+    "subject": "docs: record live disposable federation qualification and receipts",
+    "files": [
+      "docs/federation/evidence/baseline-live-defect/report.json",
+      "docs/federation/evidence/disposable-live/ava-audit.json",
+      "docs/federation/evidence/disposable-live/platform-receipts.json",
+      "docs/federation/evidence/disposable-live/report.json",
+      "docs/federation/evidence/disposable-live/sofie-audit.json",
+      "docs/federation/evidence/harness-attempt-01.json",
+      "docs/federation/evidence/harness-attempt-02.json",
+      "docs/federation/evidence/manifest.json",
+      "docs/federation/evidence/regression-summary.json",
+      "docs/federation/qualification.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "673022d03680cd154c2bdf485b522cc1478affc4",
+    "subject": "Add beta invite revocation and disposable account markers",
+    "files": [
+      "app/api/beta-invites/route.ts",
+      "components/beta-invite-form.tsx",
+      "drizzle/0026_wandering_magik.sql",
+      "drizzle/meta/0026_snapshot.json",
+      "drizzle/meta/_journal.json",
+      "lib/auth.ts",
+      "lib/db/schema.ts"
+    ],
+    "categories": [
+      "migration/schema",
+      "implementation/bug-fix"
+    ],
+    "disposition": "ANCESTRY_CONTAINED"
+  },
+  {
+    "sha": "69e089203db134e4cbe4f43ba9375b9d34ab3ac3",
+    "subject": "docs(relay): record RC1 soak cycle",
+    "files": [
+      "docs/v1-soak.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "6a7c029ded77975d1fc973aec3fab27c71f4404a",
+    "subject": "Record reviewed retirement regression evidence",
+    "files": [
+      "docs/beta-identity-lifecycle.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "ANCESTRY_CONTAINED"
+  },
+  {
+    "sha": "6ca798d5a677e0b7d9563692fb9ccbe1fa91a4ad",
+    "subject": "docs(relay): record RC1 soak cycle 2",
+    "files": [
+      "docs/v1-soak.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "70648264c3c11eb669546d3ef004e2609a1448ff",
+    "subject": "Merge remote-tracking branch 'origin/main' into codex/relay-owner-preview-qualification",
+    "files": [],
+    "categories": [
+      "merge/metadata"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "707e05c5a67df1ca9e0d32d78d076064e5ec798b",
+    "subject": "fix: read Linear-normalized signed factory envelopes",
+    "files": [
+      "lib/myfactory-protocol.mjs"
+    ],
+    "categories": [
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "73d9104fbe8a2c102258dc593ce61d0f23d9254f",
+    "subject": "chore: reserve disabled synthetic qualification branch slots",
+    "files": [
+      "QUALIFICATION_DISABLED.md",
+      "vercel.json"
+    ],
+    "categories": [
+      "merge/metadata"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "86c558d6e52081cfbb425920d560ed8024731bb4",
+    "subject": "fix: allow factory-only agent credentials from owner UI",
+    "files": [
+      "components/actions.tsx"
+    ],
+    "categories": [
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "8a08f94f7f7b1a96d09e57747e2d21a0a3e25bee",
+    "subject": "feat(telegram): bounded expiring local executor qualification",
+    "files": [
+      "docs/v2/qualification/telegram-private-beta-golden-path.md",
+      "lib/v2/channels/config.ts",
+      "lib/v2/channels/http.ts",
+      "lib/v2/channels/local-qualification.ts",
+      "lib/v2/channels/worker.ts",
+      "scripts/channel-worker.ts",
+      "tests/v2/channel-local-qualification.test.ts",
+      "tests/v2/channel-myeve.integration.test.mjs",
+      "tests/v2/channel-pipeline.test.ts",
+      "vercel.json"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "8a9567f95388fb12d05b36d8ad25457c8505ed8d",
+    "subject": "Add offline emergency revocation for Telegram qualification",
+    "files": [
+      "docs/v2/qualification/telegram-private-beta-golden-path.md",
+      "lib/v2/channels/management.ts",
+      "scripts/qualification/telegram-identities.ts",
+      "tests/v2/channel-local-qualification.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "8a9ba35475af83075c46202e62e98c9631c24de8",
+    "subject": "fix(auth): read production session cookie",
+    "files": [
+      "lib/auth.ts",
+      "tests/auth/session-cookie.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "8d6ee6dd0602d002b6c6fefcb3f73c4e09209d65",
+    "subject": "docs(v2): record owner preview completion evidence",
+    "files": [
+      "docs/v2-implementation.md",
+      "docs/v2/qualification/owner-authenticated-preview-2026-09-18.md",
+      "docs/v2/qualification/private-preview-2026-09-14.md",
+      "docs/v2/qualification/wo22-release-dossier.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "90bbc498fd4071d396ebece0fea4f68549de2306",
+    "subject": "docs(telegram): record integration publication and ledger recovery blocker",
+    "files": [
+      "docs/v2/qualification/telegram-private-beta-golden-path.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "90e6897e8385dce52e42f08ae0ae4fd9a319d69f",
+    "subject": "fix(google): recover connection after token refresh",
+    "files": [
+      "lib/connections.ts",
+      "tests/google/google-capabilities.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "9777afc44f8b20366bdb8f0eca380a518aa86afc",
+    "subject": "fix(v2): preserve external qualification status",
+    "files": [
+      "app/v2/settings/page.tsx",
+      "tests/v2/dashboard.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "9cb9efe38bfad406fb3f82e46827e3eae459ecb9",
+    "subject": "fix: explain expired owner approvals and cancel their blocked tasks",
+    "files": [
+      "docs/v2/qualification/telegram-private-beta-golden-path.md",
+      "lib/v2/channels/worker.ts",
+      "tests/v2/channel-pipeline.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "9cc1cb1d46f8c6790b4e4b6d6d2603c9d6c608ea",
+    "subject": "feat: add scoped MyFactory routing to owner UI and MCP",
+    "files": [
+      "app/(dashboard)/factory/page.tsx",
+      "app/api/v2/operator/factory/route.ts",
+      "components/factory-form.tsx",
+      "components/sidebar.tsx",
+      "components/v2/sidebar.tsx",
+      "lib/executor.ts",
+      "lib/mcp.ts",
+      "lib/myfactory-protocol.d.mts",
+      "lib/myfactory-protocol.mjs",
+      "lib/myfactory.ts",
+      "lib/types.ts",
+      "package.json",
+      "pnpm-lock.yaml",
+      "tests/factory/owner-route.test.ts",
+      "tests/factory/routing.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "9cec381a28dac90be4458c3f387e2441b4c9e046",
+    "subject": "Fence disposable account authority during retirement",
+    "files": [
+      "app/api/beta-invites/lifecycle/route.ts",
+      "lib/account-fence.ts",
+      "lib/agent-sessions.ts",
+      "lib/agents.ts",
+      "lib/auth.ts",
+      "lib/beta-account-retirement.ts",
+      "lib/memory.ts",
+      "tests/beta/lifecycle.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "ANCESTRY_CONTAINED"
+  },
+  {
+    "sha": "a4386eac506f0d8a6338b27a0a18ce28f37abaa4",
+    "subject": "fix: bound hosted factory request size before publishing intake",
+    "files": [
+      "lib/myfactory-protocol.mjs"
+    ],
+    "categories": [
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "a4c692d25169d37ddd5ab6b74cb9f3e7c264c327",
+    "subject": "fix(browser): enforce context TTL in owner process",
+    "files": [
+      "lib/providers/playwright-browser.ts",
+      "tests/browser/playwright-live.test.ts",
+      "tests/browser/playwright-provider.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "ae00cab7d3b9d774db5cc6b2fed04de0edf64d77",
+    "subject": "fix: allow factory-only agent credentials from owner UI",
+    "files": [
+      "components/actions.tsx"
+    ],
+    "categories": [
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "b453652e3efa7db18e06cd5fe42cba4a518b4c63",
+    "subject": "test(auth): verify Gmail plus alias account isolation",
+    "files": [
+      "tests/auth/authentication.test.ts"
+    ],
+    "categories": [
+      "tests"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "b4fe4bd390bfbd53069ef92232af09c96d7c5526",
+    "subject": "Make Telegram feedback immediate and explain queued requests",
+    "files": [
+      "docs/v2/qualification/telegram-private-beta-golden-path.md",
+      "lib/v2/channels/http.ts",
+      "lib/v2/channels/ingress.ts",
+      "lib/v2/channels/worker.ts",
+      "scripts/channel-worker.ts",
+      "tests/v2/channel-pipeline.test.ts",
+      "tests/v2/telegram-webhook-gateway.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "b81a95cf61752c6279321f6fdded7122647988e5",
+    "subject": "test: add isolated two-owner HTTPS federation qualification",
+    "files": [
+      "scripts/federation-qualification/platform.mjs",
+      "scripts/federation-qualification/relay.mjs",
+      "scripts/federation-qualification/run.mjs",
+      "scripts/federation-qualification/watch-private.py"
+    ],
+    "categories": [
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "c0f13bc29cda68a96db32c78e576451a5462da75",
+    "subject": "chore(relay): add RC1 soak qualification",
+    "files": [
+      "docs/v1-soak.md",
+      "package.json",
+      "scripts/soak-check.ts"
+    ],
+    "categories": [
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "c30250ef1ac154b80765c617c83ed371cc57391e",
+    "subject": "Record live KMS qualification of bounded v2 commitments through maximum envelope",
+    "files": [
+      "docs/security/evidence/signature-v2/kms-live.json",
+      "scripts/qualify-signature-v2.mjs"
+    ],
+    "categories": [
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "c910c9debc1f92acd60649431a6466243a711c33",
+    "subject": "Freeze v2 signature regression evidence and remaining source-publication blocker",
+    "files": [
+      "docs/security/evidence/signature-v2/browser-performance.json",
+      "docs/security/evidence/signature-v2/peer-source.json",
+      "docs/security/evidence/signature-v2/regressions.json",
+      "docs/security/evidence/signature-v2/three-worker-simulation.json",
+      "docs/security/signature-v2-qualification.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "d3c29f29b6a0f341b5906b64c3fd7d34278d7a93",
+    "subject": "docs(v2): record owner preview qualification blocker",
+    "files": [
+      "docs/v2-implementation.md",
+      "docs/v2/qualification/owner-authenticated-preview-2026-09-18.md",
+      "docs/v2/qualification/private-preview-2026-09-14.md",
+      "docs/v2/qualification/wo22-release-dossier.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "d4fcf48ec4cf45e5721326e36251c81bf611b88b",
+    "subject": "Qualify adversarial and historical versioned signature verification",
+    "files": [
+      "docs/security/federation-signature-v2.md",
+      "tests/federation/signature-v2.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "d9be7376b0f3da2f8239a5bf3bd91aa51056ec9c",
+    "subject": "Expose active Relay delivery verification key for reviewed onboarding",
+    "files": [
+      "app/api/federation/trust/route.ts",
+      "tests/v2/federation-trust.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "de727a5f74442ec8db1dee44974ebd5bd70af446",
+    "subject": "fix(v2): focus skip-link target",
+    "files": [
+      "app/v2/layout.tsx",
+      "tests/v2/dashboard.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "e2dfb5b4480f9bc2c2e5c7642dbf38f36a3f8404",
+    "subject": "Exclude generated factory declaration from lint",
+    "files": [
+      "eslint.config.mjs"
+    ],
+    "categories": [
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "e3b981a787476416005a555a5ac9c58b24c00300",
+    "subject": "Record Eve 0.66 real-provider Telegram qualification evidence",
+    "files": [
+      "docs/v2/qualification/telegram-private-beta-golden-path.md"
+    ],
+    "categories": [
+      "documentation/evidence"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "e548de59f16c0aec21f4892be1c53d0d000a1eee",
+    "subject": "perf: collect Telegram execution results without minute-long polling delay",
+    "files": [
+      "docs/v2/qualification/telegram-private-beta-golden-path.md",
+      "lib/v2/channels/worker.ts",
+      "scripts/channel-worker.ts",
+      "tests/v2/channel-pipeline.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "e8d1d6f7b823e580732f9747a06f44d6872c89ca",
+    "subject": "fix: scope MyEve expiry injection to a delivered Telegram control",
+    "files": [
+      ".github/workflows/ci.yml",
+      "docs/v2/qualification/telegram-private-beta-golden-path.md",
+      "scripts/qualification/expire-myeve-approval.py",
+      "scripts/qualification/test-expire-myeve-approval.py",
+      "scripts/qualification/test-expiry-postgres.py"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "ed8bb0f11543c2b82a61cf65fc9ed697aae21df4",
+    "subject": "Integrate qualified beta identity retirement and authority fencing",
+    "files": [],
+    "categories": [
+      "merge/metadata"
+    ],
+    "disposition": "ANCESTRY_CONTAINED"
+  },
+  {
+    "sha": "ed9b5f99efc5d33fb641321ef55db56bbac62a29",
+    "subject": "feat(telegram): local live topology tooling and canonical identities",
+    "files": [
+      "docs/v2/qualification/telegram-private-beta-golden-path.md",
+      "lib/v2/channels/local-qualification.ts",
+      "scripts/qualification/telegram-identities.ts",
+      "scripts/qualification/telegram-webhook-gateway.mjs",
+      "scripts/qualification/telegram-webhook.ts",
+      "tests/v2/channel-local-qualification.test.ts",
+      "tests/v2/telegram-webhook-control.test.ts",
+      "tests/v2/telegram-webhook-gateway.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "ee3a5e345d8d0183724844300c614733e4b6e2fa",
+    "subject": "fix(platform): align Vercel with Neon region",
+    "files": [
+      "vercel.json"
+    ],
+    "categories": [
+      "merge/metadata"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "efc4b3af91bed7118777b6bee92dd260988321c1",
+    "subject": "fix: preserve signed federation authorization denial receipts",
+    "files": [
+      "lib/v2/federation/service.ts",
+      "tests/federation/federation.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "f06d84f8a926c450983d7fcc14e6c4ad919da45e",
+    "subject": "feat(telegram): pin the dedicated qualification bot identity",
+    "files": [
+      "docs/v2/qualification/telegram-private-beta-golden-path.md",
+      "lib/v2/channels/local-qualification.ts",
+      "tests/v2/channel-local-qualification.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "documentation/evidence",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "f39288e74c74bc3764457bbc52d8f3961bc47e11",
+    "subject": "Revert \"fix(dashboard): render missing agents as not found\"",
+    "files": [
+      "app/(dashboard)/agents/[id]/page.tsx",
+      "lib/dashboard-agent.ts",
+      "tests/security/v1-boundaries.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "f7b5daa1b3ed5df8f950a8e03059a4f540d300ec",
+    "subject": "chore(v2): instrument preview performance",
+    "files": [
+      "app/api/v2/qualification/performance/route.ts"
+    ],
+    "categories": [
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "fac4dede019d0b60aacc1a7c5901a413e38206d4",
+    "subject": "Use short-lived signed beta invites without production migration",
+    "files": [
+      ".env.example",
+      "app/api/auth/signup/route.ts",
+      "app/signup/page.tsx",
+      "components/actions.tsx",
+      "components/beta-invite-form.tsx",
+      "drizzle/0024_mature_blob.sql",
+      "drizzle/meta/0024_snapshot.json",
+      "drizzle/meta/_journal.json",
+      "lib/auth.ts",
+      "lib/db/schema.ts",
+      "tests/auth/beta-invites.test.ts"
+    ],
+    "categories": [
+      "migration/schema",
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  },
+  {
+    "sha": "fd74ba5f33ff7ead3b8b52fa45ded78763433eff",
+    "subject": "test: qualify factory MCP grants and reject invalid input before provider access",
+    "files": [
+      "lib/executor.ts",
+      "lib/myfactory.ts",
+      "tests/factory/mcp.test.ts",
+      "tests/factory/routing.test.ts"
+    ],
+    "categories": [
+      "tests",
+      "implementation/bug-fix"
+    ],
+    "disposition": "RETAINED_FOR_SEMANTIC_RECONCILIATION"
+  }
+]

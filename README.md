@@ -1,5 +1,9 @@
 # Relay
 
+<!-- CANONICAL-CONSOLIDATION-STATUS -->
+**Repository consolidation is in progress.** The private-alpha source baseline is not final. See the [current canonical status](docs/consolidation/CANONICAL-STATUS.md), [source manifest](docs/consolidation/PRIVATE-ALPHA-SOURCE-MANIFEST.md), and [source/migration policy](docs/consolidation/DEVELOPMENT-POLICY.md). Historical qualification below remains scoped to its original source and environment.
+<!-- /CANONICAL-CONSOLIDATION-STATUS -->
+
 Relay is a governed control plane for personal AI agents that act in the real world.
 
 It gives Agents durable identity, bounded authority, human approvals, budgets, event-driven execution, and provider-neutral computers and connectors—without handing runtimes durable credentials or allowing execution providers to become independent control planes.
