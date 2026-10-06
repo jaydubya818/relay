@@ -38,8 +38,11 @@ export async function manageMessageEnrollment(owner: Owner, agentId: string, val
     const declared = registrationSchema.parse(registered.registration).capabilities.map(c => c.name);
     const capabilityEligibility = ["message.send", "message.receive"].filter(name => declared.includes(name as "message.send" | "message.receive")).map(name => ({ name, version: "1.0" }));
     if (!capabilityEligibility.length) throw new RelayError("CAPABILITY_DENIED", "Declare a message capability before enrollment.", undefined, 403);
-    for (const capability of capabilityEligibility) {
-      const [definition] = await transaction.select({ id: capabilityDefinitions.id }).from(capabilityDefinitions).where(and(eq(capabilityDefinitions.name, capability.name), eq(capabilityDefinitions.version, capability.version), eq(capabilityDefinitions.enabled, true))).limit(1);
+    // Federation evaluates message.send as message.receive at the recipient.
+    // Outbound permission remains an explicit peer/resource grant.
+    const policyCapabilities = [...new Set(capabilityEligibility.map(capability => capability.name === "message.send" ? "message.receive" : capability.name))];
+    for (const capability of policyCapabilities) {
+      const [definition] = await transaction.select({ id: capabilityDefinitions.id }).from(capabilityDefinitions).where(and(eq(capabilityDefinitions.name, capability), eq(capabilityDefinitions.version, "1.0"), eq(capabilityDefinitions.enabled, true))).limit(1);
       if (!definition) throw new RelayError("CAPABILITY_DENIED", "Message capability is unavailable.", undefined, 403);
     }
     return issueAgentPassportInTransaction({ ...owner, ownerPrincipalId: owner.principalId, agentId, expectedVersion: command.expectedVersion, policy: {

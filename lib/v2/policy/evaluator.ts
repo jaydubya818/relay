@@ -8,17 +8,23 @@ export type PolicyEvaluationSnapshot = { action: ActionIntent; capability: Capab
 
 const EFFECT_ORDER = { ALLOW: 0, LIMIT: 1, REQUIRE_APPROVAL: 2, ESCALATE: 3, DENY: 4 } as const;
 
-function matches(rule: PolicyRule, snapshot: PolicyEvaluationSnapshot, facts: Map<string, ResolvedFact>) {
+type ActionContext = Pick<PolicyEvaluationSnapshot, "action" | "capability">;
+function staticallyMatches(rule: PolicyRule, snapshot: ActionContext) {
   const match = rule.match;
   if (match.capability && (match.capability.name !== snapshot.capability.name || match.capability.version !== snapshot.capability.version)) return false;
   if (match.effectClass && match.effectClass !== snapshot.capability.effectClass) return false;
   if (match.riskClass && match.riskClass !== snapshot.capability.riskClass) return false;
   if (match.resourceType && match.resourceType !== snapshot.action.resource.type) return false;
-  return Object.entries(match.facts ?? {}).every(([name, value]) => facts.get(name)?.value === value);
+  return true;
 }
 
-export function requiredFactNames(bundles: PolicyBundleDocument[]) {
-  return [...new Set(bundles.flatMap((bundle) => bundle.rules.flatMap((rule) => Object.keys(rule.match.facts ?? {}))))].sort();
+function matches(rule: PolicyRule, snapshot: PolicyEvaluationSnapshot, facts: Map<string, ResolvedFact>) {
+  if (!staticallyMatches(rule, snapshot)) return false;
+  return Object.entries(rule.match.facts ?? {}).every(([name, value]) => facts.get(name)?.value === value);
+}
+
+export function requiredFactNames(bundles: PolicyBundleDocument[], context?: ActionContext) {
+  return [...new Set(bundles.flatMap((bundle) => bundle.rules.filter(rule => !context || staticallyMatches(rule, context)).flatMap((rule) => Object.keys(rule.match.facts ?? {}))))].sort();
 }
 
 export function evaluatePolicySnapshot(snapshot: PolicyEvaluationSnapshot): PolicyEvaluationResult {
@@ -32,7 +38,7 @@ export function evaluatePolicySnapshot(snapshot: PolicyEvaluationSnapshot): Poli
   if (!eligible) return { outcome: "DENY", reasonCodes: ["CAPABILITY_NOT_GRANTED"], obligations: { limits: {} }, matchedRuleIds: [] };
 
   const facts = new Map(snapshot.facts.map((fact) => [fact.name, fact]));
-  for (const name of requiredFactNames(snapshot.bundles)) {
+  for (const name of requiredFactNames(snapshot.bundles, snapshot)) {
     const fact = facts.get(name);
     if (!fact || !fact.authoritative || Date.parse(fact.observedAt) > Date.parse(snapshot.evaluatedAt) || Date.parse(fact.expiresAt) <= Date.parse(snapshot.evaluatedAt)) return { outcome: "DENY", reasonCodes: ["MISSING_AUTHORITATIVE_FACT"], obligations: { limits: {} }, matchedRuleIds: [] };
   }

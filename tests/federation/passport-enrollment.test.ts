@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { agentPassports, capabilityGrants, federationGrants, principals, accountMemberships } from "@/lib/db/schema";
+import { agentPassports, capabilityDefinitions, capabilityGrants, federationGrants, principals, accountMemberships } from "@/lib/db/schema";
 import { createAgent } from "@/lib/agents";
 import { id } from "@/lib/ids";
 import { createLocalEd25519Signer, createLocalRsaKeyWrapper } from "@/lib/v2/evidence/crypto";
@@ -163,6 +163,16 @@ describe("explicit canonical message Passport enrollment", () => {
     const f = await fixture(); await issued(f);
     await expect(executeFederationCommand(f.agent.credential, { operation: "passport.verify" }, f.bindings)).rejects.toBeDefined();
     await expect(executeFederationCommand(f.agent.credential, { operation: "passport.verify", input: null }, f.bindings)).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("uses the canonical receiving policy definition for outbound message eligibility", async () => {
+    const f = await fixture();
+    // Production's explicit registry defines the evaluated receiving action.
+    await db().delete(capabilityDefinitions).where(eq(capabilityDefinitions.name, "message.send"));
+    await f.enroll();
+    expect((await requireCurrentAgentPassport(f.owner.accountId, f.agent.agentId, f.signer)).passport.capabilityEligibility).toEqual(capabilities);
+    await db().update(capabilityDefinitions).set({ enabled: false }).where(eq(capabilityDefinitions.name, "message.receive"));
+    await expect(f.enroll(1)).rejects.toMatchObject({ status: 403 });
   });
 
 });

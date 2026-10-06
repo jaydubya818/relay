@@ -1,3 +1,4 @@
+import { lockActiveAccount } from "@/lib/account-fence";
 import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
 import { capabilityDefinitions, policyBundles, policyDecisions, stepUpChallenges } from "@/lib/db/schema";
@@ -39,6 +40,10 @@ export async function registerCapabilityDefinition(input: CapabilityDefinition, 
 
 async function createPolicyBundleDocument(input: { accountId: string | null; name: string; layer: PolicyBundleDocument["layer"]; rules: PolicyBundleDocument["rules"]; createdByPrincipalId?: string }, signer: AuditSigner, activate: boolean) {
   return await withTransaction(async (transaction) => {
+    if (input.accountId) {
+      await lockActiveAccount(transaction, input.accountId);
+      await requireMembership({ accountId: input.accountId, principalId: input.createdByPrincipalId!, allowedRoles: ["OWNER", "ADMIN"] });
+    }
     const lockKey = `${input.accountId ?? "relay"}:${input.layer}:${input.name}`;
     await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`);
     const [previous] = await transaction.select({ version: policyBundles.version }).from(policyBundles).where(and(input.accountId ? eq(policyBundles.accountId, input.accountId) : isNull(policyBundles.accountId), eq(policyBundles.layer, input.layer), eq(policyBundles.name, input.name))).orderBy(desc(policyBundles.version)).limit(1);
@@ -60,17 +65,39 @@ export async function stageAccountPolicy(input: { accountId: string; actorPrinci
   return await createPolicyBundleDocument({ accountId: input.accountId, name: input.name, layer: input.layer, rules: input.rules, createdByPrincipalId: input.actorPrincipalId }, signer, false);
 }
 
+function verifyPolicyDocumentHash(bundle: typeof policyBundles.$inferSelect) {
+  const document = policyBundleDocumentSchema.parse({ schemaVersion: "relay.policy-bundle.v1", accountId: bundle.accountId, name: bundle.name, layer: bundle.layer, version: bundle.version, rules: bundle.rules });
+  if (canonicalHash(document) !== bundle.bundleHash) throw new RelayError("INVALID_CREDENTIAL", "Policy document integrity check failed.", undefined, 401);
+}
+
 export async function activateAccountPolicy(input: { accountId: string; actorPrincipalId: string; bundleId: string; stepUpChallengeId: string }, signer: AuditSigner) {
   await requireMembership({ accountId: input.accountId, principalId: input.actorPrincipalId, allowedRoles: ["OWNER", "ADMIN"] });
   await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, input.accountId);
+    await requireMembership({ accountId: input.accountId, principalId: input.actorPrincipalId, allowedRoles: ["OWNER", "ADMIN"] });
     const [bundle] = await transaction.select().from(policyBundles).where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.id, input.bundleId), eq(policyBundles.status, "STAGED"))).limit(1);
     if (!bundle) throw new RelayError("INVALID_INPUT", "Staged policy bundle not found.", undefined, 404);
+    verifyPolicyDocumentHash(bundle);
     const freshnessFloor = new Date(Date.now() - 10 * 60_000).toISOString();
     const [stepUp] = await transaction.select({ id: stepUpChallenges.id }).from(stepUpChallenges).where(and(eq(stepUpChallenges.id, input.stepUpChallengeId), eq(stepUpChallenges.accountId, input.accountId), eq(stepUpChallenges.principalId, input.actorPrincipalId), eq(stepUpChallenges.actionClass, "policy.activate"), eq(stepUpChallenges.actionHash, bundle.bundleHash), eq(stepUpChallenges.status, "CONSUMED"), gt(stepUpChallenges.consumedAt, freshnessFloor))).limit(1);
     if (!stepUp) throw new RelayError("INVALID_CREDENTIAL", "Fresh action-bound step-up evidence is required.", undefined, 401);
     await transaction.update(policyBundles).set({ status: "RETIRED", retiredAt: now() }).where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.name, bundle.name), eq(policyBundles.layer, bundle.layer), eq(policyBundles.status, "ACTIVE")));
     await transaction.update(policyBundles).set({ status: "ACTIVE", activatedAt: now() }).where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.id, bundle.id)));
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.actorPrincipalId, eventType: "policy.activated", outcome: "SUCCESS", details: { bundleId: bundle.id, bundleHash: bundle.bundleHash, layer: bundle.layer, version: bundle.version } }, signer);
+  });
+}
+
+export async function retireAccountPolicy(input: { accountId: string; actorPrincipalId: string; bundleId: string; stepUpChallengeId: string }, signer: AuditSigner) {
+  await withTransaction(async transaction => {
+    await lockActiveAccount(transaction, input.accountId);
+    await requireMembership({ accountId: input.accountId, principalId: input.actorPrincipalId, allowedRoles: ["OWNER", "ADMIN"] });
+    const [bundle] = await transaction.select().from(policyBundles).where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.id, input.bundleId), eq(policyBundles.status, "ACTIVE"))).limit(1);
+    if (!bundle) throw new RelayError("INVALID_INPUT", "Active policy bundle not found.", undefined, 404);
+    verifyPolicyDocumentHash(bundle);
+    const [stepUp] = await transaction.select({ id: stepUpChallenges.id }).from(stepUpChallenges).where(and(eq(stepUpChallenges.id, input.stepUpChallengeId), eq(stepUpChallenges.accountId, input.accountId), eq(stepUpChallenges.principalId, input.actorPrincipalId), eq(stepUpChallenges.actionClass, "policy.retire"), eq(stepUpChallenges.actionHash, bundle.bundleHash), eq(stepUpChallenges.status, "CONSUMED"), gt(stepUpChallenges.consumedAt, new Date(Date.now() - 600000).toISOString()))).limit(1);
+    if (!stepUp) throw new RelayError("INVALID_CREDENTIAL", "Fresh action-bound step-up evidence is required.", undefined, 401);
+    await transaction.update(policyBundles).set({ status: "RETIRED", retiredAt: now() }).where(eq(policyBundles.id, bundle.id));
+    await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.actorPrincipalId, eventType: "policy.retired", outcome: "SUCCESS", details: { bundleId: bundle.id, bundleHash: bundle.bundleHash, layer: bundle.layer, version: bundle.version } }, signer);
   });
 }
 
@@ -119,7 +146,7 @@ async function evaluateCurrentPolicy(input: { accountId: string; action: ActionI
   if (action.accountId !== input.accountId || canonicalHash(actionMaterial(action)) !== action.canonicalHash) throw new RelayError("INVALID_INPUT", "Action intent account or canonical hash is invalid.");
   const loaded = await loadEvaluationInputs(input.accountId, action, signer);
   const factResolutionStartedAt = now();
-  const resolved = await resolveFacts(requiredFactNames(loaded.bundles), input.factResolvers ?? [], { accountId: input.accountId, action, evaluatedAt: factResolutionStartedAt });
+  const resolved = await resolveFacts(requiredFactNames(loaded.bundles, { action, capability: loaded.capability }), input.factResolvers ?? [], { accountId: input.accountId, action, evaluatedAt: factResolutionStartedAt });
   const ownership = await input.resourceResolver.resolveOwnership({ accountId: input.accountId, resource: action.resource });
   const parsedOwnership = ownership ? resolvedFactSchema.parse(ownership) : undefined;
   const evaluatedAt = now();
