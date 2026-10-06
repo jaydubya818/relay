@@ -134,7 +134,7 @@ function policyAction(row: Pick<RequestRow, "id" | "targetOwnerId" | "targetAgen
 async function policyInput(row: RequestRow, action: ActionIntent, approvalRequired: boolean) {
   const relationships = await db().select().from(federationRelationships).where(and(eq(federationRelationships.ownerId, row.targetOwnerId), inArray(federationRelationships.subject, [row.callerOwnerId, row.callerAgentId])));
   const known = relationships.some((relationship) => ["CONTACT", "TRUSTED"].includes(relationship.trust));
-  const facts = { "recipient.relationship": known ? "known" : "new", "federation.caller_owner": row.callerOwnerId, "federation.caller_agent": row.callerAgentId, "federation.capability": row.capability };
+  const facts = { "recipient.relationship": known ? "known" : "new", "federation.caller_owner": row.callerOwnerId, "federation.caller_agent": row.callerAgentId, "federation.capability": row.capability, "federation.target_agent": row.targetAgentId, "federation.resource": row.resource };
   return { accountId: row.targetOwnerId, action, requiredApprovalClass: approvalRequired ? "federation.disclosure" : undefined,
     factResolvers: Object.entries(facts).map(([name, value]) => ({ name, resolve: async () => ({ name, value, authoritative: true, observedAt: now(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: canonicalHash({ name, value }) }) })),
     resourceResolver: { resolveOwnership: async () => ({ name: "resource.account_id", value: row.targetOwnerId, authoritative: true, observedAt: now(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: row.publicationVersion?.toString() ?? row.id }) },
