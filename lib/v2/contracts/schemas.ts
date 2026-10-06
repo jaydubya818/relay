@@ -67,6 +67,7 @@ export const agentPassportSchema = z.object({
   budgetReferences: z.array(z.string().min(1).max(255)).max(100),
   allowedEnvironments: z.object({ providerIds: z.array(z.string().min(1).max(255)).max(100), minimumAssurance: z.enum(["registered", "attested", "managed-equivalent"]), regions: z.array(z.string().min(1).max(64)).max(100).optional() }).strict(),
   dataAccess: z.array(z.object({ classification: z.enum(["public", "internal", "confidential", "restricted"]), resourceTypes: z.array(z.string().min(1).max(128)).max(100) }).strict()).max(100),
+  signingKey: z.object({ id: z.string().min(1).max(255), version: z.string().min(1).max(255), purpose: z.literal("passport"), algorithm: z.literal("Ed25519") }).strict().optional(),
   validFrom: isoTimestamp, expiresAt: isoTimestamp, revocationEpoch: z.number().int().nonnegative(),
 }).strict().refine((passport) => Date.parse(passport.expiresAt) > Date.parse(passport.validFrom), { path: ["expiresAt"], message: "expiresAt must follow validFrom" });
 

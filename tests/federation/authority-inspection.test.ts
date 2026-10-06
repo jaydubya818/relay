@@ -42,7 +42,7 @@ async function fixture() {
 }
 
 afterEach(async () => { vi.restoreAllMocks(); await cleanupDatabase(); });
-const inspect = (f: Awaited<ReturnType<typeof fixture>>, changes = {}) => inspectFederationAuthority(f.ava.credential, { ...f.submission, ...changes });
+const inspect = (f: Awaited<ReturnType<typeof fixture>>, changes = {}) => inspectFederationAuthority(f.ava.credential, { ...f.submission, ...changes }, f.bindings.signer);
 
 describe("authenticated authority inspection", () => {
   it("supports explicit no-expiry grants while rechecking revocation at execution", async () => {
@@ -117,12 +117,13 @@ describe("authenticated authority inspection", () => {
   });
   it("derives caller identity from authentication and rejects identity overrides", async () => {
     const f = await fixture();
-    await expect(inspectFederationAuthority("", f.submission)).rejects.toMatchObject({ code: "INVALID_CREDENTIAL" });
+    await expect(inspectFederationAuthority("", f.submission, f.bindings.signer)).rejects.toMatchObject({ code: "INVALID_CREDENTIAL" });
     await expect(inspect(f, { caller: { ownerId: f.sarah.accountId, agentId: f.ava.agentId } })).rejects.toBeDefined();
     const sibling = await createAgent(f.sarah.accountId, { name: "Ava", capabilities: [] });
     await registerFederationAgent(f.sarah, { agentId: sibling.agentId, platform: "test", capabilities: capabilitySchema.options.map(name => ({ name, version: "1.0" })) }, f.bindings.signer);
-    expect(await inspectFederationAuthority(sibling.credential, f.submission)).toMatchObject({ authorized: false, status: "MISSING" });
-    expect(await inspectFederationAuthority(f.sofie.credential, f.submission)).toMatchObject({ authorized: false, status: "MISSING" });
+    await issueAgentPassport({ accountId: f.sarah.accountId, ownerPrincipalId: f.sarah.principalId, agentId: sibling.agentId, policy: { trustTier: "REGISTERED", capabilityEligibility: [], policyReferences: [], budgetReferences: [], allowedEnvironments: { providerIds: [], minimumAssurance: "registered" }, dataAccess: [], expiresAt: future() } }, f.bindings.signer);
+    expect(await inspectFederationAuthority(sibling.credential, f.submission, f.bindings.signer)).toMatchObject({ authorized: false, status: "MISSING" });
+    expect(await inspectFederationAuthority(f.sofie.credential, f.submission, f.bindings.signer)).toMatchObject({ authorized: false, status: "MISSING" });
   });
   it("does not transfer authority to a namesake peer or another account", async () => {
     const f = await fixture();

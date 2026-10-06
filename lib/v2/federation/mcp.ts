@@ -23,7 +23,7 @@ function toolSchema(operation: string) {
   return { type: "object", required: ["requestId"], properties: { requestId: string }, additionalProperties: false };
 }
 export async function handleFederationMcp(secret: string, value: unknown, bindings: FederationBindings) {
-  await authenticateFederationAgent(secret);
+  await authenticateFederationAgent(secret, bindings.signer);
   const request = z.object({ jsonrpc: z.literal("2.0"), id: z.union([z.string(), z.number()]).optional(), method: z.string(), params: z.unknown().optional() }).strict().parse(value);
   if (request.method === "notifications/initialized" && request.id === undefined) return null;
   if (request.id === undefined) throw new RelayError("INVALID_INPUT", "An RPC request ID is required.");

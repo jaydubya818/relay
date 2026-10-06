@@ -1,3 +1,4 @@
+import type { AuditSigner } from "@/lib/v2/evidence/crypto";
 import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -7,8 +8,8 @@ import { assertNotBlocked } from "./registry";
 import { authenticateFederationAgent, chargeRates } from "./service";
 import { RelayError } from "@/lib/errors";
 
-export async function discoverFederationAgents(secret: string, value: unknown) {
-  const caller = await authenticateFederationAgent(secret);
+export async function discoverFederationAgents(secret: string, value: unknown, signer: AuditSigner) {
+  const caller = await authenticateFederationAgent(secret, signer);
   const input = z.object({ after: z.string().max(255).default(""), topic: z.string().max(100).optional() }).strict().parse(value);
   await chargeRates([{ accountId: caller.ownerId, key: `discovery:${caller.ownerId}`, limit: 10, seconds: 60 }]);
   const candidates = await db().select({ profile: federationAgents }).from(federationAgents).innerJoin(agents, and(eq(agents.id, federationAgents.agentId), eq(agents.status, "ACTIVE"))).innerJoin(accounts, and(eq(accounts.id, federationAgents.ownerId), isNull(accounts.retiredAt)))

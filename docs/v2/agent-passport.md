@@ -21,3 +21,7 @@ Runtime clients have immutable Relay IDs and one-time credentials. Product names
 ## Isolation obligation
 
 Passport, import, runtime-client, and credential lookups are account-scoped. Focused negative tests cover cross-account Passport export, import authorization, runtime verification, and runtime authentication. These boundaries join the complete WO-22 tenant-isolation suite.
+
+## Production messaging enrollment
+
+See [Agent Passport enrollment for messaging](../agent-passport-enrollment.md) for the explicit owner API, signed key-version binding, retained v1 compatibility, revocation, and independent policy/grant requirements.
