@@ -7,7 +7,7 @@ export interface AuditSigner {
   readonly keyId: string;
   /** Immutable version identity; local/reference keys use their unique key ID. */
   readonly keyVersion?: string;
-  verificationKeys?(): Array<{ keyId: string; algorithm: "Ed25519"; publicKeyPem: string }>;
+  verificationKeys?(): Array<{ keyId: string; keyVersion?: string; activatedAt?: string; retiredAt?: string; algorithm: "Ed25519"; publicKeyPem: string }>;
   sign(recordHash: string): Promise<string>;
   verify(recordHash: string, signature: string): Promise<boolean>;
   publicKeyPem(): Promise<string>;

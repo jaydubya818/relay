@@ -97,3 +97,10 @@ describe('hosted federation composition',()=>{
   expect(await configured.keyResolver.publicKeyForPurpose?.('evidence-v1','lease')).toBeUndefined();
  });
 });
+
+it("rejects revoked-to-active same-purpose public-key aliases", () => {
+  const { key } = fixture("passport");
+  const revoked: SigningKey = { ...key, state: "REVOKED", revokedAt: "2026-06-01T00:00:00Z" };
+  const relabeled: SigningKey = { ...key, keyId: "passport-alias", keyVersion: "passport-alias-version" };
+  expect(() => new SigningKeyring([revoked, relabeled], { sign: vi.fn() })).toThrow();
+});

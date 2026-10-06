@@ -162,6 +162,7 @@ describe("federation trust boundaries", () => {
     await expect(submitFederationRequest(f.ava.credential, { ...f.submission, caller: f.sofie.agentId }, f.bindings)).rejects.toBeDefined();
     await publishView(f.jay, { ...f.document, id: f.view.viewId, expectedVersion: 1, allowedAudience: [{ ownerId: f.sarah.accountId }] }, f.bindings.signer);
     const sibling = await createAgent(f.sarah.accountId, { name: "Sibling", capabilities: [] });
+    await issueAgentPassport({ accountId: f.sarah.accountId, ownerPrincipalId: f.sarah.principalId, agentId: sibling.agentId, policy: { trustTier: "REGISTERED", capabilityEligibility: capabilitySchema.options.map(name => ({ name, version: "1.0" })), policyReferences: [], budgetReferences: [], allowedEnvironments: { providerIds: [], minimumAssurance: "registered" }, dataAccess: [], expiresAt: future() } }, f.bindings.signer);
     await registerFederationAgent(f.sarah, { agentId: sibling.agentId, platform: "test", capabilities: [{ name: "knowledge.query", version: "1.0" }] }, f.bindings.signer);
     await expect(submitFederationRequest(sibling.credential, f.submission, f.bindings)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" });
     const request = await submitFederationRequest(f.ava.credential, f.submission, f.bindings);
@@ -245,7 +246,7 @@ describe("federation trust boundaries", () => {
     await submitFederationRequest(f.ava.credential, { ...work, idempotencyKey: "work-second" }, f.bindings);
     await expect(submitFederationRequest(f.ava.credential, { ...work, idempotencyKey: "work-exhausted" }, f.bindings)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" });
     expect(await db().select().from(federationRequests)).toHaveLength(2);
-    await acknowledgeFederationResult(f.ava.credential, request.requestId);
+    await acknowledgeFederationResult(f.ava.credential, request.requestId, f.bindings.signer);
     const [row] = await db().select().from(federationRequests).where(eq(federationRequests.id, request.requestId));
     expect(row.encryptedPayload).toBeNull(); expect(row.encryptedResult).toBeNull();
   });
@@ -279,9 +280,10 @@ describe("federation trust boundaries", () => {
     await revokeFederationGrant(f.jay, f.grant.grantId, f.bindings.signer);
     await expect(submitFederationRequest(f.ava.credential, f.submission, f.bindings)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" });
     const publicReader = await createAgent(f.sarah.accountId, { name: "Public reader", capabilities: [] });
+    await issueAgentPassport({ accountId: f.sarah.accountId, ownerPrincipalId: f.sarah.principalId, agentId: publicReader.agentId, policy: { trustTier: "REGISTERED", capabilityEligibility: capabilitySchema.options.map(name => ({ name, version: "1.0" })), policyReferences: [], budgetReferences: [], allowedEnvironments: { providerIds: [], minimumAssurance: "registered" }, dataAccess: [], expiresAt: future() } }, f.bindings.signer);
     await registerFederationAgent(f.sarah, { agentId: publicReader.agentId, platform: "test", capabilities: [{ name: "knowledge.query", version: "1.0" }] }, f.bindings.signer);
     expect(await submitFederationRequest(publicReader.credential, f.submission, f.bindings)).toMatchObject({ status: "AUTHORIZED" });
-    const discovery = await discoverFederationAgents(f.ava.credential, {});
+    const discovery = await discoverFederationAgents(f.ava.credential, {}, f.bindings.signer);
     expect(discovery.agents.find((agent) => agent.name === "Sofie")?.views[0].id).toBe(f.view.viewId);
     expect(JSON.stringify(discovery)).not.toContain("published-1");
   });
@@ -305,6 +307,7 @@ describe("federation trust boundaries", () => {
     await expect(registerFederationAgent(f.sarah, { agentId: f.ava.agentId, platform: "replacement-platform", capabilities: [] }, f.bindings.signer)).rejects.toMatchObject({ code: "INVALID_INPUT" });
     await publishView(f.jay, { ...f.document, id: f.view.viewId, expectedVersion: 1, allowedAudience: [{ ownerId: f.sarah.accountId }] }, f.bindings.signer);
     const replacement = await createAgent(f.sarah.accountId, { name: "New Ava", capabilities: [] });
+    await issueAgentPassport({ accountId: f.sarah.accountId, ownerPrincipalId: f.sarah.principalId, agentId: replacement.agentId, policy: { trustTier: "REGISTERED", capabilityEligibility: capabilitySchema.options.map(name => ({ name, version: "1.0" })), policyReferences: [], budgetReferences: [], allowedEnvironments: { providerIds: [], minimumAssurance: "registered" }, dataAccess: [], expiresAt: future() } }, f.bindings.signer);
     await registerFederationAgent(f.sarah, { agentId: replacement.agentId, platform: "replacement-platform", capabilities: [{ name: "knowledge.query", version: "1.0" }] }, f.bindings.signer);
     await expect(submitFederationRequest(replacement.credential, f.submission, f.bindings)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" });
     const ownerGrant = { ...f.grantDocument };
@@ -331,11 +334,11 @@ describe("federation trust boundaries", () => {
   });
   it("indexes only explicitly public profiles and view metadata", async () => {
     const f = await fixture();
-    const discovered = await discoverFederationAgents(f.ava.credential, {});
+    const discovered = await discoverFederationAgents(f.ava.credential, {}, f.bindings.signer);
     expect(discovered.agents.find((agent) => agent.name === "Sofie")?.views).toEqual([]);
     expect(JSON.stringify(discovered)).not.toContain("published-1");
     await db().update(agents).set({ status: "DISABLED" }).where(eq(agents.id, f.sofie.agentId));
-    expect((await discoverFederationAgents(f.ava.credential, {})).agents.some((agent) => agent.name === "Sofie")).toBe(false);
+    expect((await discoverFederationAgents(f.ava.credential, {}, f.bindings.signer)).agents.some((agent) => agent.name === "Sofie")).toBe(false);
   });
   it("rejects implicit dynamic eligibility", () => {
     expect(viewSchema.safeParse({ mode: "DYNAMIC", entries: [{ eligibility: "LLM_MATCH" }] }).success).toBe(false);

@@ -1,3 +1,4 @@
+import { issueAgentPassport } from "@/lib/v2/passports";
 import { afterEach, describe, expect, it } from "vitest";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -80,12 +81,13 @@ describe("disposable Relay beta lifecycle on PostgreSQL", () => {
     const [principal] = await db().select({ id: principals.id }).from(principals)
       .innerJoin(users, eq(users.id, principals.userId)).where(eq(users.accountId, tester.accountId));
     const principalId = principal.id;
+    await issueAgentPassport({ accountId: tester.accountId, agentId: agent.agentId, ownerPrincipalId: principalId, policy: { trustTier: "REGISTERED", capabilityEligibility: [], policyReferences: [], budgetReferences: [], allowedEnvironments: { providerIds: [], minimumAssurance: "registered" }, dataAccess: [], expiresAt: new Date(Date.now() + 3600000).toISOString() } }, signer);
     await registerFederationAgent({ accountId: tester.accountId, principalId }, { agentId: agent.agentId, platform: "qualification", capabilities: [{ name: "message.send", version: "1.0" }], discovery: "PUBLIC", publicName: "Ava" }, signer);
     await db().insert(memories).values({ id: id("mem"), accountId: tester.accountId, createdByAgentId: agent.agentId, scope: "AGENT_PRIVATE", type: "FACT", content: "private-canary", source: "test" });
     await db().insert(memories).values({ id: id("mem"), accountId: tester.accountId, createdByAgentId: agent.agentId, scope: "AGENT_PRIVATE", type: "FACT", content: "forgotten-private-canary", source: "test", forgottenAt: new Date().toISOString() });
     await db().insert(federationGrants).values({ id: id("fgr"), ownerId: tester.accountId, granteeOwnerId: owner.accountId, capability: "message.send", resource: "inbox", document: {} });
     expect(await parseSession(session)).toMatchObject({ accountId: tester.accountId });
-    expect(await authenticateFederationAgent(agent.credential)).toMatchObject({ ownerId: tester.accountId });
+    expect(await authenticateFederationAgent(agent.credential, signer)).toMatchObject({ ownerId: tester.accountId });
     const plan = await planDisposableBetaRetirement(tester.accountId);
     expect(plan).toMatchObject({ state: "ACTIVE", agents: 1, activeGrants: 1, privateDataObjects: 2, unsupportedResources: 0, policy: "RETIRE_ONLY" });
     const before = await listAuditRecords(tester.accountId);
@@ -93,7 +95,7 @@ describe("disposable Relay beta lifecycle on PostgreSQL", () => {
     const results = await Promise.all([retireDisposableBetaAccount(retireInput), retireDisposableBetaAccount(retireInput)]);
     expect(results.map((result) => result.idempotentReplay).sort()).toEqual([false, true]);
     expect(await parseSession(session)).toBeNull();
-    await expect(authenticateFederationAgent(agent.credential)).rejects.toMatchObject({ code: "INVALID_CREDENTIAL" });
+    await expect(authenticateFederationAgent(agent.credential, signer)).rejects.toMatchObject({ code: "INVALID_CREDENTIAL" });
     expect(await db().select().from(userSessions).where(and(eq(userSessions.accountId, tester.accountId), isNull(userSessions.revokedAt)))).toHaveLength(0);
     expect(await db().select().from(agentCredentials).where(and(eq(agentCredentials.accountId, tester.accountId), isNull(agentCredentials.revokedAt)))).toHaveLength(0);
     expect(await db().select().from(federationGrants).where(and(eq(federationGrants.ownerId, tester.accountId), eq(federationGrants.status, "ACTIVE")))).toHaveLength(0);

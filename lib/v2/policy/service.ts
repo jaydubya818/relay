@@ -1,12 +1,13 @@
 import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
-import { agentPassports, capabilityDefinitions, policyBundles, policyDecisions, stepUpChallenges } from "@/lib/db/schema";
+import { capabilityDefinitions, policyBundles, policyDecisions, stepUpChallenges } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
-import { actionIntentSchema, agentPassportSchema, canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
+import { actionIntentSchema, canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
 import { appendAuditRecordInTransaction } from "@/lib/v2/evidence/audit";
 import type { AuditSigner } from "@/lib/v2/evidence/crypto";
 import { redactForEvidence } from "@/lib/v2/evidence/redaction";
+import { requireCurrentAgentPassport } from "@/lib/v2/passports";
 import { requireMembership } from "@/lib/v2/identity";
 import { capabilityDefinitionSchema, policyBundleDocumentSchema, resolvedFactSchema, type CapabilityDefinition, type PolicyBundleDocument, type ResolvedFact } from "./contracts";
 import { evaluatePolicySnapshot, requiredFactNames, type PolicyEvaluationResult, type PolicyEvaluationSnapshot } from "./evaluator";
@@ -73,17 +74,16 @@ export async function activateAccountPolicy(input: { accountId: string; actorPri
   });
 }
 
-async function loadEvaluationInputs(accountId: string, action: ActionIntent) {
+async function loadEvaluationInputs(accountId: string, action: ActionIntent, signer: AuditSigner) {
   const [capability] = await db().select().from(capabilityDefinitions).where(and(eq(capabilityDefinitions.name, action.capability.name), eq(capabilityDefinitions.version, action.capability.version), eq(capabilityDefinitions.enabled, true))).limit(1);
   if (!capability) throw new RelayError("CAPABILITY_DENIED", "Capability definition is unavailable.", action.capability.name, 403);
-  const [passportRow] = await db().select().from(agentPassports).where(and(eq(agentPassports.accountId, accountId), eq(agentPassports.agentId, action.agentId), eq(agentPassports.status, "ACTIVE"), gt(agentPassports.expiresAt, now()))).orderBy(desc(agentPassports.version)).limit(1);
-  if (!passportRow) throw new RelayError("CAPABILITY_DENIED", "Active Agent Passport is unavailable.", action.capability.name, 403);
+  const { passport } = await requireCurrentAgentPassport(accountId, action.agentId, signer);
   const rows = await db().select().from(policyBundles).where(and(or(isNull(policyBundles.accountId), eq(policyBundles.accountId, accountId)), eq(policyBundles.status, "ACTIVE")));
   const bundles = rows.map((row) => policyBundleDocumentSchema.parse({ schemaVersion: "relay.policy-bundle.v1", name: row.name, layer: row.layer, version: row.version, accountId: row.accountId, rules: row.rules }));
   return {
     capability: capabilityDefinitionSchema.parse({ name: capability.name, version: capability.version, domain: capability.domain, description: capability.description, effectClass: capability.effectClass, riskClass: capability.riskClass, resourceType: capability.resourceType, inputSchema: capability.inputSchema, outputSchema: capability.outputSchema, meteringDimensions: capability.meteringDimensions }),
     capabilityHash: capability.definitionHash,
-    passport: agentPassportSchema.parse(passportRow.payload),
+    passport,
     bundles,
     bundleHashes: rows.map((row) => row.bundleHash).sort(),
   };
@@ -114,10 +114,10 @@ async function persistDecision(input: { accountId: string; action: ActionIntent;
   return { decisionId, expiresAt, ...input.result };
 }
 
-async function evaluateCurrentPolicy(input: { accountId: string; action: ActionIntent; resourceResolver: PolicyResourceResolver; factResolvers?: PolicyFactResolver[]; requiredApprovalClass?: string }) {
+async function evaluateCurrentPolicy(input: { accountId: string; action: ActionIntent; resourceResolver: PolicyResourceResolver; factResolvers?: PolicyFactResolver[]; requiredApprovalClass?: string }, signer: AuditSigner) {
   const action = actionIntentSchema.parse(input.action);
   if (action.accountId !== input.accountId || canonicalHash(actionMaterial(action)) !== action.canonicalHash) throw new RelayError("INVALID_INPUT", "Action intent account or canonical hash is invalid.");
-  const loaded = await loadEvaluationInputs(input.accountId, action);
+  const loaded = await loadEvaluationInputs(input.accountId, action, signer);
   const factResolutionStartedAt = now();
   const resolved = await resolveFacts(requiredFactNames(loaded.bundles), input.factResolvers ?? [], { accountId: input.accountId, action, evaluatedAt: factResolutionStartedAt });
   const ownership = await input.resourceResolver.resolveOwnership({ accountId: input.accountId, resource: action.resource });
@@ -140,12 +140,12 @@ async function evaluateCurrentPolicy(input: { accountId: string; action: ActionI
 }
 
 /** A current observation only: no decision, audit signature, approval, or authority handle. */
-export async function inspectPolicy(input: Parameters<typeof evaluateCurrentPolicy>[0]) {
-  return (await evaluateCurrentPolicy(input)).result;
+export async function inspectPolicy(input: Parameters<typeof evaluateCurrentPolicy>[0], signer: AuditSigner) {
+  return (await evaluateCurrentPolicy(input, signer)).result;
 }
 
 export async function evaluatePolicy(input: Parameters<typeof evaluateCurrentPolicy>[0], signer: AuditSigner) {
-  return persistDecision({ ...await evaluateCurrentPolicy(input), signer });
+  return persistDecision({ ...await evaluateCurrentPolicy(input, signer), signer });
 }
 
 export async function reproducePolicyDecision(accountId: string, decisionId: string) {

@@ -1,3 +1,5 @@
+import type { AuditSigner } from "@/lib/v2/evidence/crypto";
+import { requireCurrentAgentPassport } from "@/lib/v2/passports";
 import { messageResponseSchema } from "./contracts";
 import { and, asc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -23,13 +25,14 @@ function amountUnits(value: string) {
   return BigInt(whole) * 1000000000n + BigInt(fraction.padEnd(9, "0"));
 }
 const activeStates = ["AUTHORIZED", "DELIVERED", "WAITING", "ACCEPTED", "RUNNING"];
-export async function authenticateFederationAgent(secret: string): Promise<AuthenticatedAgent> {
+export async function authenticateFederationAgent(secret: string, signer: AuditSigner): Promise<AuthenticatedAgent> {
   const [row] = await db().select({ ownerId: agents.accountId, agentId: agents.id, credentialId: agentCredentials.id, expiresAt: agentCredentials.expiresAt, address: federationAgents.address, availability: federationAgents.availability })
     .from(agentCredentials).innerJoin(agents, and(eq(agents.id, agentCredentials.agentId), eq(agents.accountId, agentCredentials.accountId), eq(agents.status, "ACTIVE")))
     .innerJoin(federationAgents, and(eq(federationAgents.agentId, agents.id), eq(federationAgents.ownerId, agents.accountId)))
     .innerJoin(accounts, and(eq(accounts.id, agents.accountId), isNull(accounts.retiredAt)))
     .where(and(eq(agentCredentials.secretHash, hashSecret(secret)), isNull(agentCredentials.revokedAt))).limit(1);
   if (!row || (row.expiresAt && Date.parse(row.expiresAt) <= Date.now()) || ["REVOKED", "PAUSED"].includes(row.availability)) throw new RelayError("INVALID_CREDENTIAL", "Federation credential is unavailable.", undefined, 401);
+  await requireCurrentAgentPassport(row.ownerId, row.agentId, signer);
   return { ownerId: row.ownerId, agentId: row.agentId, credentialId: row.credentialId, address: row.address };
 }
 async function identityStillActive(transaction: RelayDatabase, row: RequestRow) {
@@ -54,9 +57,17 @@ export async function chargeRates(keys: Array<{ accountId: string; key: string; 
     }
   });
 }
-async function authority(transaction: RelayDatabase, row: RequestRow, submission: Submission) {
+async function authority(transaction: RelayDatabase, row: RequestRow, submission: Submission, signer: AuditSigner) {
   if (Date.parse(row.expiresAt) <= Date.now()) denied();
   await identityStillActive(transaction, row);
+  try {
+    const callerPassport = await requireCurrentAgentPassport(row.callerOwnerId, row.callerAgentId, signer, transaction);
+    await requireCurrentAgentPassport(row.targetOwnerId, row.targetAgentId, signer, transaction);
+    if (!callerPassport.passport.capabilityEligibility.some(cap => cap.name === submission.capability && cap.version === "1.0")) denied();
+  } catch (error) {
+    if (error instanceof RelayError && error.code === "INVALID_CREDENTIAL") denied();
+    throw error;
+  }
   await assertNotBlocked(transaction, { ownerId: row.callerOwnerId, agentId: row.callerAgentId }, { ownerId: row.targetOwnerId, agentId: row.targetAgentId });
   const [target] = await transaction.select().from(federationAgents).where(eq(federationAgents.agentId, row.targetAgentId));
   const [caller] = await transaction.select().from(federationAgents).where(eq(federationAgents.agentId, row.callerAgentId));
@@ -151,7 +162,7 @@ function validateSubmissionLifetime(submission: Submission) {
   }
 }
 export async function submitFederationRequest(secret: string, value: unknown, bindings: FederationBindings) {
-  const caller = await authenticateFederationAgent(secret);
+  const caller = await authenticateFederationAgent(secret, bindings.signer);
   const submission = submissionSchema.parse(value);
   validateSubmissionLifetime(submission);
   await chargeRates([{ accountId: caller.ownerId, key: `owner:${caller.ownerId}`, limit: 120, seconds: 60 }, { accountId: caller.ownerId, key: `agent:${caller.agentId}`, limit: 60, seconds: 60 }]);
@@ -168,7 +179,7 @@ export async function submitFederationRequest(secret: string, value: unknown, bi
     }
     const requestId = id("frq");
     const row: RequestRow = { id: requestId, callerOwnerId: caller.ownerId, callerAgentId: caller.agentId, callerCredentialId: caller.credentialId, targetOwnerId: target.ownerId, targetAgentId: target.agentId, capability: submission.capability, resource: submission.resource, idempotencyKey: submission.idempotencyKey, submissionHash, status: "CREATED", inboxStatus: "UNREAD", grantId: null, publicationVersion: null, policyDecisionId: null, approvalId: null, encryptedPayload: null, encryptedResult: null, metadata: {}, attempts: 0, nextAttemptAt: now(), expiresAt: submission.expiresAt, createdAt: now(), updatedAt: now() };
-    const authorization = await authority(transaction, row, submission);
+    const authorization = await authority(transaction, row, submission, bindings.signer);
     row.grantId = authorization.grant.id;
     row.publicationVersion = authorization.publication?.version ?? null;
     const action = policyAction(row);
@@ -222,7 +233,7 @@ async function terminal(transaction: RelayDatabase, row: RequestRow, status: "DE
   await transaction.update(federationRequests).set({ status, inboxStatus: status === "EXPIRED" ? "EXPIRED" : "REJECTED", encryptedPayload: null, encryptedResult: null, updatedAt: now() }).where(eq(federationRequests.id, row.id));
 }
 export async function pollFederationInbox(secret: string, bindings: FederationBindings) {
-  const recipient = await authenticateFederationAgent(secret);
+  const recipient = await authenticateFederationAgent(secret, bindings.signer);
   await chargeRates([{ accountId: recipient.ownerId, key: `poll:${recipient.agentId}`, limit: 120, seconds: 60 }]);
   const candidates = await db().select().from(federationRequests).where(and(eq(federationRequests.targetAgentId, recipient.agentId), inArray(federationRequests.status, ["AUTHORIZED", "DELIVERED", "WAITING"]), lte(federationRequests.nextAttemptAt, now()))).orderBy(asc(federationRequests.createdAt)).limit(10);
   const deliveries: Array<{ requestId: string; token: string; attempt: number }> = [];
@@ -235,7 +246,7 @@ export async function pollFederationInbox(secret: string, bindings: FederationBi
       if (row.attempts >= 3) { await terminal(transaction, row, "FAILED"); return; }
       const submission = await readSubmission(row, bindings);
       let authorization: Awaited<ReturnType<typeof authority>>;
-      try { authorization = await authority(transaction, row, submission); } catch (error) {
+      try { authorization = await authority(transaction, row, submission, bindings.signer); } catch (error) {
         if (!(error instanceof RelayError) || error.code !== "CAPABILITY_DENIED") throw error;
         await terminal(transaction, row, "DENIED"); return;
       }
@@ -284,7 +295,7 @@ const responseSchema = z.discriminatedUnion("status", [
 ]);
 const workResultSchema = z.object({ summary: z.string().max(16000), artifacts: z.array(z.string().max(255)).max(10), evidence: z.array(z.string().max(255)).min(1).max(30), cost: z.string().regex(/^\d{1,6}(\.\d{1,9})?$/), runtimeSeconds: z.number().nonnegative(), modelSteps: z.number().int().nonnegative(), providerReceipts: z.array(z.string().max(255)).max(20) }).strict();
 export async function respondToFederationRequest(secret: string, requestId: string, value: unknown, bindings: FederationBindings) {
-  const recipient = await authenticateFederationAgent(secret);
+  const recipient = await authenticateFederationAgent(secret, bindings.signer);
   await chargeRates([{ accountId: recipient.ownerId, key: `respond:${recipient.agentId}`, limit: 120, seconds: 60 }]);
   const response = responseSchema.parse(value);
   const [candidate] = await db().select().from(federationRequests).where(and(eq(federationRequests.id, requestId), eq(federationRequests.targetAgentId, recipient.agentId), eq(federationRequests.targetOwnerId, recipient.ownerId)));
@@ -296,7 +307,7 @@ export async function respondToFederationRequest(secret: string, requestId: stri
     if (row.status === "COMPLETED" && response.status === "COMPLETED" && metadata.resultHash === canonicalHash(response.result)) return { requestId, status: "COMPLETED" };
     if (!activeStates.includes(row.status) || !row.attempts) denied();
     const submission = await readSubmission(row, bindings);
-    const authorization = await authority(transaction, row, submission);
+    const authorization = await authority(transaction, row, submission, bindings.signer);
     if (response.status === "REJECTED") { await terminal(transaction, row, "REJECTED"); return { requestId, status: "REJECTED" }; }
     if (response.status === "REQUIRE_APPROVAL") {
       if (!["DELIVERED", "WAITING"].includes(row.status)) denied();
@@ -349,7 +360,7 @@ export async function respondToFederationRequest(secret: string, requestId: stri
   });
 }
 export async function getFederationRequest(secret: string, requestId: string, bindings: FederationBindings) {
-  const caller = await authenticateFederationAgent(secret);
+  const caller = await authenticateFederationAgent(secret, bindings.signer);
   await chargeRates([{ accountId: caller.ownerId, key: `get:${caller.agentId}`, limit: 120, seconds: 60 }]);
   const [row] = await db().select().from(federationRequests).where(and(eq(federationRequests.id, requestId), eq(federationRequests.callerAgentId, caller.agentId), eq(federationRequests.callerOwnerId, caller.ownerId)));
   if (!row) denied();
@@ -360,7 +371,7 @@ export async function getFederationRequest(secret: string, requestId: string, bi
     let result: unknown;
     if (current.status === "COMPLETED" && current.encryptedResult) {
       const submission = await readSubmission(current, bindings);
-      const authorization = await authority(transaction, current, submission);
+      const authorization = await authority(transaction, current, submission, bindings.signer);
       const metadata = current.metadata as Metadata;
       const decision = await policy(current, metadata.action, authorization.grant.document.conditions.approvalRequired, bindings);
       if (["DENY", "ESCALATE"].includes(decision.outcome) || Object.keys(decision.obligations.limits).length || (decision.outcome === "REQUIRE_APPROVAL" && !metadata.approvalConsumed)) denied();
@@ -371,8 +382,8 @@ export async function getFederationRequest(secret: string, requestId: string, bi
     return { requestId, status: current.status, attempts: current.attempts, ...(result === undefined ? {} : { result }) };
   });
 }
-export async function acknowledgeFederationResult(secret: string, requestId: string) {
-  const caller = await authenticateFederationAgent(secret);
+export async function acknowledgeFederationResult(secret: string, requestId: string, signer: AuditSigner) {
+  const caller = await authenticateFederationAgent(secret, signer);
   await db().update(federationRequests).set({ encryptedPayload: null, encryptedResult: null, updatedAt: now() }).where(and(eq(federationRequests.id, requestId), eq(federationRequests.callerAgentId, caller.agentId), eq(federationRequests.status, "COMPLETED")));
   return { requestId, acknowledged: true };
 }
@@ -380,8 +391,8 @@ export async function acknowledgeFederationResult(secret: string, requestId: str
 type InspectionStatus = "ACTIVE" | "MISSING" | "EXPIRED" | "REVOKED" | "NOT_YET_ACTIVE" | "PEER_UNAVAILABLE" | "RESOURCE_NOT_AUTHORIZED" | "CAPABILITY_NOT_AUTHORIZED" | "DENIED";
 
 /** Observes the exact proposed request. Never admits it or returns reusable authority. */
-export async function inspectFederationAuthority(secret: string, value: unknown) {
-  const caller = await authenticateFederationAgent(secret);
+export async function inspectFederationAuthority(secret: string, value: unknown, signer: AuditSigner) {
+  const caller = await authenticateFederationAgent(secret, signer);
   const submission = submissionSchema.parse(value);
   validateSubmissionLifetime(submission);
   await chargeRates([
@@ -431,9 +442,9 @@ export async function inspectFederationAuthority(secret: string, value: unknown)
       metadata: {}, attempts: 0, nextAttemptAt: now(), expiresAt: submission.expiresAt, createdAt: now(), updatedAt: now(),
     };
     try {
-      const access = await authority(transaction, row, submission);
+      const access = await authority(transaction, row, submission, signer);
       row.publicationVersion = access.publication?.version ?? null;
-      const decision = await inspectPolicy(await policyInput(row, policyAction(row), access.grant.document.conditions.approvalRequired));
+      const decision = await inspectPolicy(await policyInput(row, policyAction(row), access.grant.document.conditions.approvalRequired), signer);
       if (["DENY", "ESCALATE"].includes(decision.outcome) || Object.keys(decision.obligations.limits).length) return result("DENIED");
       return result("ACTIVE", access.grant.document.conditions.expiresAt, decision.outcome === "REQUIRE_APPROVAL");
     } catch (error) {

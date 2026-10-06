@@ -1,3 +1,5 @@
+import { requireCurrentAgentPassport } from "@/lib/v2/passports";
+import { authenticateFederationAgent } from "./service";
 import { z } from "zod";
 import { RelayError } from "@/lib/errors";
 import { requireRuntimeActionsEnabled } from "@/lib/v2/deployment";
@@ -33,6 +35,7 @@ export async function boundedBody(request: Request) {
   try { return JSON.parse(Buffer.concat(chunks).toString()); } catch { throw new RelayError("INVALID_INPUT", "Invalid JSON."); }
 }
 const commandSchema = z.discriminatedUnion("operation", [
+  z.object({ operation: z.literal("passport.verify"), input: z.unknown().refine(value => value !== undefined, "Passport bundle required") }).strict(),
   z.object({ operation: z.literal("authority.inspect"), input: z.unknown() }).strict(),
   z.object({ operation: z.literal("submit"), input: z.unknown() }).strict(),
   z.object({ operation: z.literal("poll") }).strict(),
@@ -44,12 +47,17 @@ const commandSchema = z.discriminatedUnion("operation", [
 export async function executeFederationCommand(secret: string, value: unknown, bindings: FederationBindings) {
   const command = commandSchema.parse(value);
   switch (command.operation) {
-    case "authority.inspect": return inspectFederationAuthority(secret, command.input);
+    case "passport.verify": {
+      const caller = await authenticateFederationAgent(secret, bindings.signer);
+      const bundle = await requireCurrentAgentPassport(caller.ownerId, caller.agentId, bindings.signer, undefined, command.input);
+      return { valid: true, agentId: caller.agentId, ownerId: caller.ownerId, passportId: bundle.passport.passportId, version: bundle.passport.version };
+    }
+    case "authority.inspect": return inspectFederationAuthority(secret, command.input, bindings.signer);
     case "submit": return submitFederationRequest(secret, command.input, bindings);
     case "poll": return pollFederationInbox(secret, bindings);
     case "get": return getFederationRequest(secret, command.requestId, bindings);
     case "respond": return respondToFederationRequest(secret, command.requestId, command.input, bindings);
-    case "acknowledge": return acknowledgeFederationResult(secret, command.requestId);
-    case "discover": return discoverFederationAgents(secret, command.input);
+    case "acknowledge": return acknowledgeFederationResult(secret, command.requestId, bindings.signer);
+    case "discover": return discoverFederationAgents(secret, command.input, bindings.signer);
   }
 }

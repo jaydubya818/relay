@@ -26,7 +26,8 @@ export class SigningKeyring {
       const publicKey = createPublicKey(key.publicKeyPem);
       if (publicKey.asymmetricKeyType !== "ed25519") unavailable();
       const fingerprint = publicKey.export({ type: "spki", format: "der" }).toString("hex");
-      if (publicKeys.has(fingerprint) && publicKeys.get(fingerprint) !== key.purpose) unavailable();
+      // Immutable key identities must never alias, including retired/revoked keys.
+      if (publicKeys.has(fingerprint)) unavailable();
       publicKeys.set(fingerprint, key.purpose); ids.add(key.keyId); versions.add(key.keyVersion);
     }
     for (const purpose of purposes) if (this.keys.filter((key) => key.purpose === purpose && key.state === "ACTIVE").length > 1) unavailable();
@@ -52,7 +53,7 @@ export class SigningKeyring {
     return {
       keyId: key.keyId,
       keyVersion: key.keyVersion,
-      verificationKeys: () => this.verificationKeys(purpose).map(({ keyId, algorithm, publicKeyPem }) => ({ keyId, algorithm, publicKeyPem })),
+      verificationKeys: () => this.verificationKeys(purpose).map(({ keyId, keyVersion, algorithm, publicKeyPem, activatedAt, retiredAt }) => ({ keyId, keyVersion, algorithm, publicKeyPem, activatedAt, retiredAt })),
       forPurpose: (requested) => this.signer(requested),
       async sign(material) {
         assertActive();

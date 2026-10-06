@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { and, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
 import { accountMemberships, accounts, principals, serviceClients, stepUpChallenges, users, userSessions } from "@/lib/db/schema";
 import { hashSecret, verifyPassword } from "@/lib/crypto";
@@ -86,6 +86,13 @@ export async function completePasswordStepUp(input: { accountId: string; princip
 export async function suspendPrincipal(input: { accountId: string; principalId: string }) {
   await requireMembership({ accountId: input.accountId, principalId: input.principalId, allowedRoles: MEMBERSHIP_ROLES });
   return await withTransaction(async (transaction) => {
+    // Principal suspension is global: fence every associated account in the
+    // same order as federation, including historical/retired memberships.
+    const memberships = await transaction.select({ accountId: accountMemberships.accountId }).from(accountMemberships).where(eq(accountMemberships.principalId, input.principalId));
+    for (const accountId of [...new Set(memberships.map(m => m.accountId))].sort()) {
+      await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`federation:${accountId}`}, 0))`);
+    }
+    await requireMembership({ ...input, allowedRoles: MEMBERSHIP_ROLES });
     const [principal] = await transaction.update(principals).set({ status: "SUSPENDED", updatedAt: now() }).where(eq(principals.id, input.principalId)).returning({ id: principals.id, userId: principals.userId });
     await transaction.update(accountMemberships).set({ status: "SUSPENDED", updatedAt: now() }).where(and(eq(accountMemberships.accountId, input.accountId), eq(accountMemberships.principalId, input.principalId)));
     if (principal?.userId) await transaction.update(userSessions).set({ revokedAt: now() }).where(eq(userSessions.userId, principal.userId));
