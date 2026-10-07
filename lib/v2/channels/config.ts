@@ -1,12 +1,17 @@
 import { configuredEd25519Signer } from "./signing";
 import { OWNER_EXECUTOR_QUALIFIED,type Environment } from "./contracts";
+import { localExecutorQualification } from "./local-qualification";
 
 type Env = Record<string, string | undefined>;
-export function channelConfiguration(env: Env = process.env) {
+/** Time-dependent: re-evaluate per request and per worker cycle, never cache. */
+export function channelConfiguration(env: Env = process.env, now = Date.now()) {
   const issues: string[] = [];
   const required = (name: string) => { const value = env[name]; if (!value) issues.push(name); return value ?? ""; };
   const enabled = env.RELAY_TELEGRAM_ENABLED === "true";
-  const executionEnabled = OWNER_EXECUTOR_QUALIFIED && enabled && env.RELAY_TELEGRAM_EXECUTION_ENABLED === "true" && env.RELAY_DEPLOYMENT_MODE !== "private-preview";
+  const requested = enabled && env.RELAY_TELEGRAM_EXECUTION_ENABLED === "true" && env.RELAY_DEPLOYMENT_MODE !== "private-preview";
+  // The release constant stays false; only an exact, unexpired local qualification can stand in for it.
+  const localQualification = requested && !OWNER_EXECUTOR_QUALIFIED ? localExecutorQualification(env, now) : null;
+  const executionEnabled = requested && (OWNER_EXECUTOR_QUALIFIED || localQualification?.active === true);
   const environment = env.RELAY_CHANNEL_ENVIRONMENT as Environment;
   const connectionId = required("RELAY_TELEGRAM_CONNECTION_ID");
   const accountId = required("RELAY_TELEGRAM_ACCOUNT_ID");
@@ -27,6 +32,6 @@ export function channelConfiguration(env: Env = process.env) {
   try { const u = new URL(endpoint); if (u.protocol !== "https:" || u.username || u.password || u.search || u.hash) throw new Error(); } catch { issues.push("RELAY_OWNER_EXECUTOR_URL"); }
   let signer;
   try { signer = configuredEd25519Signer(keyId, privateKey); } catch { issues.push("RELAY_CHANNEL_SIGNING_PRIVATE_KEY"); }
-  return { enabled, executionEnabled, environment, connectionId, accountId, ownerPrincipalId, agentId, botUsername, botToken, webhookSecret, endpoint, audience, signer, issues: [...new Set(issues)] };
+  return { enabled, executionEnabled, localQualification, environment, connectionId, accountId, ownerPrincipalId, agentId, botUsername, botToken, webhookSecret, endpoint, audience, signer, issues: [...new Set(issues)] };
 }
 export type ChannelConfiguration = ReturnType<typeof channelConfiguration>;

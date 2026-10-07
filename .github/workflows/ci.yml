@@ -53,6 +53,10 @@ jobs:
       - run: pnpm db:check
       - run: pnpm typecheck
       - run: pnpm lint
+      - name: Qualification expiry helper regressions
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/qualification/test-expire-myeve-approval.py
+          PYTHONDONTWRITEBYTECODE=1 QUALIFICATION_TEST_PG_BIN="$(pg_config --bindir)" python3 scripts/qualification/test-expiry-postgres.py
       - run: pnpm test:ci
       - run: pnpm test:performance
       - run: pnpm build

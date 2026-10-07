@@ -8,7 +8,8 @@
       "codex/grant-never-expire": false,
       "codex/authority-expiry-diagnostics": false,
       "codex/relay-final-integration": false,
-      "codex/telegram-current-integration": false
+      "codex/telegram-current-integration": false,
+      "claude/telegram-local-qualification": false
     }
   },
   "installCommand": "pnpm install --frozen-lockfile",

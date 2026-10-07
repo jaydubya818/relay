@@ -10,14 +10,26 @@ import { acceptChannelMessage } from "./ingress";
 import { acceptChannelControl,parseTelegramControl } from "./controls";
 import { channelConfiguration,type ChannelConfiguration } from "./config";
 
+// Telegram redelivers every non-2xx update, in order, before any later update (max_connections=1).
+// An authenticated update that can never succeed (replayed/expired pairing, revoked or unpaired
+// sender, stale callback, malformed or oversized body) must therefore be acknowledged without
+// executing it, or it blocks the owner's channel indefinitely. Authentication failures stay 401,
+// and transient failures (timeouts, rate limits, unavailable storage or execution) keep a retryable
+// status so Telegram redelivers them.
+const TRANSIENT_STATUSES=new Set([408,429]);
+export function permanentlyRejected(status:number){return status>=400&&status<500&&status!==401&&!TRANSIENT_STATUSES.has(status);}
+const acknowledgedRejection=(code:string)=>Response.json({accepted:false,acknowledged:true,code},{status:200});
+
 export async function telegramWebhook(request:Request,config:ChannelConfiguration=channelConfiguration(),acknowledge:(callbackId:string,text:string)=>Promise<boolean>=(callbackId,text)=>new TelegramOwnerSender(config.botToken).acknowledge(callbackId,text)) {
   if(!config.enabled||config.issues.length||!config.signer)return Response.json({accepted:false,code:"NOT_CONFIGURED"},{status:503});
+  let authenticated=false;
   try {
     verifyTelegramSecret(config.webhookSecret,request.headers.get("x-telegram-bot-api-secret-token")??"");
-    if(!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))return Response.json({accepted:false,code:"UNSUPPORTED_CONTENT"},{status:415});
+    authenticated=true;
+    if(!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))return acknowledgedRejection("UNSUPPORTED_CONTENT");
     const rawBody=await readBoundedTelegramBody(request);
     let value:Record<string,unknown>;
-    try { value=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(rawBody)); if(!value || typeof value!=="object")throw new Error(); } catch { return Response.json({accepted:false,code:"INVALID_INPUT"},{status:400}); }
+    try { value=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(rawBody)); if(!value || typeof value!=="object")throw new Error(); } catch { return acknowledgedRejection("INVALID_INPUT"); }
     if("callback_query" in value){
       const control=parseTelegramControl(value);
       try{
@@ -31,9 +43,18 @@ export async function telegramWebhook(request:Request,config:ChannelConfiguratio
       await consumeTelegramPairingUpdate({connectionId:config.connectionId,rawBody,secretToken:config.webhookSecret},{resolve:async(accountId,handle)=>{if(accountId!==config.accountId||handle!=="vlt_telegram_webhook")throw new Error("Wrong secret scope.");return config.webhookSecret;}},config.signer);
       return Response.json({accepted:true,paired:true});
     }
-    return Response.json(await acceptChannelMessage(update,config,config.signer));
+    const result=await acceptChannelMessage(update,config,config.signer);
+    // Telegram can execute this ephemeral hint from the webhook response itself:
+    // no extra HTTP round trip, model call, durable message or execution authority.
+    // Queued work gets its durable explanation instead of claiming to be typing.
+    if(result.taskId&&!result.duplicate&&"queued" in result&&!result.queued)
+      return Response.json({...result,method:"sendChatAction",chat_id:update.chatId,action:"typing"});
+    return Response.json(result);
   }catch(error){
-    if(error instanceof RelayError)return Response.json({accepted:false,code:error.code},{status:error.status});
+    if(error instanceof RelayError){
+      if(authenticated&&permanentlyRejected(error.status))return acknowledgedRejection(error.code);
+      return Response.json({accepted:false,code:error.code},{status:error.status});
+    }
     // Never log parser exceptions, credentials, SQL parameters or message bodies.
     return Response.json({accepted:false,code:"UNAVAILABLE"},{status:503});
   }
@@ -45,5 +66,9 @@ export async function telegramReadiness(config=channelConfiguration()) {
     const binding=row&&await currentBinding(row.id);
     identityReady=Boolean(binding&&binding.agent_status==="ACTIVE"&&await channelGranted(binding,"channel.owner.receive")&&await channelGranted(binding,"channel.owner.reply"));
   }catch{ /* Unavailable storage never admits work. */ }
-  return {healthy:true,ready:config.enabled&&config.issues.length===0&&storage,executorQualified:OWNER_EXECUTOR_QUALIFIED,executionReady:OWNER_EXECUTOR_QUALIFIED&&config.enabled&&config.executionEnabled&&config.issues.length===0&&storage&&identityReady,issues:config.issues,storageAvailable:storage,identityReady};
+  // executorQualified reports the immutable release constant; a local window is reported separately.
+  const local=config.localQualification;
+  return {healthy:true,ready:config.enabled&&config.issues.length===0&&storage,executorQualified:OWNER_EXECUTOR_QUALIFIED,
+    localQualification:local?(local.active?{active:true,expiresAt:new Date(local.expiresAt).toISOString()}:{active:false,reason:local.reason}):null,
+    executionReady:config.enabled&&config.executionEnabled&&config.issues.length===0&&storage&&identityReady,issues:config.issues,storageAvailable:storage,identityReady};
 }

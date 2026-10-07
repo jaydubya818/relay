@@ -47,3 +47,13 @@ export async function disconnectTelegram(accountId:string,principalId:string,bin
   await withTransaction(async tx=>{await channelAudit(tx,config.signer!,binding,"channel.disconnected","REVOKED");});
   return {revoked:true};
 }
+/** Emergency revocation of every active binding on this deployment connection.
+ * Needs only the database and the signing key: no web session, running worker, webhook, tunnel
+ * or open qualification window. Idempotent; revoked connections cannot be re-paired. */
+export async function revokeAllTelegramBindings(accountId:string,principalId:string,config=channelConfiguration()) {
+  const active=await rows<{id:string}>(sql`SELECT id FROM telegram_bindings WHERE connection_id=${config.connectionId} AND account_id=${accountId} AND revoked_at IS NULL ORDER BY created_at`);
+  for(const binding of active)await disconnectTelegram(accountId,principalId,binding.id,config);
+  const [left]=await rows<{n:number}>(sql`SELECT count(*)::int AS n FROM telegram_bindings WHERE connection_id=${config.connectionId} AND account_id=${accountId} AND revoked_at IS NULL`);
+  if(Number(left?.n??1)!==0)throw new Error("Revocation incomplete: an active binding remains.");
+  return {revoked:active.map(b=>b.id),activeBindings:0};
+}
