@@ -167,14 +167,14 @@ cd relay
 cp .env.example .env.local
 pnpm install --frozen-lockfile
 # Configure a dedicated local database and unique local secrets.
-pnpm db:migrate
-pnpm db:seed
+node --env-file=.env.local --import tsx scripts/migrate.ts
+node --env-file=.env.local --import tsx scripts/seed.ts
 pnpm dev
 ```
 
-Open `http://localhost:3000`. The demo seed is for local development only and can print newly issued Agent credentials once. Do not run it against hosted data or put its output in public artifacts. Hosted owner initialization uses the separately reviewed `pnpm db:bootstrap-owner` path and rejects ambiguous state.
+Open `http://localhost:3000`. The demo seed is for local development only and can print newly issued Agent credentials once. Do not run it against hosted data or put its output in public artifacts. Hosted owner initialization uses the separately reviewed `scripts/bootstrap-owner.ts` path and rejects ambiguous state. Supply its environment explicitly, for example `node --env-file=.env.local --import tsx scripts/bootstrap-owner.ts` with the intended operator configuration. Do not run bootstrap against an unverified database binding.
 
-The [environment example](.env.example) describes database, session/encryption, connector and feature configuration. A service connection's OAuth settings are not a dashboard authentication mechanism. Do not enable unrelated providers just to make a smoke test pass.
+The migration, seed and bootstrap scripts do not automatically load `.env.local`; the explicit Node environment flag above prevents them from silently targeting a different database from Next.js. The [environment example](.env.example) describes database, session/encryption, connector and feature configuration. A service connection's OAuth settings are not a dashboard authentication mechanism. Do not enable unrelated providers just to make a smoke test pass.
 
 ## APIs and SDKs
 
