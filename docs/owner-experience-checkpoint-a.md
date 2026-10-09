@@ -4,6 +4,8 @@ Source baseline: `a90625776193031ca2303ba2e2162249d1245479` from freshly fetched
 
 Branch: `codex/relay-owner-experience`.
 
+Implementation SHA: `1167dc34620b23d756a08293dceaafa61f2dfb2a`. Subsequent evidence-only commits do not change the application. Draft review: https://github.com/jaydubya818/relay/pull/34.
+
 Architecture: **Option A — preserve canonical OWNER authority**, accepted explicitly by the owner. Advanced is progressive disclosure, not an entitlement or authority reduction.
 
 ## Implemented behavior
@@ -32,10 +34,10 @@ The source commit containing this report is the candidate. Hosted checks attach 
 | Accessibility | PASS: owner and Advanced surfaces at desktop/390px; owner also at 768px; zero critical/serious axe findings and keyboard checks |
 | Visual regression | PASS: nine macOS Chromium baselines, compared without updates |
 | Security regressions | 477 tests passed; six live-provider tests intentionally skipped |
-| TypeScript / lint / production build | PASS locally; final fresh-clone check pending |
+| TypeScript / lint / production build | PASS locally and from fresh clone |
 | Schema / frozen V2 frontier | PASS; both performance regression tests pass |
-| Fresh clone | Pending |
-| Hosted CI | Pending push |
+| Fresh clone | PASS: locked install, typecheck, lint, build, seven focused component/route tests, 24 affected security/auth/MCP/Factory tests, all 11 browser tests and nine visual comparisons |
+| Hosted CI | Required; exact pushed-head results are attached to draft PR #34. See GitHub checks rather than assuming local success implies hosted success. |
 | Independent review | Pending; author review is documented separately |
 
 Local qualification uses disposable loopback PostgreSQL and synthetic personas only. Six skipped tests require live Docker/browser/provider/MyEve integration and are not claimed as qualified. CI runs viewport, accessibility, journey and authorization checks on Linux; committed macOS visual baselines are compared locally, not across operating-system fonts.
