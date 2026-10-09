@@ -187,12 +187,14 @@ export function GitHubConnectionManager({ connected, oauthConfigured }: { connec
         ? <a className="button" href="/api/connections/github/oauth/start">{connected ? "Reconnect with GitHub" : "Connect with GitHub"}</a>
         : <div className="notice">GitHub OAuth is not configured for this deployment.</div>}
       <div className="divider" />
-      <p className="subtle"><strong>Advanced development option</strong></p>
+      <details className="technical-details"><summary>Advanced setup with a personal access token</summary>
+      <p className="subtle">Use a token scoped only to the repositories this account needs. Relay stores the provider credential; Agents still need their own repository permissions.</p>
       <form className="form-grid" onSubmit={connect}>
         <div className="field full"><label htmlFor="github-token">Fine-grained personal access token</label><input id="github-token" name="token" type="password" minLength={20} placeholder={connected ? "Enter a new token to replace the connection" : "github_pat_…"} required /></div>
         <div className="field full"><div className="inline"><button className="button" disabled={busy}>{connected ? "Reconnect" : "Connect GitHub"}</button>{connected && <><button type="button" className="button secondary" onClick={() => action("POST")}>Test connection</button><button type="button" className="button danger" onClick={() => action("DELETE")}>Disconnect</button></>}</div></div>
       </form>
-      {message && <div className={`notice ${message.includes("failed") ? "error" : ""}`}>{message}</div>}
+      </details>
+      {message && <div role="status" className={`notice ${message.includes("failed") ? "error" : ""}`}>{message}</div>}
       <p className="subtle">Relay validates this token with GitHub, encrypts it at rest, and never returns it through the dashboard API.</p>
     </div>
   );

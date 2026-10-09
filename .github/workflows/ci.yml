@@ -3,7 +3,7 @@ name: Relay qualification
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, codex/relay-owner-experience]
 
 permissions:
   contents: read

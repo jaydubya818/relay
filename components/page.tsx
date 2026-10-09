@@ -10,7 +10,7 @@ export function PageHeader({ eyebrow, title, description, action }: { eyebrow: s
 }
 
 export function Status({ value }: { value: string }) {
-  const variant = ["DENIED", "FAILED", "DISABLED", "ERROR", "REVOKED"].includes(value) ? "denied" : ["NOT_CONNECTED", "DISCONNECTED"].includes(value) ? "pending" : "";
+  const variant = ["DENIED", "FAILED", "ERROR", "REVOKED"].includes(value) ? "denied" : ["DISABLED", "NOT_CONFIGURED", "NOT_CHECKED", "DRAFT", "CONFIGURED", "NOT_GRANTED"].includes(value) ? "neutral" : ["NOT_CONNECTED", "DISCONNECTED", "UNAVAILABLE", "DEGRADED"].includes(value) ? "pending" : "";
   return <span className={`status ${variant.toLowerCase()}`}>{value.replaceAll("_", " ")}</span>;
 }
 
