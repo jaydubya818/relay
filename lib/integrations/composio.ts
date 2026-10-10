@@ -9,7 +9,7 @@ type SDK = {
   authConfigs: Pick<Composio["authConfigs"], "get">;
   tools: Pick<Composio["tools"], "getRawComposioToolBySlug" | "execute">;
   toolkits: Pick<Composio["toolkits"], "getMany">;
-  connectedAccounts: Pick<Composio["connectedAccounts"], "list" | "link" | "delete">;
+  connectedAccounts: Pick<Composio["connectedAccounts"], "list" | "link" | "revoke">;
 };
 export type ComposioSDK = SDK;
 
@@ -170,11 +170,11 @@ export class ComposioProviderAdapter implements IntegrationProviderAdapter {
   }
 
   async revoke(scope: IntegrationScope, binding: IntegrationBinding) {
-    // Relay must fence its canonical connection before requesting remote deletion.
+    // Relay must fence its canonical connection before requesting upstream revocation.
     await this.connectionStatus(scope, binding);
     try {
-      const result = await this.call(signal => this.sdk.connectedAccounts.delete(binding.connectedAccountId, { signal }), true);
-      return { providerRevocation: result.success && !result.revoke_job_id ? "CONFIRMED" as const : "PENDING" as const };
+      const result = await this.call(signal => this.sdk.connectedAccounts.revoke(binding.connectedAccountId, { signal }), true);
+      return { providerRevocation: result.connectedAccount.id === binding.connectedAccountId && result.connectedAccount.status === "REVOKED" ? "CONFIRMED" as const : "PENDING" as const };
     }
     catch { return { providerRevocation: "PENDING" as const }; }
   }

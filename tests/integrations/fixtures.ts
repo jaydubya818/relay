@@ -31,7 +31,7 @@ export function fixture(timeoutMs = 1000) {
       execute: vi.fn(async () => ({ data: { issues: [{ number: 7, title: "Fix connection retry" }], access_token: "do-not-return" }, successful: true, error: null })) },
     connectedAccounts: { list: vi.fn(async () => ({ items: [structuredClone(account)], nextCursor: null, totalPages: 1 })),
       link: vi.fn(async () => ({ id: "request_synthetic", redirectUrl: "https://connect.composio.dev/synthetic", waitForConnection: async () => structuredClone(account), toJSON: () => ({ id: "request_synthetic" }), toString: (): string => "request_synthetic" })),
-      delete: vi.fn(async () => ({ success: true })) },
+      revoke: vi.fn(async () => ({ revokedTokens: [], connectedAccount: { id: binding.connectedAccountId, status: "REVOKED" as const } })) },
   } satisfies ComposioSDK;
   return { sdk, adapter: new ComposioProviderAdapter(sdk, [qualification], "http://127.0.0.1:3261", timeoutMs) };
 }

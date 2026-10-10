@@ -41,11 +41,15 @@ owner registry, or inferred platform-owner identity is not an acceptable fix.
 | Connection initiation | `authConfigs.get` verifies toolkit, then `connectedAccounts.link` with fixed callback origin | Canonical one-time Relay state and durable owner consent must be provided by the future gateway |
 | Execution | `tools.execute` with exact account, opaque user, version, strict arguments, tracing off | READ qualification only; no production qualification entries |
 | Errors/timeouts | Safe error codes; abort and deadline; rate-limit delay hint; no automatic retry | UNKNOWN requires reconciliation; no lifecycle replay ledger yet |
-| Revocation | Scoped account resolution then `connectedAccounts.delete` | Gateway must fence canonical access first; queued revocation jobs remain PENDING |
+| Revocation | Scoped account resolution then `connectedAccounts.revoke` | Gateway must fence canonical access first; unsupported or ambiguous revocation remains PENDING |
 | Evidence | Argument, schema, result and scope digests; connection and authority version; duration | Canonical audit/Result/Proof persistence remains unwired |
 
 The public underlying client retry count is set to zero, including lifecycle
 operations. SDK 0.22.0 independently disables automatic execution retries.
+The underlying API's delete operation defaults `revoke_on_delete` to false;
+deletion is not proof of upstream revocation. The adapter uses the SDK's explicit
+upstream revoke operation and checks its exact connection ID and REVOKED status.
+Unsupported toolkit revocation remains pending; no automatic delete fallback.
 The actual installed SDK is exercised with a denied-by-default fixture `fetch`;
 these are wire-contract tests, not tests against Composio's service.
 

@@ -89,14 +89,14 @@ describe("Composio provider boundary (synthetic qualification)", () => {
     expect(await adapter.initiateConnection(scope, "github", binding.authConfigId, "http://127.0.0.1:3261/callback?state=synthetic")).toMatchObject({ requestId: "request_synthetic" });
   });
   it("preserves pending remote revocation", async () => {
-    const { adapter, sdk } = fixture(); sdk.connectedAccounts.delete.mockRejectedValue(new Error("unknown"));
+    const { adapter, sdk } = fixture(); sdk.connectedAccounts.revoke.mockRejectedValue(new Error("unknown"));
     expect(await adapter.revoke(scope, binding)).toEqual({ providerRevocation: "PENDING" });
-    expect(sdk.connectedAccounts.delete).toHaveBeenCalledTimes(1);
+    expect(sdk.connectedAccounts.revoke).toHaveBeenCalledTimes(1);
   });
-  it("can remove the provider connection after Relay has already fenced it", async () => {
+  it("can revoke upstream access after Relay has already fenced it", async () => {
     const { adapter, sdk } = fixture();
     expect(await adapter.revoke(scope, { ...binding, status: "REVOKED", revokedAt: new Date().toISOString() })).toEqual({ providerRevocation: "CONFIRMED" });
-    expect(sdk.connectedAccounts.delete).toHaveBeenCalledTimes(1);
+    expect(sdk.connectedAccounts.revoke).toHaveBeenCalledTimes(1);
     expect(sdk.tools.execute).not.toHaveBeenCalled();
   });
   it("does not interpret a provider failure response as proof of no effect", async () => {

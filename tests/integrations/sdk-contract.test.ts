@@ -12,8 +12,10 @@ describe("Pinned SDK wire contracts, no live provider requests", () => {
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const request = new Request(input, init);
       const url = new URL(request.url);
-      const body = request.method === "POST" ? await request.json() as Record<string, unknown> : undefined;
+      const rawBody = request.method === "POST" ? await request.text() : "";
+      const body = rawBody ? JSON.parse(rawBody) as Record<string, unknown> : undefined;
       seen.push({ url, body });
+      if (url.pathname.endsWith("/revoke")) return Response.json({ revoked_tokens: ["access_token"], connected_account: { id: binding.connectedAccountId, status: "REVOKED" } });
       if (url.pathname.includes("/tools/execute/")) return Response.json({ data: { issues: [{ number: 7, title: "Fix connection retry" }] }, successful: true, error: null });
       if (url.pathname.includes("/tools/")) return Response.json({ ...tool, input_parameters: tool.inputParameters, output_parameters: tool.outputParameters });
       if (url.pathname.endsWith("/connected_accounts")) return Response.json({ items: [{ id: binding.connectedAccountId,
@@ -33,6 +35,8 @@ describe("Pinned SDK wire contracts, no live provider requests", () => {
     const lookup = seen.find(entry => entry.url.pathname.endsWith("/connected_accounts"))!.url;
     expect(lookup.searchParams.get("user_ids")).toBe(binding.providerUserId);
     expect(JSON.stringify(result)).not.toContain("synthetic-must-not-escape");
+    expect(await adapter.revoke(scope, { ...binding, status: "REVOKED", revokedAt: new Date().toISOString() })).toEqual({ providerRevocation: "CONFIRMED" });
+    expect(seen.filter(entry => entry.url.pathname.endsWith(`/${binding.connectedAccountId}/revoke`))).toHaveLength(1);
   });
 
   it("does not retry SDK requests after provider failure", async () => {
