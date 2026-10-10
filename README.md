@@ -159,7 +159,7 @@ The beta identity lifecycle supports pending invitation revocation and condition
 
 ## Local development
 
-Requirements: Node.js 22.5 or newer, pnpm 9, PostgreSQL, and Docker/Playwright only for relevant local provider/browser qualification.
+Requirements: Node.js 22.12 or newer, pnpm 9, PostgreSQL, and Docker/Playwright only for relevant local provider/browser qualification.
 
 ```bash
 git clone https://github.com/jaydubya818/relay.git
