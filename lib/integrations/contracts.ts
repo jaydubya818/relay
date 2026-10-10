@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { canonicalHash } from "@/lib/v2/contracts";
+import type { ExecutionBindingContext } from "./execution-binding";
 
 const identity = z.string().trim().min(1).max(255);
 export const integrationScopeSchema = z.object({
@@ -61,7 +62,7 @@ export type IntegrationResult = {
   state: "SUCCEEDED" | "REJECTED" | "UNKNOWN";
   trust: "UNTRUSTED_EXTERNAL_DATA";
   data?: unknown;
-  evidence: { provider: "composio"; adapterVersion: string; scopeDigest: string; connectionId: string; authorityVersion: number; tool: string; version: string; schemaHash: string; argumentDigest: string; resultDigest?: string; errorCode?: string; durationMs: number };
+  evidence: { provider: "composio"; adapterVersion: string; scopeDigest: string; connectionId: string; authorityVersion: number; tool: string; version: string; schemaHash: string; argumentDigest: string; executionBindingDigest: string; actionHash: string; policyDecisionId: string; leaseId: string; approvalDecisionId?: string; resultDigest?: string; errorCode?: string; durationMs: number };
 };
 
 /** Internal provider port. Only canonical Relay admission may call execution or lifecycle methods. */
@@ -73,6 +74,6 @@ export interface IntegrationProviderAdapter {
   getAction(slug: string): Promise<IntegrationAction>;
   connectionStatus(scope: IntegrationScope, binding: IntegrationBinding): Promise<{ connectedAccountId: string; status: string; disabled: boolean }>;
   initiateConnection(scope: IntegrationScope, toolkit: Toolkit, authConfigId: string, callbackUrl: string): Promise<{ requestId: string; redirectUrl: string }>;
-  executeRead(scope: IntegrationScope, binding: IntegrationBinding, slug: string, args: Record<string, unknown>): Promise<IntegrationResult>;
+  executeRead(scope: IntegrationScope, binding: IntegrationBinding, slug: string, args: Record<string, unknown>, context: ExecutionBindingContext): Promise<IntegrationResult>;
   revoke(scope: IntegrationScope, binding: IntegrationBinding): Promise<{ providerRevocation: "CONFIRMED" | "PENDING" }>;
 }

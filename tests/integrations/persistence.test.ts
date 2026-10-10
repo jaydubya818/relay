@@ -153,7 +153,7 @@ describe("PostgreSQL provider lifecycle and bounded Golden Journey", () => {
     await persist();
     for (let index = 0; index < 60; index++) await store.recordVerifiedEvent(scope, binding.connectionId, { webhookId: `event_${index}`, payloadHash: canonicalHash(index) });
     await expect(store.recordVerifiedEvent(scope, binding.connectionId, { webhookId: "event_over_limit", payloadHash: canonicalHash(61) })).rejects.toThrow("EVENT_RATE_LIMITED");
-    expect(provider.sdk.tools.execute).not.toHaveBeenCalled();
+    expect(provider.sdk.getClient().tools.execute).not.toHaveBeenCalled();
   });
   it("denies retired accounts", async () => {
     await persist();
@@ -170,7 +170,7 @@ describe("PostgreSQL provider lifecycle and bounded Golden Journey", () => {
     const value = request();
     const receipts = await Promise.all([gateway().requestRead(secret, value), gateway().requestRead(secret, value)]);
     expect(receipts[0]).toEqual(receipts[1]); expect(receipts[0].code).toBe("CROSS_DATABASE_ORDERING_UNQUALIFIED");
-    expect(receipts[0].state).toBe("NOT_DISPATCHED"); expect(provider.sdk.tools.execute).not.toHaveBeenCalled();
+    expect(receipts[0].state).toBe("NOT_DISPATCHED"); expect(provider.sdk.getClient().tools.execute).not.toHaveBeenCalled();
     expect(await listAuditRecords(scope.accountId)).toHaveLength(2);
     const denial = (await listAuditRecords(scope.accountId))[1];
     expect(denial.actorPrincipalId).toBeNull();
@@ -190,13 +190,28 @@ describe("PostgreSQL provider lifecycle and bounded Golden Journey", () => {
     }
     expect(provider.sdk.tools.getRawComposioToolBySlug).not.toHaveBeenCalled();
   });
+  it("concurrent and duplicate requests cannot dispatch, conflict on changed arguments, or bypass revoke", async () => {
+    await persist();
+    const value = request();
+    const results = await Promise.all(Array.from({ length: 12 }, () => gateway().requestRead(secret, value)));
+    expect(results.every(result => result.state === "NOT_DISPATCHED")).toBe(true);
+    expect(await listAuditRecords(scope.accountId)).toHaveLength(2);
+    const changed = structuredClone(value);
+    changed.action.parameters = { per_page: 9 };
+    changed.action.canonicalHash = canonicalHash({ capability: changed.action.capability, resource: changed.action.resource, parameters: changed.action.parameters });
+    await expect(gateway().requestRead(secret, changed)).rejects.toThrow("IDEMPOTENCY_CONFLICT");
+    await store.revokeLocal(scope, binding.connectionId);
+    expect((await gateway().requestRead(secret, value)).state).toBe("NOT_DISPATCHED");
+    expect(provider.sdk.getClient().tools.execute).not.toHaveBeenCalled();
+    expect(await verifyAuditRecords(await listAuditRecords(scope.accountId), signer)).toBe(true);
+  });
   it("denies stale execution policy, invalid credential, and cross-agent credential", async () => {
     await persist(); projection.validUntil = new Date(0).toISOString();
     expect((await gateway().requestRead(secret, request())).code).toBe("POLICY_STALE");
     await expect(gateway().discover("invalid", discovery())).rejects.toThrow("INVALID_CREDENTIAL");
     const other = await createAgent(scope.accountId, { name: "Other" });
     await expect(gateway().discover(other.credential, discovery())).rejects.toThrow("AUTHENTICATED_SCOPE_MISMATCH");
-    expect(provider.sdk.tools.execute).not.toHaveBeenCalled();
+    expect(provider.sdk.getClient().tools.execute).not.toHaveBeenCalled();
   });
   it("intersects exact grants/scopes and detects revocation during provider schema lookup", async () => {
     await persist();

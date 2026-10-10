@@ -3,11 +3,14 @@ import { z } from "zod";
 import { canonicalHash } from "@/lib/v2/contracts";
 import { redactForEvidence } from "@/lib/v2/evidence/redaction";
 import { assertBinding, assertBindingIdentity, IntegrationError, providerUserId, toolkitSchema, type IntegrationAction, type IntegrationBinding, type IntegrationProviderAdapter, type IntegrationResult, type IntegrationScope, type Toolkit } from "./contracts";
+import { bindExecution, type ExecutionBindingContext } from "./execution-binding";
 
 export const COMPOSIO_SDK_VERSION = "0.22.0";
+type ClientExecute = ReturnType<Composio["getClient"]>["tools"]["execute"];
 type SDK = {
   authConfigs: Pick<Composio["authConfigs"], "get">;
-  tools: Pick<Composio["tools"], "getRawComposioToolBySlug" | "execute">;
+  tools: Pick<Composio["tools"], "getRawComposioToolBySlug">;
+  getClient(): { tools: { execute(...args: Parameters<ClientExecute>): PromiseLike<Awaited<ReturnType<ClientExecute>>> } };
   toolkits: Pick<Composio["toolkits"], "getMany">;
   connectedAccounts: Pick<Composio["connectedAccounts"], "list" | "link" | "revoke">;
 };
@@ -61,7 +64,7 @@ function normalizeError(error: unknown, dispatched: boolean): IntegrationError {
 
 export class ComposioProviderAdapter implements IntegrationProviderAdapter {
   readonly provider = "composio";
-  readonly version = "1.0";
+  readonly version = "1.1";
   private readonly tools: ReadonlyMap<string, QualifiedReadTool>;
   constructor(private readonly sdk: SDK, qualifications: readonly QualifiedReadTool[], private readonly callbackOrigin: string, private readonly timeoutMs = 10_000) {
     const origin = new URL(callbackOrigin);
@@ -137,7 +140,7 @@ export class ComposioProviderAdapter implements IntegrationProviderAdapter {
     return { requestId: request.id, redirectUrl: request.redirectUrl };
   }
 
-  async executeRead(scope: IntegrationScope, input: IntegrationBinding, slug: string, args: Record<string, unknown>): Promise<IntegrationResult> {
+  async executeRead(scope: IntegrationScope, input: IntegrationBinding, slug: string, args: Record<string, unknown>, context: ExecutionBindingContext): Promise<IntegrationResult> {
     const started = performance.now();
     const binding = assertBinding(scope, input);
     const qualified = this.qualified(slug);
@@ -145,21 +148,26 @@ export class ComposioProviderAdapter implements IntegrationProviderAdapter {
     const parameters = qualified.parseArguments(args);
     // The only accepted payload is the exact qualified request, with no silently stripped fields.
     if (canonicalHash(parameters) !== canonicalHash(args)) throw new IntegrationError("INVALID_ARGUMENTS");
-    await this.getAction(slug);
+    const execution = bindExecution(scope, binding, slug, parameters, context);
+    if (execution.request.toolVersion !== qualified.version || execution.request.toolSchemaHash !== qualified.schemaHash) throw new IntegrationError("TOOL_SCHEMA_DRIFT");
     const status = await this.connectionStatus(scope, binding);
     if (status.status !== "ACTIVE" || status.disabled) throw new IntegrationError("CONNECTION_UNAVAILABLE");
+    // Last provider read validates the descriptor that supplies the dispatch identity.
+    // Do NOT call sdk.tools.execute: 0.22.0 refetches an unchecked descriptor there.
+    const descriptor = await this.getAction(slug);
+    if (bindExecution(scope, input, slug, args, context).digest !== execution.digest) throw new IntegrationError("EXECUTION_BINDING_MISMATCH");
+    const dispatchArguments = structuredClone(parameters);
+    if (canonicalHash(dispatchArguments) !== canonicalHash(execution.request.action.parameters)) throw new IntegrationError("EXECUTION_BINDING_MISMATCH");
     const evidence = { provider: "composio" as const, adapterVersion: this.version, scopeDigest: canonicalHash(scope), connectionId: binding.connectionId, authorityVersion: binding.authorityVersion, tool: slug, version: qualified.version,
-      schemaHash: qualified.schemaHash, argumentDigest: canonicalHash(parameters), durationMs: 0 };
+      schemaHash: qualified.schemaHash, argumentDigest: canonicalHash(dispatchArguments), executionBindingDigest: execution.digest,
+      actionHash: execution.request.action.canonicalHash, policyDecisionId: execution.lease.policyDecisionId, leaseId: execution.lease.jti,
+      ...(execution.lease.approvalDecisionId ? { approvalDecisionId: execution.lease.approvalDecisionId } : {}), durationMs: 0 };
     try {
-      const result = await this.call(signal => this.sdk.tools.execute(slug, { userId: binding.providerUserId,
-        connectedAccountId: binding.connectedAccountId, version: qualified.version, arguments: parameters, allowTracing: false }, { signal,
-        // SDK retrieves the pinned schema again; check the final request identity too.
-        beforeExecute: ({ toolSlug, toolkitSlug, params }) => {
-          if (toolSlug !== slug || toolkitSlug !== qualified.toolkit || params.userId !== binding.providerUserId || params.version !== qualified.version || params.connectedAccountId !== binding.connectedAccountId || params.customAuthParams || params.customConnectionData || params.dangerouslySkipVersionCheck || params.allowTracing !== false || canonicalHash(params.arguments) !== evidence.argumentDigest) throw new IntegrationError("DISPATCH_BINDING_MISMATCH");
-          return params;
-        },
-      }), true);
-      if (!result.successful) return { state: "UNKNOWN", trust: "UNTRUSTED_EXTERNAL_DATA", evidence: { ...evidence, errorCode: "PROVIDER_REPORTED_FAILURE", durationMs: performance.now() - started } };
+      // Public generated client transport; no descriptor lookup, middleware, file
+      // transformations or custom auth. Retry policy is explicit for this request.
+      const result = await this.call(async signal => this.sdk.getClient().tools.execute(descriptor.slug, { user_id: binding.providerUserId,
+        connected_account_id: binding.connectedAccountId, version: descriptor.version, arguments: dispatchArguments, allow_tracing: false }, { signal, maxRetries: 0 }), true);
+      if (result.successful !== true) return { state: "UNKNOWN", trust: "UNTRUSTED_EXTERNAL_DATA", evidence: { ...evidence, errorCode: "PROVIDER_REPORTED_FAILURE", durationMs: performance.now() - started } };
       const data = redactForEvidence(qualified.projectResult(result.data));
       if (Buffer.byteLength(JSON.stringify(data)) > 64 * 1024) throw new IntegrationError("RESULT_TOO_LARGE", "UNKNOWN");
       return { state: "SUCCEEDED", trust: "UNTRUSTED_EXTERNAL_DATA", data, evidence: { ...evidence, resultDigest: canonicalHash(data), durationMs: performance.now() - started } };

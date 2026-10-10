@@ -49,6 +49,7 @@ jobs:
           node-version: 22.22.3
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level=moderate
       - run: pnpm v2:frontier:check
       - run: pnpm db:check
       - run: pnpm exec tsx scripts/verify-owner-contracts.ts
