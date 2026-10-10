@@ -34,8 +34,8 @@ schema, credential contract, API, or execution admission changes are planned.
 | B5 Activity | Implemented; search, filters, date windows, pagination, disclosure |
 | B6 Settings/capability preview | Implemented; canonical integration explicitly inactive |
 | B7 Advanced tools | Implemented; grouped tools and honest availability states |
-| B8 Local product review | Candidate available; owner acceptance pending |
-| B9 Qualification | Technical checks in progress; release sign-off pending B8 review |
+| B8 Local product review | Product design accepted; bounded B9 refinements implemented |
+| B9 Qualification | Refinement qualification in progress; exact-source results in final adoption package |
 
 ## Administration parity
 
@@ -55,7 +55,7 @@ administration and cross-system preference integration remain dependencies.
 Search/date pagination is a presentation read; the existing activity API remains
 unchanged and retains its current bounded result contract.
 
-## Verification and limitations
+## Checkpoint B evidence before B9 refinements
 
 - Regression: 481 passed, six live-integration checks skipped. Existing
   performance suites: two passed. Type checking and lint passed.
@@ -90,5 +90,43 @@ Login: `owner@relay-demo.local` / `RelayDemo-Only2026!` (local demo only).
 Sample connection records have no provider credentials. Requires setup is
 therefore expected. No real tester, provider credential or Agent is mutated.
 
-The next decision is owner acceptance of B8 product design. B9 release sign-off,
-adoption, merge and deployment are not implied by this preview.
+The owner accepted B8 product design and requested bounded B9 refinements.
+Release adoption, merge and deployment require a separate authorization.
+
+## Accepted B8 and bounded B9 refinements
+
+The owner accepted the product design, navigation and information architecture.
+These refinements preserve that design and reuse the existing backend contracts:
+
+- Secondary text uses stronger contrast and larger type in both themes.
+- Home metrics have visible link affordances. Enabled identities, configured
+  GitHub/Google connections, running tasks, unexpired pending approvals and
+  recent failures link to matching filters. Approval links preserve the Home
+  cutoff; activity links preserve the exact 24-hour cutoff. Matching V2 records
+  are filtered before the existing 100-row presentation limit, with that bound
+  displayed. Canonical V2 membership remains required.
+- Agent enablement, credential use and recorded operation outcomes are distinct
+  from live/online state. No heartbeat or running state is inferred.
+- Connection readiness, granted permissions and account-wide historical
+  provider success are separate. Historical success may predate the current
+  connection or credentials. Provider history filters normalize case only in
+  presentation reads, without changing the API contract.
+- First-login guidance links to existing Agent creation, connection, grant and
+  activity flows. Empty states provide concrete next actions. No setup step
+  automatically grants permissions, executes work or writes preferences.
+
+The independent reviewer identified a P3 pending-decision attention link that
+lost its filter; it now uses the same filtered URL as the metric. Regression
+coverage includes records older than 100 unrelated entries, cutoff/expiry,
+missing canonical membership, case-insensitive provider history, keyboard metric
+navigation and first-use views. The Agent directory action row now wraps without splitting Configure.
+The 320px Activity filter overflow found during
+first-use testing was corrected. All five primary review screens are covered at
+five widths in both themes, plus first-use screens: 66 new B9 snapshots preserve
+all previous snapshots. Final comparison results are in the adoption package.
+
+The unified capability preference integration remains explicitly inactive. This
+is the approved fallback, not a claim of completed cross-system integration.
+Exact-commit qualification and the external-alpha change-impact handoff are
+recorded separately in the final B9 release-adoption package. No merge or
+installation change is authorized by those results.

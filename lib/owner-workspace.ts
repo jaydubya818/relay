@@ -39,8 +39,8 @@ export async function ownerConnections(accountId: string) {
     listConnections(accountId),
     db().select({ id: connections.id, present: connectionCredentials.connectionId, expiresAt: connectionCredentials.tokenExpiresAt, refreshable: sql<boolean>`${connectionCredentials.encryptedRefreshToken} is not null` }).from(connections)
       .leftJoin(connectionCredentials, eq(connectionCredentials.connectionId, connections.id)).where(eq(connections.accountId, accountId)),
-    db().selectDistinctOn([activities.provider], { provider: activities.provider, createdAt: activities.createdAt }).from(activities)
-      .where(and(eq(activities.accountId, accountId), eq(activities.status, "SUCCESS"))).orderBy(activities.provider, desc(activities.createdAt)),
+    db().select({ provider: sql<string>`upper(${activities.provider})`, createdAt: sql<string>`max(${activities.createdAt})` }).from(activities)
+      .where(and(eq(activities.accountId, accountId), eq(activities.status, "SUCCESS"))).groupBy(sql`upper(${activities.provider})`),
   ]);
   return rows.map((row) => {
     const credential = auth.find((item) => item.id === row.id);
@@ -51,7 +51,7 @@ export async function ownerConnections(accountId: string) {
   });
 }
 
-export async function ownerOperations(user: SessionUser) {
+export async function ownerOperations(user: SessionUser, asOf = new Date().toISOString()) {
   try { await operatorContext(user.accountId, user.id); }
   catch (error) {
     if (error instanceof RelayError && error.status === 403) return null;
@@ -59,7 +59,7 @@ export async function ownerOperations(user: SessionUser) {
   }
   const [[running], [pending]] = await Promise.all([
     db().select({ value: count() }).from(v2Tasks).where(and(eq(v2Tasks.accountId, user.accountId), eq(v2Tasks.status, "RUNNING"))),
-    db().select({ value: count() }).from(approvalRequests).where(and(eq(approvalRequests.accountId, user.accountId), eq(approvalRequests.status, "PENDING"), gte(approvalRequests.expiresAt, new Date().toISOString()))),
+    db().select({ value: count() }).from(approvalRequests).where(and(eq(approvalRequests.accountId, user.accountId), eq(approvalRequests.status, "PENDING"), gte(approvalRequests.expiresAt, asOf))),
   ]);
   return { running: running.value, pending: pending.value };
 }
@@ -80,7 +80,7 @@ export async function ownerActivity(accountId: string, filters: ActivityFilters 
   const conditions: SQL[] = [eq(activities.accountId, accountId)];
   if (filters.agent) conditions.push(eq(activities.agentId, filters.agent));
   if (filters.capability) conditions.push(eq(activities.capability, filters.capability));
-  if (filters.provider) conditions.push(eq(activities.provider, filters.provider));
+  if (filters.provider) conditions.push(sql`upper(${activities.provider}) = ${filters.provider.toUpperCase()}`);
   const status = filters.status;
   if (status === "SUCCESS" || status === "DENIED" || status === "FAILED" || status === "BLOCKED") conditions.push(eq(activities.status, status));
   const from = validDate(filters.from), to = validDate(filters.to);
@@ -102,4 +102,18 @@ export async function ownerActivity(accountId: string, filters: ActivityFilters 
   }).from(activities).leftJoin(agents, and(eq(agents.id, activities.agentId), eq(agents.accountId, accountId))).where(where)
     .orderBy(desc(activities.createdAt), desc(activities.id)).limit(20).offset((page - 1) * 20);
   return { rows, total: total.value, page, pages };
+}
+
+// Filter before applying the existing 100-row presentation bound. Never use the
+// latest unfiltered rows to represent the Home metric's matching records.
+export async function ownerRunningTasks(user: SessionUser) {
+  await operatorContext(user.accountId, user.id);
+  return db().select({ id: v2Tasks.id, agentId: v2Tasks.agentId, status: v2Tasks.status, attemptCount: v2Tasks.attemptCount, maxAttempts: v2Tasks.maxAttempts, updatedAt: v2Tasks.updatedAt })
+    .from(v2Tasks).where(and(eq(v2Tasks.accountId, user.accountId), eq(v2Tasks.status, "RUNNING"))).orderBy(desc(v2Tasks.createdAt)).limit(100);
+}
+export async function ownerPendingApprovals(user: SessionUser, asOf: string) {
+  await operatorContext(user.accountId, user.id);
+  const cutoff = validSince(asOf) ?? new Date().toISOString();
+  return db().select({ id: approvalRequests.id, actionIntentId: approvalRequests.actionIntentId, agentId: approvalRequests.agentId, taskId: approvalRequests.taskId, riskClass: approvalRequests.riskClass, effectClass: approvalRequests.effectClass, summary: approvalRequests.summary, consequence: approvalRequests.consequence, displayEvidence: approvalRequests.displayEvidence, allowedScopes: approvalRequests.allowedScopes, status: approvalRequests.status, expiresAt: approvalRequests.expiresAt })
+    .from(approvalRequests).where(and(eq(approvalRequests.accountId, user.accountId), eq(approvalRequests.status, "PENDING"), gte(approvalRequests.expiresAt, cutoff))).orderBy(desc(approvalRequests.createdAt)).limit(100);
 }

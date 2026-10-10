@@ -21,11 +21,15 @@ for (const width of [1440, 1024, 768, 390, 320]) {
     if (width <= 768) await page.getByRole("button", { name: "Close menu" }).click();
     for (const theme of ["light", "dark"]) {
       await page.getByLabel("Appearance").selectOption(theme);
-      for (const path of ["/", "/connections", "/advanced"]) {
-        await page.goto(path); await expect(page.getByRole("heading", { name: path === "/" ? "Home" : path === "/connections" ? "Connections" : "Developer tools", exact: true })).toBeVisible(); await expect(page.getByRole("heading", { name: "Loading your Relay", exact: true })).not.toBeVisible();
+      for (const path of ["/", "/agents", "/connections", "/activity", "/advanced"]) {
+        await page.goto(path); await expect(page.getByRole("heading", { name: path === "/" ? "Home" : path === "/advanced" ? "Developer tools" : path.slice(1).replace(/^./, (letter) => letter.toUpperCase()), exact: true })).toBeVisible(); await expect(page.getByRole("heading", { name: "Loading your Relay", exact: true })).not.toBeVisible();
         await expect(page.locator("html")).toHaveAttribute("data-owner-theme", theme);
         await accessible(page);
-        if (!process.env.RELAY_OWNER_SKIP_VISUAL) await expect(page).toHaveScreenshot(`checkpoint-b-${path.slice(1) || "home"}-${width}-${theme}.png`, { fullPage: true });
+        if (path === "/agents") {
+          const configure = page.getByRole("link", { name: "Configure Sofie" });
+          expect(await configure.evaluate((el) => { const range = document.createRange(); range.selectNode(el.firstChild!); return range.getClientRects().length; })).toBe(1);
+        }
+        if (!process.env.RELAY_OWNER_SKIP_VISUAL) await expect(page).toHaveScreenshot(`checkpoint-b9-${path.slice(1) || "home"}-${width}-${theme}.png`, { fullPage: true });
       }
     }
   });
@@ -95,4 +99,49 @@ test("new Agent starts with zero grants and mutations retain input after an erro
   await page.route("**/api/agents/*/capabilities/*", async (route) => route.fulfill({ status: 403, json: { code: "CAPABILITY_DENIED", message: "Synthetic canonical denial" } }));
   await page.getByRole("button", { name: "Allow memory.read", exact: true }).click(); await expect(page.getByText("Synthetic canonical denial", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Allow memory.read", exact: true })).toBeEnabled();
+});
+
+
+test("Home metrics link to matching views and Agent state stays evidence based", async ({ page }) => {
+  await signIn(page);
+  const destinations = [
+    ["Total agents", "/agents", "Agents"], ["Enabled agents", "/agents?status=ACTIVE", "Agents"],
+    ["Running operations", "/v2/tasks?status=RUNNING", "Tasks"], ["Pending approvals", "/v2/approvals?status=PENDING", "Approval center"],
+    ["Failed operations", "/activity?status=FAILED", "Activity"], ["Connected services", "/connections?state=CONNECTED", "Connections"],
+  ];
+  for (const [label, destination, heading] of destinations) {
+    await page.goto("/"); const metric = page.getByRole("link", { name: new RegExp(`^${label}`) });
+    await metric.focus(); await page.keyboard.press("Enter"); await expect(page).toHaveURL(new RegExp(destination.replace(/[?]/g, "\\?")));
+    await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    if (label === "Enabled agents") await expect(page.getByLabel("Status", { exact: true })).toHaveValue("ACTIVE");
+    if (label === "Running operations") await expect(page.getByText("No running operations", { exact: true })).toBeVisible();
+    if (label === "Pending approvals") expect(new URL(page.url()).searchParams.get("asOf")).toMatch(/T.*Z$/);
+    if (label === "Failed operations") expect(new URL(page.url()).searchParams.get("since")).toMatch(/T.*Z$/);
+    if (label === "Connected services") await expect(page.getByRole("heading", { name: "No connected services" })).toBeVisible();
+  }
+  await page.goto("/agents"); await expect(page.getByText("ENABLED", { exact: true })).toBeVisible();
+  await expect(page.getByText("No credential use recorded", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Relay has no live heartbeat/)).toBeVisible();
+  await page.goto("/connections");
+  await expect(page.getByRole("heading", { name: "Current readiness", exact: true })).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "Granted permissions", exact: true })).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "Historical activity", exact: true })).toHaveCount(2);
+  await page.getByRole("link", { name: "View recorded successes" }).first().click();
+  await expect(page).toHaveURL(/provider=GITHUB&status=SUCCESS/);
+});
+
+for (const width of [1440, 320]) test(`First-login next steps and empty filters at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 }); await signIn(page, "empty");
+  for (const theme of ["light", "dark"]) {
+    await page.getByLabel("Appearance").selectOption(theme);
+    for (const path of ["/", "/agents", "/connections", "/activity"]) {
+      await page.goto(path); await expect(page.getByRole("heading", { name: path === "/" ? "Home" : path.slice(1).replace(/^./, (letter) => letter.toUpperCase()), exact: true })).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("data-owner-theme", theme); await accessible(page);
+      if (path === "/") await expect(page.getByRole("heading", { name: "Set up your first Agent" })).toBeVisible();
+      if (!process.env.RELAY_OWNER_SKIP_VISUAL) await expect(page).toHaveScreenshot(`checkpoint-b9-empty-${path.slice(1) || "home"}-${width}-${theme}.png`, { fullPage: true });
+    }
+  }
+  await page.goto("/"); await page.getByRole("region", { name: "Set up your first Agent" }).getByRole("link", { name: "Create an Agent", exact: true }).click();
+  await expect(page.getByLabel("Agent name")).toBeVisible();
+  await expect(page.getByLabel("Allow reading shared memory")).not.toBeChecked();
 });
