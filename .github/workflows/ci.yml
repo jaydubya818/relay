@@ -50,6 +50,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm audit --prod --audit-level=moderate
+      - run: node scripts/qualify-composio-canonical.mjs
+        if: contains(github.ref, 'relay-composio-integration') || contains(github.head_ref, 'relay-composio-integration')
       - run: pnpm v2:frontier:check
       - run: pnpm db:check
       - run: pnpm exec tsx scripts/verify-owner-contracts.ts
