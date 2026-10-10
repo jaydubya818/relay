@@ -16,3 +16,7 @@ This adds no registry, capability grants, or separate authorization engine. Owne
 No UI was added to the governance page in this checkpoint. No service is deployed. No bridge exports these decisions into MyEve's qualification projection yet. Live policy propagation and cross-database revocation ordering are NOT_QUALIFIED. MyEve preferences cannot override a Relay denial, and no platform-owner identity has been provisioned here.
 
 Run `node scripts/qualify-capability-administration.mjs` for disposable PostgreSQL tests; no existing database is used. Hosted qualification runs the same script. Existing policy, Passport and peer-message regressions are included.
+
+## Preview-build incident
+
+The initial checkpoint push exposed a missing Vercel exclusion for this new branch and triggered two unintended preview builds. Both were explicitly cancelled, verified CANCELED with target null and aliasAssigned false, before readiness. The branch exclusion is now explicit in vercel.json. No production target, alias promotion, active external-alpha installation or paid execution was changed. Exact cancellation metadata is retained in evidence/preview-cancellation.json. The no-deployment boundary was not perfectly observed; this incident must remain visible in the checkpoint report.
