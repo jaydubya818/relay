@@ -214,7 +214,7 @@ export function GoogleConnectionManager({ connected, oauthConfigured }: { connec
   return <div className="stack">
     {oauthConfigured ? <a className="button" href="/api/connections/google/oauth/start">{connected ? "Reconnect Google Workspace" : "Connect Google Workspace"}</a> : <div className="notice">Google OAuth is not configured for this deployment.</div>}
     {connected && <div className="inline"><button className="button secondary" disabled={busy} onClick={() => action("POST")}>Test connection</button><button className="button danger" disabled={busy} onClick={() => action("DELETE")}>Disconnect</button></div>}
-    {message && <div className="notice">{message}</div>}
+    {message && <div role="status" className="notice">{message}</div>}
   </div>;
 }
 

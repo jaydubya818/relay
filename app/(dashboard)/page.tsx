@@ -1,33 +1,39 @@
 export const metadata = { title: "Home" };
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { listAgents } from "@/lib/agents";
-import { listConnections } from "@/lib/connections";
 import { listActivity } from "@/lib/activity";
-import { PageHeader, Status } from "@/components/page";
+import { ownerConnections, ownerDirectory, ownerOperations, ownerRecentCounts } from "@/lib/owner-workspace";
+import { PageHeader, Status, RelativeTime } from "@/components/page";
 import { ActivityTimeline, EmptyState } from "@/components/owner-ui";
-import { providerLabel } from "@/lib/owner-presentation";
+import { OwnerIcon } from "@/components/owner-icons";
+import { permissionLabel, providerLabel } from "@/lib/owner-presentation";
 
 export default async function HomePage() {
   const user = await requireUser();
-  const [agents, connections, activity] = await Promise.all([
-    listAgents(user.accountId), listConnections(user.accountId), listActivity(user.accountId, { limit: 6 }),
-  ]);
-  const attention = connections.filter((connection) => connection.status === "ERROR");
+  const since = new Date(Date.now() - 86400000).toISOString();
+  const [agents, connections, activity, counts, operations] = await Promise.all([ownerDirectory(user.accountId), ownerConnections(user.accountId), listActivity(user.accountId, { limit: 5 }), ownerRecentCounts(user.accountId, since), ownerOperations(user)]);
+  const issues = [
+    ...connections.filter((item) => ["ERROR", "AUTHENTICATION_EXPIRED", "REQUIRES_SETUP"].includes(item.state)).map((item) => ({ title: `${providerLabel(item.provider)} needs attention`, detail: item.authentication, href: "/connections" })),
+    ...(operations?.pending ? [{ title: `${operations.pending} pending owner decision${operations.pending === 1 ? "" : "s"}`, detail: "Unexpired approval requests awaiting a decision.", href: "/v2/approvals" }] : []),
+    ...agents.filter((item) => item.expiring).map((item) => ({ title: `${item.name}: credential expires soon`, detail: "At least one active credential expires within 7 days.", href: `/agents/${item.id}?tab=security` })),
+    ...(counts.denials ? [{ title: `${counts.denials} denied operation${counts.denials === 1 ? "" : "s"}`, detail: "Last 24 hours. Review the requested permissions.", href: `/activity?status=DENIED&since=${encodeURIComponent(since)}` }] : []),
+    ...(counts.failures ? [{ title: `${counts.failures} failed operation${counts.failures === 1 ? "" : "s"}`, detail: "Last 24 hours. Inspect the recorded outcome.", href: `/activity?status=FAILED&since=${encodeURIComponent(since)}` }] : []),
+  ];
+  const metrics = [
+    { label: "Total agents", value: agents.length, note: "Registered identities", href: "/agents" },
+    { label: "Active agents", value: agents.filter((item) => item.status === "ACTIVE").length, note: "Enabled identities", href: "/agents?status=ACTIVE" },
+    { label: "Running operations", value: operations?.running ?? "—", note: operations ? "Recorded V2 tasks" : "V2 membership required", href: operations ? "/v2/tasks" : "/advanced#governance" },
+    { label: "Pending approvals", value: operations?.pending ?? "—", note: operations ? "Unexpired V2 requests" : "V2 membership required", href: operations ? "/v2/approvals" : "/advanced#governance" },
+    { label: "Failed operations", value: counts.failures, note: "Last 24 hours", href: `/activity?status=FAILED&since=${encodeURIComponent(since)}`, alert: counts.failures > 0 },
+    { label: "Connected services", value: connections.filter((item) => item.state === "CONNECTED").length, note: "Credentials stored", href: "/connections" },
+  ];
   return <>
-    <PageHeader eyebrow="Relay" title="Home" description="Your agents and connections. See what they can access and what they have been doing." />
-    {attention.length > 0 && <section className="card section-gap" aria-labelledby="attention-title"><h2 id="attention-title">Needs attention</h2>
-      {attention.map((connection) => <p key={connection.id}>{providerLabel(connection.provider)} needs attention. <Link className="text-link" href="/connections">Review connection</Link></p>)}
-    </section>}
-    <section className="grid two-col owner-home">
-      <div className="stack"><section className="card"><div className="owner-section-head"><h2>Agents</h2><Link className="text-link" href="/agents">View all agents</Link></div>
-        {agents.length ? <ul className="owner-list">{agents.slice(0, 6).map((agent) => <li key={agent.id}><Link className="owner-row" href={`/agents/${agent.id}`}><div><strong>{agent.name}</strong><p className="subtle">{agent.description || "Agent registered with your account"}</p></div><Status value={agent.status} /></Link></li>)}</ul>
-          : <EmptyState title="No Agents are connected yet">Sofie will appear here after your MyEve setup is complete. Return here to review permissions and activity.</EmptyState>}
-      </section><section className="card"><div className="owner-section-head"><h2>Recent activity</h2><Link className="text-link" href="/activity">View all activity</Link></div><ActivityTimeline activity={activity} /></section></div>
-      <div className="stack"><section className="card"><div className="owner-section-head"><h2>Connections</h2><Link className="text-link" href="/connections">View connections</Link></div>
-        {connections.length ? <ul className="owner-list">{connections.map((connection) => <li className="owner-row" key={connection.id}><strong>{providerLabel(connection.provider)}</strong><Status value={connection.status} /></li>)}</ul>
-          : <EmptyState title="No service connections yet">Services connected to this account will appear here. Your MyEve setup manages Sofie’s access to Relay.</EmptyState>}
-      </section><section className="card owner-trust"><h2>You stay in control</h2><p>Each Agent has its own permissions. A connection does not automatically give every Agent access.</p><Link className="text-link" href="/agents">Review your Agents →</Link></section></div>
-    </section>
+    <PageHeader eyebrow="AGENT OPERATIONS" title="Home" description="A clear view of your Agents, their access, and what needs you next." action={<Link className="button" href="/agents/new">+ Create Agent</Link>} />
+    <section className="operation-strip" aria-label="Operational overview">{metrics.map((item) => <Link className={`operation-metric ${item.alert ? "alert" : ""}`} href={item.href} key={item.label}><span>{item.label}</span><strong>{item.value}</strong><small>{item.note}</small></Link>)}</section>
+    <div className="operations-layout"><div className="stack"><section className="card"><div className="section-heading"><h2>Your Agents <span className="count">{agents.length}</span></h2><Link className="text-link" href="/agents">Manage agents →</Link></div>
+      {agents.length ? agents.slice(0, 5).map((agent, index) => <Link className="agent-record" href={`/agents/${agent.id}`} key={agent.id}><span className={`agent-monogram tone-${index % 2}`}>{agent.name.slice(0, 1)}</span><div><strong>{agent.name}</strong><p>{agent.description || "Purpose not added"}</p><div className="agent-chips">{agent.allowed.slice(0, 2).map((cap) => <span key={cap}>{permissionLabel(cap)}</span>)}<span>{agent.allowed.length} permission{agent.allowed.length === 1 ? "" : "s"}</span></div></div><div className="record-end"><Status value={agent.status} /><small>{agent.lastActiveAt ? <RelativeTime value={agent.lastActiveAt} /> : "No credential use yet"}</small></div></Link>) : <EmptyState title="No Agents are connected yet">Create a scoped Agent or complete Sofie’s setup in MyEve to get started.</EmptyState>}
+    </section><section className="card"><div className="section-heading"><h2>Recent activity</h2><Link className="text-link" href="/activity">View activity →</Link></div><ActivityTimeline activity={activity} /></section></div>
+    <aside className="stack"><section className="card"><div className="section-heading"><h2>Needs attention <span className="count">{issues.length}</span></h2></div>{issues.length ? <ul className="attention-list">{issues.slice(0, 5).map((issue) => <li key={issue.title}><Link href={issue.href}><span className="attention-indicator" />{issue.title}</Link><small>{issue.detail}</small></li>)}</ul> : <p className="subtle">No issues found in connection configuration, expiring credentials or the last 24 hours of activity.</p>}{issues.length > 5 && <Link className="text-link" href="/activity">Review more activity →</Link>}</section>
+    <section className="card"><h2>Quick actions</h2><nav className="quick-actions" aria-label="Quick actions">{[["Create Agent", "/agents/new"], ["Connect service", "/connections"], ["Review permissions", "/agents"], ["View activity", "/activity"]].map(([label, href]) => <Link href={href} key={href}>{label}<OwnerIcon name="Arrow" /></Link>)}</nav></section><div className="workspace-note"><strong>Access is always explicit.</strong>A connection makes a service available. Agent grants and execution policies decide whether an operation can proceed.</div></aside></div>
   </>;
 }

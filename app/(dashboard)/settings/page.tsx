@@ -1,34 +1,35 @@
 export const metadata = { title: "Settings" };
-import { PageHeader } from "@/components/page";
+import Link from "next/link";
+import { PageHeader, Status } from "@/components/page";
 import { canIssueBetaInvites, requireUser } from "@/lib/auth";
 import { BetaInviteForm } from "@/components/beta-invite-form";
 import { BetaAccountRetirement } from "@/components/beta-account-retirement";
 import { db } from "@/lib/db";
-import { accounts, agentCredentials, memories } from "@/lib/db/schema";
-import { and, count, eq, isNull } from "drizzle-orm";
+import { accounts, agentCredentials, memories, capabilities } from "@/lib/db/schema";
+import { and, asc, count, eq, isNull } from "drizzle-orm";
+import { ownerDirectory } from "@/lib/owner-workspace";
+import { permissionLabel } from "@/lib/owner-presentation";
 
-export default async function SettingsPage() {
-  const user = await requireUser();
+const sections = [["account", "Account"], ["security", "Security"], ["connections", "Connections"], ["preferences", "Agent Preferences"], ["capabilities", "Capability Management"], ["notifications", "Notifications"], ["privacy", "Data & Privacy"], ["advanced", "Advanced"]] as const;
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const user = await requireUser(); const requested = (await searchParams).section; const section = sections.some(([key]) => key === requested) ? requested : "account";
   const [[account], [credentialResult], [memoryResult]] = await Promise.all([
     db().select({ id: accounts.id, name: accounts.name, createdAt: accounts.createdAt, disposableBeta: accounts.disposableBeta }).from(accounts).where(eq(accounts.id, user.accountId)).limit(1),
     db().select({ value: count() }).from(agentCredentials).where(and(eq(agentCredentials.accountId, user.accountId), isNull(agentCredentials.revokedAt))),
     db().select({ value: count() }).from(memories).where(and(eq(memories.accountId, user.accountId), isNull(memories.forgottenAt))),
   ]);
   if (!account) throw new Error("Authenticated Relay account was not found.");
-  const credentialCount = credentialResult.value;
-  const memoryCount = memoryResult.value;
-  return (
-    <>
-      <PageHeader eyebrow="Your Relay" title="Settings" description="Manage your account and review its security and data controls." />
-      <section className="grid two-col">
-        <div className="stack">
-          <div className="card"><h2>Account</h2><div className="kv"><div className="key">Name</div><div>{account.name}</div><div className="key">Account ID</div><div className="mono subtle">{account.id}</div><div className="key">Created</div><div>{new Date(account.createdAt).toLocaleString()}</div></div></div>
-          <details className="card technical-details"><summary>Advanced security details</summary><h2>Credentials</h2><p className="subtle">{credentialCount} active agent credential{credentialCount === 1 ? "" : "s"}. Credentials are hashed, shown once, independently revocable, and never recoverable.</p></details>
-          <details className="card technical-details"><summary>Stored data details</summary><h2>Data</h2><p className="subtle">{memoryCount} active memories belong to this account. Forgotten memories are excluded from all active retrieval.</p></details>
-        </div>
-        <div className="card">{account.disposableBeta ? <BetaAccountRetirement accountId={account.id} /> : <><h2>Danger zone</h2><p className="subtle">Account-wide deletion is not available for this account. Individual Agent, credential and connection controls are available in Advanced tools.</p></>}</div>
-        {canIssueBetaInvites(user) && <div className="card"><h2>Invite a beta tester</h2><p className="subtle">Create a private, email-bound Relay signup link. Send it only to the intended tester through a trusted channel.</p><BetaInviteForm /></div>}
-      </section>
-    </>
-  );
+  const registry = section === "capabilities" ? await db().select({ name: capabilities.name, description: capabilities.description, enabled: capabilities.enabled, status: capabilities.status, provider: capabilities.provider }).from(capabilities).orderBy(asc(capabilities.name)) : [];
+  const agents = section === "capabilities" ? await ownerDirectory(user.accountId) : [];
+  return <><PageHeader eyebrow="WORKSPACE PREFERENCES" title="Settings" description="Your account, security and the boundaries your Agents work within." />
+    <div className="settings-layout"><nav className="settings-nav" aria-label="Settings sections">{sections.map(([key, label]) => <Link key={key} href={`/settings?section=${key}`} aria-current={section === key ? "page" : undefined}>{label}</Link>)}</nav><div className="settings-content stack">
+    {section === "account" && <><section className="card"><h2>Account</h2><p className="subtle">Your authenticated Relay workspace.</p>{[["Workspace", account.name], ["Signed in as", user.name], ["Email", user.email], ["Account role", user.role], ["Created", new Date(account.createdAt).toLocaleDateString("en-US", { timeZone: "UTC" })]].map(([label, value]) => <div className="settings-fact" key={label}><span>{label}</span><span>{value}</span></div>)}<details className="technical-details"><summary>Account reference</summary><code>{account.id}</code></details><p className="subtle">Profile editing is not available in the current account contract.</p></section>{canIssueBetaInvites(user) && <section className="card"><h2>Invite a beta tester</h2><p className="subtle">Create a private, email-bound invitation for the intended tester.</p><BetaInviteForm /></section>}</>}
+    {section === "security" && <section className="card"><h2>Security</h2><p>{credentialResult.value} unrevoked Agent credential{credentialResult.value === 1 ? "" : "s"}. Expiry and usage are shown for each Agent.</p><p className="subtle">Dashboard sessions retain their existing server-side validation and expiry. Sign out using the control at the top of this page. Agent credentials are scoped, hashed, individually revocable and shown only at creation.</p><Link className="button secondary" href="/agents">Review Agent security</Link><p className="subtle">Additional session management and password changes are not available in this interface.</p></section>}
+    {section === "connections" && <section className="card"><h2>Connected services</h2><p>Review authentication, scopes and which Agents have the relevant grants. Service credentials stay with your account.</p><Link className="button" href="/connections">Manage connections</Link></section>}
+    {section === "preferences" && <section className="card"><h2>Agent Preferences</h2><Status value="INACTIVE_PREVIEW" /><p>MyEve owns individual owner capability preferences. Relay owns organization and Agent policy. Execution backends retain final admission authority.</p><p className="inactive-banner">The authenticated platform-owner preference contract is not integrated. The requested enabled-for-testing defaults will apply only after canonical identity and preference contracts are available. No preference or grant is changed by this preview.</p><Link className="text-link" href="/settings?section=capabilities">Preview capability boundaries →</Link></section>}
+    {section === "capabilities" && <section className="card"><div className="section-heading"><h2>Capability management</h2><Status value="INACTIVE_PREVIEW" /></div><p>Read-only view of Relay’s existing registry and this account’s Agent grants. The Unified Capability Control Plane has not been integrated.</p><p className="inactive-banner">MyEve preference, unified organization policy and execution-readiness contracts are pending. Enabled registry entries and Agent grants do not establish execution authorization.</p><div className="capability-preview">{registry.map((capability) => { const granted = agents.filter((agent) => agent.allowed.includes(capability.name)); return <details key={capability.name}><summary>{permissionLabel(capability.name)} <small>{capability.enabled ? "Registered" : "Disabled in registry"}</small></summary><p className="subtle">{capability.description}</p><dl className="owner-facts"><dt>Capability</dt><dd>{capability.name}</dd><dt>Owner preference</dt><dd>Unavailable — MyEve contract pending</dd><dt>Organization policy</dt><dd>Unified policy view not integrated; existing Relay enforcement remains in place</dd><dt>Agent grants</dt><dd>{granted.length ? granted.map((agent, index) => <span key={agent.id}>{index > 0 && ", "}<Link className="text-link" href={`/agents/${agent.id}?tab=capabilities`}>{agent.name}</Link></span>) : "No grants in this account"}</dd><dt>Operational readiness</dt><dd>Not evaluated · Registry: {capability.status}</dd><dt>Execution authorization</dt><dd>Evaluated by the execution backend for each request</dd></dl></details>; })}</div>{!registry.length && <p className="subtle">No entries are present in this deployment’s capability registry.</p>}</section>}
+    {section === "notifications" && <section className="card"><h2>Notifications</h2><Status value="NOT_CONFIGURED" /><p>Owner notification preferences do not have an implemented backend in this release.</p><p className="subtle">Use Needs attention and the activity timeline to review operational issues. No notification channel has been enabled.</p><Link className="text-link" href="/activity?status=FAILED">Review failed operations →</Link></section>}
+    {section === "privacy" && <><section className="card"><h2>Data & Privacy</h2><p>{memoryResult.value} active memories belong to this account. Forgotten memories are excluded from active retrieval.</p><Link className="text-link" href="/memory">Review stored memory →</Link><p className="subtle">Account export and retention preferences are not implemented. Provider tokens are never returned by the connection dashboard.</p></section><section className="card">{account.disposableBeta ? <BetaAccountRetirement accountId={account.id} /> : <><h2>Account retirement</h2><p>Account-wide deletion is not available for this account. Agent disable, credential revocation and connection controls remain available through their existing routes.</p></>}</section></>}
+    {section === "advanced" && <section className="card"><h2>Advanced tools</h2><p>Inspect infrastructure, integrations, governance and system health under your existing permissions.</p><Link className="button secondary" href="/advanced">Open Developer tools</Link></section>}
+    </div></div></>;
 }

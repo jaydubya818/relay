@@ -24,7 +24,7 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
         <div className="field"><label htmlFor="memory-agent">Created by</label><select id="memory-agent" name="agent" defaultValue={params.agent ?? ""}><option value="">All agents</option>{agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.name}</option>)}</select></div>
         <button className="button">Filter</button>
       </form>
-      <div className="card flush table-wrap">
+      <div className="card flush table-wrap" role="region" aria-label="Stored memory table" tabIndex={0}>
         <table><thead><tr><th>Memory</th><th>Type</th><th>Scope</th><th>Created by</th><th>Created</th><th /></tr></thead><tbody>{memories.map((memory: any) => <tr key={memory.id}><td className="memory-content">{memory.content}</td><td>{memory.type}</td><td><Status value={memory.scope} /></td><td>{memory.createdByAgent}</td><td className="subtle">{new Date(memory.createdAt).toLocaleString()}</td><td><ForgetMemoryButton id={memory.id} /></td></tr>)}</tbody></table>
         {!memories.length && <div className="empty">No memory matches these filters. Stored memories appear here only when Memory is enabled and an authorized Agent has saved them.</div>}
       </div>

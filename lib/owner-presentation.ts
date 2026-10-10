@@ -42,5 +42,5 @@ export function outcomeLabel(status: string) {
   return ({ SUCCESS: "Completed", DENIED: "Not allowed", FAILED: "Failed", BLOCKED: "Blocked" } as Record<string, string>)[status] ?? status;
 }
 export function providerLabel(provider: string) {
-  return ({ GITHUB: "GitHub", GOOGLE: "Google Workspace", MYFACTORY: "MyFactory" } as Record<string, string>)[provider] ?? provider;
+  return ({ GITHUB: "GitHub", GOOGLE: "Google Workspace", MYFACTORY: "MyFactory", RELAY: "Relay", MEMORY: "Shared memory" } as Record<string, string>)[provider.toUpperCase()] ?? provider;
 }

@@ -2,30 +2,20 @@ export const metadata = { title: "Activity" };
 import Link from "next/link";
 import { PageHeader } from "@/components/page";
 import { ActivityTimeline } from "@/components/owner-ui";
-import { listActivity } from "@/lib/activity";
 import { listAgents } from "@/lib/agents";
 import { requireUser } from "@/lib/auth";
-import type { ActivityStatus } from "@/lib/types";
+import { ownerActivity, validSince } from "@/lib/owner-workspace";
+import { CAPABILITIES } from "@/lib/types";
+import { permissionLabel } from "@/lib/owner-presentation";
 
 export default async function ActivityPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const user = await requireUser();
-  const params = await searchParams;
-  const status = ["SUCCESS", "DENIED", "FAILED", "BLOCKED"].includes(params.status ?? "") ? params.status as ActivityStatus : undefined;
-  const [activity, agents] = await Promise.all([
-    listActivity(user.accountId, { agentId: params.agent, capability: params.capability, status, provider: params.provider }), listAgents(user.accountId),
-  ]);
-  const filtered = Boolean(params.agent || params.capability || status || params.provider);
-  return <>
-    <PageHeader eyebrow="Your Relay" title="Activity" description="Follow your Agents’ actions and permission decisions, with the original record available for every entry." />
-    <form className="card owner-filters" aria-label="Filter activity">
-      <div className="field"><label htmlFor="activity-agent">Agent</label><select id="activity-agent" name="agent" defaultValue={params.agent ?? ""}><option value="">All agents</option>{agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.name}</option>)}</select></div>
-      <div className="field"><label htmlFor="activity-status">Outcome</label><select id="activity-status" name="status" defaultValue={status ?? ""}><option value="">All outcomes</option><option value="SUCCESS">Completed</option><option value="DENIED">Not allowed</option><option value="FAILED">Failed</option><option value="BLOCKED">Blocked</option></select></div>
-      <button className="button">Apply filters</button>{filtered && <Link className="text-link" href="/activity">Clear filters</Link>}
-      <details className="technical-details owner-filter-details" open={Boolean(params.capability || params.provider)}><summary>Technical filters</summary><div className="form-grid">
-        <div className="field"><label htmlFor="activity-capability">Capability</label><input id="activity-capability" name="capability" defaultValue={params.capability} /></div>
-        <div className="field"><label htmlFor="activity-provider">Provider</label><input id="activity-provider" name="provider" defaultValue={params.provider} /></div>
-      </div></details>
-    </form>
-    <section className="card section-gap" aria-label="Activity timeline"><ActivityTimeline activity={activity} filtered={filtered} /></section>
-  </>;
+  const user = await requireUser(); const params = await searchParams;
+  const [activity, agents] = await Promise.all([ownerActivity(user.accountId, params), listAgents(user.accountId)]);
+  function pageLink(page: number) { const query = new URLSearchParams(); for (const key of ["q", "agent", "capability", "status", "provider", "from", "to", "since"]) if (params[key]) query.set(key, params[key]!); query.set("page", String(page)); return `/activity?${query}`; }
+  const filtered = ["q", "agent", "capability", "status", "provider", "from", "to", "since"].some((key) => params[key]);
+  return <><PageHeader eyebrow="OPERATIONAL VISIBILITY" title="Activity" description="Every operation has a story. Follow the action, outcome and evidence." />
+    {validSince(params.since) && !params.from && !params.to && <p className="notice">Showing records since {new Date(params.since!).toLocaleString("en-US", { timeZone: "UTC" })} UTC. Choosing a date range replaces this exact dashboard window.</p>}
+    <form className="card activity-filter-grid" aria-label="Filter activity">{validSince(params.since) && <input type="hidden" name="since" value={params.since} />}<div className="field search-field"><label htmlFor="activity-search">Search activity</label><input id="activity-search" name="q" defaultValue={params.q} placeholder="Agent, action, capability or resource…" maxLength={160} /></div><div className="field"><label htmlFor="activity-agent">Agent</label><select id="activity-agent" name="agent" defaultValue={params.agent ?? ""}><option value="">All agents</option>{agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.name}</option>)}</select></div><div className="field"><label htmlFor="activity-status">Outcome</label><select id="activity-status" name="status" defaultValue={params.status ?? ""}><option value="">All outcomes</option><option value="SUCCESS">Completed</option><option value="DENIED">Not allowed</option><option value="FAILED">Failed</option><option value="BLOCKED">Blocked</option></select></div>
+    <div className="field"><label htmlFor="activity-capability">Capability</label><select id="activity-capability" name="capability" defaultValue={params.capability ?? ""}><option value="">All capabilities</option>{CAPABILITIES.map((capability) => <option key={capability} value={capability}>{permissionLabel(capability)}</option>)}</select></div><div className="field"><label htmlFor="activity-provider">Provider</label><input id="activity-provider" name="provider" defaultValue={params.provider} placeholder="e.g. GITHUB" /></div><div className="field"><label htmlFor="activity-from">From (UTC)</label><input type="date" id="activity-from" name="from" defaultValue={params.from} /></div><div className="field"><label htmlFor="activity-to">Through (UTC)</label><input type="date" id="activity-to" name="to" defaultValue={params.to} /></div><div className="filter-actions"><button className="button">Apply filters</button>{filtered && <Link className="text-link" href="/activity">Clear filters</Link>}</div></form>
+    <section className="card section-gap" aria-label="Activity timeline"><div className="section-heading"><h2>Operations <span className="count">{activity.total} matching records</span></h2><span className="subtle">Newest first</span></div><ActivityTimeline activity={activity.rows} filtered={filtered} /><div className="pagination"><span>Page {activity.page} of {activity.pages} · Up to 20 per page</span><nav aria-label="Activity pages">{activity.page > 1 && <Link className="button secondary small" href={pageLink(activity.page - 1)}>Previous</Link>}{activity.page < activity.pages && <Link className="button secondary small" href={pageLink(activity.page + 1)}>Next</Link>}</nav></div></section></>;
 }

@@ -2,7 +2,7 @@ name: Owner experience browser qualification
 on:
   pull_request:
   push:
-    branches: [codex/relay-owner-experience]
+    branches: [codex/relay-owner-experience, codex/relay-owner-checkpoint-b]
 permissions:
   contents: read
 jobs:

@@ -1,34 +1,32 @@
-export const metadata = { title: "Agent permissions" };
+export const metadata = { title: "Agent management" };
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PageHeader, Status } from "@/components/page";
-import { ActivityTimeline } from "@/components/owner-ui";
+import { PageHeader, Status, RelativeTime } from "@/components/page";
+import { ActivityTimeline, EmptyState } from "@/components/owner-ui";
+import { AgentStatusControl, GrantControl } from "@/components/owner-controls";
 import { getAgent } from "@/lib/agents";
 import { requireUser } from "@/lib/auth";
 import { listActivity } from "@/lib/activity";
-import { permissionLabel } from "@/lib/owner-presentation";
+import { permissionLabel, providerLabel } from "@/lib/owner-presentation";
+import { capabilityProvider, ownerConnections } from "@/lib/owner-workspace";
 import { CAPABILITIES } from "@/lib/types";
 import { RelayError } from "@/lib/errors";
 
-export default async function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AgentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
-  const agent = await getAgent(user.accountId, (await params).id).catch((error: unknown) => {
-    if (error instanceof RelayError && error.status === 404) notFound();
-    throw error;
-  });
-  const activity = await listActivity(user.accountId, { agentId: agent.id, limit: 8 });
+  const agent = await getAgent(user.accountId, (await params).id).catch((error: unknown) => { if (error instanceof RelayError && error.status === 404) notFound(); throw error; });
+  const [activity, connections] = await Promise.all([listActivity(user.accountId, { agentId: agent.id, limit: 6 }), ownerConnections(user.accountId)]);
+  const requested = (await searchParams).tab;
+  const tab = ["overview", "capabilities", "connections", "activity", "security"].includes(requested ?? "") ? requested : "overview";
   const grants = new Map(agent.grants.map((grant) => [grant.capability, grant.effect]));
+  const allowed = agent.grants.filter((grant) => grant.effect === "ALLOW");
   const lastUsed = agent.credentials.flatMap((credential) => credential.lastUsedAt ? [credential.lastUsedAt] : []).sort().at(-1);
-  return <>
-    <PageHeader eyebrow="Your Agent" title={agent.name} description={agent.description || "Agent registered with your account"} action={<Status value={agent.status} />} />
-    <div className="owner-actions"><Link className="text-link" href={`/activity?agent=${encodeURIComponent(agent.id)}`}>View all activity</Link><Link className="text-link" href={`/agents/${agent.id}/advanced`}>Advanced Agent tools</Link></div>
-    <section className="grid two-col section-gap"><div className="stack"><section className="card" id="permissions"><h2>Permissions</h2>
-      <p className="subtle">These are this Agent’s recorded permissions. An allowed permission still requires the relevant service, policy and resource access. An active identity does not mean every service is ready.</p>
-      <ul className="owner-list">{CAPABILITIES.filter((capability) => grants.get(capability) === "ALLOW").map((capability) => <li className="owner-row" key={capability}><span>{permissionLabel(capability)}</span><span className="owner-outcome success">Allowed by grant</span></li>)}</ul>
-      {!agent.grants.some((grant) => grant.effect === "ALLOW") && <p>No permissions are currently granted.</p>}
-      <details className="technical-details"><summary>Other permissions — not granted</summary><ul className="owner-list">{CAPABILITIES.filter((capability) => grants.get(capability) !== "ALLOW").map((capability) => <li className="owner-row" key={capability}><span>{permissionLabel(capability)}</span><span className="owner-outcome neutral">{grants.get(capability) === "DENY" ? "Denied by grant" : "Not granted"}</span></li>)}</ul></details>
-    </section><section className="card"><h2>Recent activity</h2><ActivityTimeline activity={activity} /></section></div>
-    <aside className="stack"><section className="card"><h2>About this Agent</h2><dl className="owner-facts"><dt>Status</dt><dd>{agent.status}</dd><dt>Last active</dt><dd>{lastUsed ? `${new Date(lastUsed).toLocaleString("en-US", { timeZone: "UTC" })} UTC` : "No activity recorded"}</dd><dt>Registered</dt><dd>{new Date(agent.createdAt).toLocaleDateString("en-US", { timeZone: "UTC" })}</dd></dl><p className="subtle">Application identity and runtime sessions can be inspected in Advanced Agent tools. A reported application name is not proof of a verified connection.</p></section>
-    <section className="card"><h2>Connection access</h2><p className="subtle">Permissions do not automatically connect a service. Review your account’s connections alongside this Agent’s permissions.</p><Link className="text-link" href="/connections">View connections →</Link></section></aside></section>
+  return <><PageHeader eyebrow="AGENT MANAGEMENT" title={agent.name} description={agent.description || "A scoped identity in your workspace."} action={<Status value={agent.status} />} />
+    <nav className="owner-tabs" aria-label="Agent sections">{["Overview", "Capabilities", "Connections", "Activity", "Security"].map((label) => <Link key={label} href={`/agents/${agent.id}?tab=${label.toLowerCase()}`} aria-current={tab === label.toLowerCase() ? "page" : undefined}>{label}</Link>)}</nav>
+    {tab === "overview" && <div className="operations-layout"><div className="stack"><section className="card"><div className="section-heading"><h2>Permissions</h2><Link className="text-link" href={`/agents/${agent.id}?tab=capabilities`}>Manage capabilities →</Link></div><p className="subtle">{allowed.length} explicit grants. Connections and execution policies still apply.</p><ul className="owner-list">{allowed.map((grant) => <li className="owner-row" key={grant.capability}><span>{permissionLabel(grant.capability)}</span><span className="owner-outcome">Allowed by grant</span></li>)}</ul>{!allowed.length && <p className="subtle">No capabilities granted. This Agent starts with no access.</p>}</section><section className="card"><div className="section-heading"><h2>Recent activity</h2><Link className="text-link" href={`/agents/${agent.id}?tab=activity`}>View all activity</Link></div><ActivityTimeline activity={activity} /></section></div><aside className="card"><h2>Identity at a glance</h2><dl className="owner-facts"><dt>Status</dt><dd>{agent.status}</dd><dt>Last active</dt><dd><RelativeTime value={lastUsed} /></dd><dt>Registered</dt><dd>{new Date(agent.createdAt).toLocaleDateString("en-US", { timeZone: "UTC" })}</dd><dt>Granted services</dt><dd>{[...new Set(allowed.map((grant) => capabilityProvider(grant.capability)))].map(providerLabel).join(", ") || "None"}</dd></dl><Link className="text-link" href={`/agents/${agent.id}?tab=security`}>Review security →</Link></aside></div>}
+    {tab === "capabilities" && <section className="card"><h2>Capability grants</h2><p className="subtle">These are organization-managed Agent grants. Allowing a capability does not override policy, resource scope, qualification or execution admission.</p><ul className="grant-list">{CAPABILITIES.map((capability) => <li key={capability}><div><strong>{permissionLabel(capability)}</strong><small>{providerLabel(capabilityProvider(capability))} · {grants.get(capability) === "ALLOW" ? "Allowed by grant" : grants.get(capability) === "DENY" ? "Denied by grant" : "Not granted"}</small></div><GrantControl agentId={agent.id} capability={capability} allowed={grants.get(capability) === "ALLOW"} /></li>)}</ul></section>}
+    {tab === "connections" && <section className="card"><h2>Connection access</h2><p className="subtle">Account-owned service credentials are never copied to an Agent. A grant and a usable connection are both required.</p>{connections.map((connection) => { const hasGrant = allowed.some((grant) => capabilityProvider(grant.capability) === connection.provider.toUpperCase()); return <div className="agent-record" key={connection.id}><span className="provider-mark">{connection.provider.slice(0, 1).toUpperCase()}</span><div><strong>{providerLabel(connection.provider)}</strong><p>{hasGrant ? "Relevant capability granted" : "No relevant capability granted"} · {connection.authentication}</p><Link className="text-link" href="/connections">Manage service</Link></div><Status value={connection.state} /></div>; })}{!connections.length && <EmptyState title="No service connections yet"><Link className="text-link" href="/connections">Explore available integrations</Link></EmptyState>}</section>}
+    {tab === "activity" && <section className="card"><div className="section-heading"><h2>Latest operations</h2><Link className="text-link" href={`/activity?agent=${encodeURIComponent(agent.id)}`}>Search all activity →</Link></div><ActivityTimeline activity={activity} /></section>}
+    {tab === "security" && <div className="stack"><section className="card"><h2>Agent access</h2><p className="subtle">Disable this Agent to stop its access while retaining its history. Permanent retirement and profile editing are not implemented in the current Agent contract.</p><AgentStatusControl agentId={agent.id} disabled={agent.status === "DISABLED"} /></section><section className="card"><div className="section-heading"><h2>Credentials</h2><Link className="text-link" href={`/agents/${agent.id}/advanced`}>Advanced Agent tools →</Link></div>{agent.credentials.length ? <ul className="owner-list">{agent.credentials.map((credential) => <li className="owner-row" key={credential.id}><div><strong>{credential.name}</strong><p className="subtle">Last used: <RelativeTime value={credential.lastUsedAt} />{credential.expiresAt && <> · Expires {new Date(credential.expiresAt).toLocaleDateString("en-US", { timeZone: "UTC" })}</>}</p></div><Status value={credential.revokedAt ? "REVOKED" : credential.expiresAt && Date.parse(credential.expiresAt) <= Date.now() ? "EXPIRED" : "ACTIVE"} /></li>)}</ul> : <p className="subtle">No credentials configured.</p>}<p className="subtle">Existing rotation, revocation and session diagnostics remain in Advanced Agent tools. Credentials are shown only at creation.</p><details className="technical-details"><summary>Identity reference</summary><code>{agent.id}</code></details></section></div>}
   </>;
 }
