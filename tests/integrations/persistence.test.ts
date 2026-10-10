@@ -146,6 +146,10 @@ describe("PostgreSQL provider lifecycle and bounded Golden Journey", () => {
     expect(receipts[0]).toEqual(receipts[1]); expect(receipts[0].code).toBe("CROSS_DATABASE_ORDERING_UNQUALIFIED");
     expect(receipts[0].state).toBe("NOT_DISPATCHED"); expect(provider.sdk.tools.execute).not.toHaveBeenCalled();
     expect(await listAuditRecords(scope.accountId)).toHaveLength(2);
+    const denial = (await listAuditRecords(scope.accountId))[1];
+    expect(denial.actorPrincipalId).toBeNull();
+    expect(denial.agentId).toBe(scope.agentId);
+    expect(denial.details).toMatchObject({ ownerPrincipalId: scope.ownerPrincipalId });
     expect(await verifyAuditRecords(await listAuditRecords(scope.accountId), signer)).toBe(true);
     console.info(JSON.stringify({ benchmark: "synthetic-integration-journey", connectionPersistenceMs: connected - started,
       discoveryMs: discovered - connected, authenticatedDenialMs: performance.now() - discovered,

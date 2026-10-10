@@ -34,9 +34,10 @@ export class IntegrationConnectionStore {
   constructor(private readonly signer: AuditSigner) {}
 
   private async evidence(transaction: RelayDatabase, scope: IntegrationScope, eventType: string, code: string, connectionId: string, requestHash?: string) {
-    await appendAuditRecordInTransaction(transaction, { accountId: scope.accountId, actorPrincipalId: scope.ownerPrincipalId,
+    await appendAuditRecordInTransaction(transaction, { accountId: scope.accountId,
+      actorPrincipalId: eventType.startsWith("integration.connection.") ? scope.ownerPrincipalId : undefined,
       agentId: scope.agentId, provider: "composio", eventType, outcome: code,
-      details: { connectionId, scopeDigest: canonicalHash(scope), ...(requestHash ? { requestHash } : {}) } }, this.signer);
+      details: { connectionId, ownerPrincipalId: scope.ownerPrincipalId, scopeDigest: canonicalHash(scope), ...(requestHash ? { requestHash } : {}) } }, this.signer);
   }
 
   /** Internal lifecycle completion, never accepts a browser-supplied provider status.

@@ -17,6 +17,7 @@ Scope: additive Composio persistence, catalog/server action, authenticated gatew
 1. Empty connection selector could omit the connection predicate in the new internal persistence helper. Fixed by making the selector required, validating nonempty length, and always including exact ID equality. Regression test verifies empty read/revoke cannot affect the existing connection. The owner action already validated this input, but the internal helper is now safe independently.
 2. Browser qualification found full binding metadata passed where a strict four-field scope was required. Fixed by explicitly projecting the scope from server-resolved records. Browser revoke/refresh now passes.
 3. Local revocation initially required an ACTIVE agent. Changed management-only checks to permit revocation for disabled agents while retaining active account and owner membership requirements; discovery still requires ACTIVE.
+4. Shared audit construction initially attributed agent denials and provider events to the owner. Corrected it to record the agent separately and retain owner scope in details, without claiming the owner acted. Owner lifecycle actions retain owner attribution. Catalog activity filters on owner scope rather than actor identity. Regression evidence verifies denial attribution and signature validity.
 
 ## Dependency advisories — unresolved baseline risk
 

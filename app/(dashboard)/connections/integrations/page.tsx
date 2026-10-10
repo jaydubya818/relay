@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { PageHeader, Status } from "@/components/page";
 import { IntegrationRevoke } from "@/components/integration-revoke";
 import { integrationOwner } from "@/lib/integrations/owner";
@@ -35,7 +35,7 @@ export default async function IntegrationCatalog({ searchParams }: { searchParam
       records = await ownerIntegrationConnections(owner.accountId, owner.ownerPrincipalId);
       directory = await db().select({ id: agents.id, name: agents.name }).from(agents).where(eq(agents.accountId, owner.accountId));
       recent = await db().select({ id: auditRecords.id, eventType: auditRecords.eventType, outcome: auditRecords.outcome }).from(auditRecords)
-        .where(and(eq(auditRecords.accountId, owner.accountId), eq(auditRecords.actorPrincipalId, owner.ownerPrincipalId), eq(auditRecords.provider, "composio")))
+        .where(and(eq(auditRecords.accountId, owner.accountId), sql`${auditRecords.details}->>'ownerPrincipalId' = ${owner.ownerPrincipalId}`, eq(auditRecords.provider, "composio")))
         .orderBy(desc(auditRecords.sequence)).limit(10);
     }
   } catch { unavailable = true; }
