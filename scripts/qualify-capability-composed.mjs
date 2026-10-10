@@ -4,7 +4,6 @@ import { promisify } from 'node:util';
 import { mkdtemp, readFile, writeFile, rm, mkdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
-import { tmpdir } from 'node:os';
 import { generateKeyPairSync, randomUUID, sign } from 'node:crypto';
 import { createServer } from 'node:http';
 import pg from 'pg';
@@ -171,7 +170,7 @@ try {
   await mkdir('docs/capability-control/evidence', { recursive: true });
   await writeFile(`docs/capability-control/evidence/composed-${platformOwner ? 'platform' : 'ordinary'}.json`, JSON.stringify({ status: 'PASS', checks, scope: 'real PostgreSQL + native Relay APIs/HTTP route + real Convex Mission admission', activeResourceStop: 'PENDING_BACKEND', paidOperations: 0 }, null, 2) + '\n');
 } catch (error) {
-  try { console.error(await readFile(join(directory, 'log'), 'utf8')); } catch {}
+  console.error(await readFile(join(directory, 'log'), 'utf8').catch(() => 'Disposable PostgreSQL log unavailable.'));
   throw error;
 } finally {
   if (server) await new Promise(resolve => server.close(resolve));
