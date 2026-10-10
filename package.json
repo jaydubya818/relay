@@ -5,7 +5,7 @@
   "description": "A universal capability plane for AI agents.",
   "packageManager": "pnpm@9.0.0",
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22.22.3"
   },
   "scripts": {
     "dev": "next dev",
@@ -43,6 +43,7 @@
     "worker:channels": "tsx scripts/channel-worker.ts"
   },
   "dependencies": {
+    "@composio/core": "0.22.0",
     "@vercel/connect": "0.8.0",
     "drizzle-orm": "^0.45.2",
     "next": "15.5.24",
