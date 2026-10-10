@@ -1,3 +1,5 @@
+import { db } from '@/lib/db';
+import { policyDecisions } from '@/lib/db/schema';
 import { generateKeyPairSync, sign } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApprovalRequest, decideApproval } from "@/lib/v2/approvals";
@@ -5,9 +7,10 @@ import { createBudget, releaseBudgetReservation, reserveBudget } from "@/lib/v2/
 import { canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
 import { createLocalEd25519Signer } from "@/lib/v2/evidence";
 import { authorizeLeaseCall, createWorkloadBootstrap, emergencyRevokeAgent, exchangeWorkloadBootstrap, introspectLease, issueCapabilityLease, revokeLease } from "@/lib/v2/leases";
-import { createV2Agent, issueAgentPassport } from "@/lib/v2/passports";
+import { createV2Agent, issueAgentPassport, exportAgentPassport, revokeAgentPassport } from "@/lib/v2/passports";
 import { evaluatePolicy, publishRelaySafetyPolicy, registerCapabilityDefinition, type PolicyRule } from "@/lib/v2/policy";
 import { registerRuntimeClient } from "@/lib/v2/runtime-clients";
+import { manageCapabilityAdministration } from "@/lib/v2/policy/administration";
 import { cleanupDatabase, freshDatabase, secondAccount } from "../helpers";
 
 function proposedAction(accountId: string, agentId: string, runtimeClientId: string, capabilityName: string, target = "target-1"): ActionIntent {
@@ -15,7 +18,7 @@ function proposedAction(accountId: string, agentId: string, runtimeClientId: str
   return { schemaVersion: "relay.action-intent.v2", id: `act_${crypto.randomUUID().replaceAll("-", "")}`, accountId, agentId, runtimeClientId, taskId: "tsk_12345678", ...material, idempotencyKey: crypto.randomUUID(), createdAt: new Date().toISOString(), canonicalHash: canonicalHash(material) };
 }
 
-async function setup(effectClass: "read" | "financial" = "read", policyEffect: "ALLOW" | "REQUIRE_APPROVAL" = "ALLOW", meteringDimensions: Array<"TOKENS"> = []) {
+async function setup(effectClass: "read" | "financial" = "read", policyEffect: "ALLOW" | "REQUIRE_APPROVAL" = "ALLOW", meteringDimensions: Array<"TOKENS"> = [], parameters?: ActionIntent["parameters"]) {
   const { accountId, principalId } = await freshDatabase();
   const signer = createLocalEd25519Signer("lease-key");
   const resolver = { publicKeyForKeyId: async (keyId: string) => keyId === signer.keyId ? await signer.publicKeyPem() : undefined };
@@ -27,6 +30,7 @@ async function setup(effectClass: "read" | "financial" = "read", policyEffect: "
   const agent = await createV2Agent({ accountId, ownerPrincipalId: principalId, name: "Lease Agent" }, signer);
   await issueAgentPassport({ accountId, agentId: agent.agentId, ownerPrincipalId: principalId, policy: { trustTier: "HIGH_ASSURANCE", capabilityEligibility: [{ name: capabilityName, version: "1.0" }], policyReferences: ["lease-safety"], budgetReferences: [], allowedEnvironments: { providerIds: ["relay-managed"], minimumAssurance: "managed-equivalent" }, dataAccess: [], expiresAt: "2099-01-01T00:00:00.000Z" } }, signer);
   const action = proposedAction(accountId, agent.agentId, runtime.runtimeClientId, capabilityName);
+  if (parameters) { action.parameters = parameters; action.canonicalHash = canonicalHash({ capability: action.capability, resource: action.resource, parameters }); }
   const policy = await evaluatePolicy({ accountId, action, resourceResolver: { resolveOwnership: async () => ({ name: "resource.account_id", value: accountId, authoritative: true, observedAt: new Date(Date.now() - 100).toISOString(), expiresAt: new Date(Date.now() + 60_000).toISOString(), sourceRevision: "target:1" }) } }, signer);
   const pair = generateKeyPairSync("ed25519");
   const publicKeyPem = pair.publicKey.export({ type: "spki", format: "pem" }).toString();
@@ -39,6 +43,52 @@ function capabilityDomain(value: string) { return value === "read" ? "resource" 
 
 describe("Relay V2 capability leases and workload identity", () => {
   afterEach(cleanupDatabase);
+
+  it("Passport revocation fences existing leases and durably requests backend cleanup", async () => {
+    const fixture = await setup();
+    const lease = await issueCapabilityLease({ accountId: fixture.accountId, action: fixture.action, workloadId: fixture.workload.workloadId, workloadIdentityToken: fixture.workload.token, audience: "relay-pep", maxCalls: 2 }, fixture.signer, fixture.resolver);
+    const passport = await exportAgentPassport(fixture.accountId, fixture.agentId);
+    const result = await revokeAgentPassport({ accountId: fixture.accountId, agentId: fixture.agentId, ownerPrincipalId: fixture.principalId, passportId: passport.passport.passportId }, fixture.signer);
+    expect(result.propagation).toMatchObject({ status: 'PENDING_BACKEND' });
+    expect(await revokeAgentPassport({ accountId: fixture.accountId, agentId: fixture.agentId, ownerPrincipalId: fixture.principalId, passportId: passport.passport.passportId }, fixture.signer)).toEqual(result);
+    expect(await introspectLease(fixture.accountId, lease.leaseId)).toMatchObject({ active: false });
+    await expect(authorizeLeaseCall({ token: lease.token, expectedAccountId: fixture.accountId, expectedAudience: 'relay-pep', expectedWorkloadId: fixture.workload.workloadId, action: fixture.action, callId: 'after-passport-revocation', online: true }, fixture.resolver, fixture.signer)).rejects.toMatchObject({ status: 403 });
+    await expect(issueCapabilityLease({ accountId: fixture.accountId, action: fixture.action, workloadId: fixture.workload.workloadId, workloadIdentityToken: fixture.workload.token, audience: 'relay-pep', maxCalls: 1 }, fixture.signer, fixture.resolver)).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('rejects a prior ALLOW decision after account policy activates DENY while preserving an admitted lease', async () => {
+    const f = await setup();
+    const request = { accountId: f.accountId, action: f.action, workloadId: f.workload.workloadId, workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 1 };
+    const admitted = await issueCapabilityLease(request, f.signer, f.resolver);
+    const staged = await manageCapabilityAdministration(f, { operation: 'stage_policy', name: 'new-denial', layer: 'ACCOUNT',
+      rules: [{ id: 'deny', effect: 'DENY', reasonCode: 'ADMINISTRATOR_DENIED', match: { capability: { name: f.capabilityName, version: '1.0' } } }] }, f.signer) as { bundleId: string };
+    await manageCapabilityAdministration(f, { operation: 'activate_policy', bundleId: staged.bundleId, password: 'correct-horse-battery-staple' }, f.signer);
+    await expect(issueCapabilityLease(request, f.signer, f.resolver)).rejects.toThrow('stale');
+    expect(await introspectLease(f.accountId, admitted.leaseId)).toMatchObject({ active: true });
+  });
+
+  it('serializes concurrent lease calls and revocation without resurrecting authority', async () => {
+    const f = await setup();
+    const lease = await issueCapabilityLease({ accountId: f.accountId, action: f.action, workloadId: f.workload.workloadId, workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 2 }, f.signer, f.resolver);
+    await Promise.allSettled([
+      authorizeLeaseCall({ token: lease.token, expectedAccountId: f.accountId, expectedAudience: 'relay-pep', expectedWorkloadId: f.workload.workloadId, action: f.action, callId: 'racing', online: true }, f.resolver, f.signer),
+      revokeLease({ accountId: f.accountId, leaseId: lease.leaseId, reason: 'qualification' }, f.signer),
+    ]);
+    expect(await introspectLease(f.accountId, lease.leaseId)).toMatchObject({ active: false });
+    await expect(authorizeLeaseCall({ token: lease.token, expectedAccountId: f.accountId, expectedAudience: 'relay-pep', expectedWorkloadId: f.workload.workloadId, action: f.action, callId: 'after-revocation', online: true }, f.resolver, f.signer)).rejects.toBeDefined();
+  });
+
+  it('binds original action digests while keeping secret-bearing evidence redacted', async () => {
+    const secret = 'synthetic-private-token';
+    const f = await setup('read', 'ALLOW', [], { token: secret });
+    const rows = await db().select().from(policyDecisions);
+    expect(JSON.stringify(rows)).not.toContain(secret);
+    const request = { accountId: f.accountId, action: f.action, workloadId: f.workload.workloadId, workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 1 };
+    await expect(issueCapabilityLease(request, f.signer, f.resolver)).resolves.toHaveProperty('leaseId');
+    const changed = { ...f.action, parameters: { token: 'changed' } };
+    changed.canonicalHash = canonicalHash({ capability: changed.capability, resource: changed.resource, parameters: changed.parameters });
+    await expect(issueCapabilityLease({ ...request, action: changed }, f.signer, f.resolver)).rejects.toThrow('Action or Passport changed');
+  });
 
   it("uses one-time proof-of-possession workload bootstrap with tenant binding", async () => {
     const fixture = await setup();

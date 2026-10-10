@@ -1,3 +1,4 @@
+import { enqueuePolicyPropagation } from "./propagation";
 import { lockActiveAccount } from "@/lib/account-fence";
 import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
@@ -40,6 +41,7 @@ export async function registerCapabilityDefinition(input: CapabilityDefinition, 
 
 async function createPolicyBundleDocument(input: { accountId: string | null; name: string; layer: PolicyBundleDocument["layer"]; rules: PolicyBundleDocument["rules"]; createdByPrincipalId?: string }, signer: AuditSigner, activate: boolean) {
   return await withTransaction(async (transaction) => {
+    if (!input.accountId) await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended('relay-safety-policy', 0))`);
     if (input.accountId) {
       await lockActiveAccount(transaction, input.accountId);
       await requireMembership({ accountId: input.accountId, principalId: input.createdByPrincipalId!, allowedRoles: ["OWNER", "ADMIN"] });
@@ -92,6 +94,8 @@ export async function activateAccountPolicy(input: { accountId: string; actorPri
     if (!stepUp) throw new RelayError("INVALID_CREDENTIAL", "Fresh action-bound step-up evidence is required.", undefined, 401);
     await transaction.update(policyBundles).set({ status: "RETIRED", retiredAt: now() }).where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.name, bundle.name), eq(policyBundles.layer, bundle.layer), eq(policyBundles.status, "ACTIVE")));
     await transaction.update(policyBundles).set({ status: "ACTIVE", activatedAt: now() }).where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.id, bundle.id)));
+    await enqueuePolicyPropagation(transaction, { accountId: input.accountId, aggregateId: bundle.id + ':activated',
+      kind: 'POLICY_CHANGED', revision: bundle.version, source: { bundleHash: bundle.bundleHash, status: 'ACTIVATED', layer: bundle.layer } }, signer);
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.actorPrincipalId, eventType: "policy.activated", outcome: "SUCCESS", details: { bundleId: bundle.id, bundleHash: bundle.bundleHash, layer: bundle.layer, version: bundle.version } }, signer);
   });
 }
@@ -106,6 +110,8 @@ export async function retireAccountPolicy(input: { accountId: string; actorPrinc
     const [stepUp] = await transaction.select({ id: stepUpChallenges.id }).from(stepUpChallenges).where(and(eq(stepUpChallenges.id, input.stepUpChallengeId), eq(stepUpChallenges.accountId, input.accountId), eq(stepUpChallenges.principalId, input.actorPrincipalId), eq(stepUpChallenges.actionClass, "policy.retire"), eq(stepUpChallenges.actionHash, bundle.bundleHash), eq(stepUpChallenges.status, "CONSUMED"), gt(stepUpChallenges.consumedAt, new Date(Date.now() - 600000).toISOString()))).limit(1);
     if (!stepUp) throw new RelayError("INVALID_CREDENTIAL", "Fresh action-bound step-up evidence is required.", undefined, 401);
     await transaction.update(policyBundles).set({ status: "RETIRED", retiredAt: now() }).where(eq(policyBundles.id, bundle.id));
+    await enqueuePolicyPropagation(transaction, { accountId: input.accountId, aggregateId: bundle.id + ':retired',
+      kind: 'POLICY_CHANGED', revision: bundle.version, source: { bundleHash: bundle.bundleHash, status: 'RETIRED', layer: bundle.layer } }, signer);
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.actorPrincipalId, eventType: "policy.retired", outcome: "SUCCESS", details: { bundleId: bundle.id, bundleHash: bundle.bundleHash, layer: bundle.layer, version: bundle.version } }, signer);
   });
 }
@@ -144,7 +150,7 @@ async function persistDecision(input: { accountId: string; action: ActionIntent;
   const expiresAt = new Date(Math.min(Date.now() + 60_000, ...(factExpiry.length ? factExpiry : [Date.now() + 60_000]))).toISOString();
   const persistableSnapshot = redactForEvidence(input.snapshot) as unknown as PolicyEvaluationSnapshot;
   await withTransaction(async (transaction) => {
-    await transaction.insert(policyDecisions).values({ id: decisionId, accountId: input.accountId, actionIntentId: input.action.id, agentId: input.action.agentId, outcome: input.result.outcome, reasonCodes: input.result.reasonCodes, obligations: input.result.obligations, capabilityDefinitionHash: input.capabilityHash, policyBundleHashes: input.bundleHashes, materialFacts: persistableSnapshot.facts, evaluationSnapshot: { snapshot: persistableSnapshot, result: input.result }, expiresAt });
+    await transaction.insert(policyDecisions).values({ id: decisionId, accountId: input.accountId, actionIntentId: input.action.id, agentId: input.action.agentId, outcome: input.result.outcome, reasonCodes: input.result.reasonCodes, obligations: input.result.obligations, capabilityDefinitionHash: input.capabilityHash, policyBundleHashes: input.bundleHashes, materialFacts: persistableSnapshot.facts, evaluationSnapshot: { snapshot: persistableSnapshot, result: input.result, actionDigest: canonicalHash(input.snapshot.action), passportDigest: canonicalHash(input.snapshot.passport) }, expiresAt });
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, agentId: input.action.agentId, runtimeClientId: input.action.runtimeClientId, taskId: input.action.taskId, actionIntentId: input.action.id, policyDecisionId: decisionId, eventType: "policy.evaluated", outcome: input.result.outcome, details: { reasonCodes: input.result.reasonCodes, matchedRuleIds: input.result.matchedRuleIds, capabilityDefinitionHash: input.capabilityHash, policyBundleHashes: input.bundleHashes } }, input.signer);
   });
   return { decisionId, expiresAt, ...input.result };

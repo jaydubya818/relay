@@ -1,9 +1,10 @@
+import { enqueuePolicyPropagation } from "@/lib/v2/policy/propagation";
 import { createPublicKey } from "node:crypto";
 import { purposeSigner } from "@/lib/v2/evidence/signing-provider";
 import { lockActiveAccount } from "@/lib/account-fence";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db, withTransaction, type RelayDatabase } from "@/lib/db";
-import { accounts, accountMemberships, principals, agentPassports, agents, capabilityGrants, passportImports } from "@/lib/db/schema";
+import { accounts, accountMemberships, principals, agentPassports, agents, capabilityGrants, passportImports, controlOutbox, agentRevocationEpochs, capabilityLeases } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { canonicalHash } from "@/lib/v2/contracts";
@@ -63,6 +64,8 @@ export async function issueAgentPassportInTransaction(input: IssuePassportInput,
   const payloadHash = canonicalHash(passport), signature = await passportSigner.sign(payloadHash);
   await transaction.update(agentPassports).set({ status: "SUPERSEDED", revokedAt: now() }).where(and(eq(agentPassports.accountId, input.accountId), eq(agentPassports.agentId, input.agentId), eq(agentPassports.status, "ACTIVE")));
   await transaction.insert(agentPassports).values({ id: passportId, accountId: input.accountId, agentId: input.agentId, version, trustTier: passport.trustTier, revocationEpoch, payload: passport, payloadHash, signature, signingKeyId: passportSigner.keyId, validFrom: passport.validFrom, expiresAt: passport.expiresAt });
+  await enqueuePolicyPropagation(transaction, { accountId: input.accountId, aggregateId: `passport:${input.agentId}`,
+    kind: 'POLICY_CHANGED', revision: version, source: { passportId, payloadHash, revocationEpoch } }, signer);
   await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.ownerPrincipalId, agentId: input.agentId, eventType: "passport.issued", outcome: "SUCCESS", details: { passportId, version, trustTier: passport.trustTier, payloadHash } }, signer);
   return { passport, payloadHash, signature, signingKeyId: passportSigner.keyId } satisfies SignedAgentPassport;
 }
@@ -112,11 +115,25 @@ export async function revokeAgentPassport(input: { accountId: string; agentId: s
     await requirePassportOwner(transaction, input.accountId, input.ownerPrincipalId, ownerOnly);
     const [current] = await transaction.select().from(agentPassports).where(and(eq(agentPassports.accountId, input.accountId), eq(agentPassports.agentId, input.agentId))).orderBy(desc(agentPassports.version)).limit(1);
     if (!current || current.id !== input.passportId) throw new RelayError("INVALID_INPUT", "Current Passport not found.", undefined, 404);
-    if (current.status === "REVOKED") return { revoked: true, version: current.version };
-    if (current.status !== "ACTIVE") throw new RelayError("INVALID_INPUT", "Passport is not active.", undefined, 409);
-    await transaction.update(agentPassports).set({ status: "REVOKED", revokedAt: now(), revocationEpoch: current.revocationEpoch + 1 }).where(eq(agentPassports.id, current.id));
-    await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.ownerPrincipalId, agentId: input.agentId, eventType: "passport.revoked", outcome: "SUCCESS", details: { passportId: current.id, version: current.version, revocationEpoch: current.revocationEpoch + 1 } }, signer);
-    return { revoked: true, version: current.version };
+    if (current.status === "REVOKED") {
+      const [event] = await transaction.select().from(controlOutbox).where(and(eq(controlOutbox.accountId, input.accountId),
+        eq(controlOutbox.idempotencyKey, `capability-policy:AGENT_REVOKED:${input.agentId}:${current.revocationEpoch}`))).limit(1);
+      if (event) return { revoked: true, version: current.version, propagation: { eventId: event.id,
+        payloadHash: (event.payload as { payloadHash: string }).payloadHash, status: 'PENDING_BACKEND' as const } };
+    }
+    if (current.status !== "ACTIVE" && current.status !== "REVOKED") throw new RelayError("INVALID_INPUT", "Passport is not active.", undefined, 409);
+    await transaction.insert(agentRevocationEpochs).values({ accountId: input.accountId, agentId: input.agentId, epoch: current.revocationEpoch + 1 })
+      .onConflictDoUpdate({ target: [agentRevocationEpochs.accountId, agentRevocationEpochs.agentId],
+        set: { epoch: sql`greatest(${agentRevocationEpochs.epoch}, ${current.revocationEpoch}) + 1`, updatedAt: now() } });
+    const [epoch] = await transaction.select().from(agentRevocationEpochs).where(and(eq(agentRevocationEpochs.accountId, input.accountId), eq(agentRevocationEpochs.agentId, input.agentId))).limit(1);
+    const revoked = await transaction.update(capabilityLeases).set({ status: "REVOKED", revokedAt: now() })
+      .where(and(eq(capabilityLeases.accountId, input.accountId), eq(capabilityLeases.agentId, input.agentId), eq(capabilityLeases.status, "ACTIVE"))).returning({ id: capabilityLeases.id });
+    await transaction.update(agentPassports).set({ status: "REVOKED", revokedAt: now(), revocationEpoch: epoch!.epoch }).where(eq(agentPassports.id, current.id));
+    const propagation = await enqueuePolicyPropagation(transaction, { accountId: input.accountId, aggregateId: input.agentId,
+      kind: 'AGENT_REVOKED', revision: epoch!.epoch, source: { passportId: current.id, passportVersion: current.version,
+        revokedLeaseIds: revoked.map(lease => lease.id).sort() } }, signer);
+    await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.ownerPrincipalId, agentId: input.agentId, eventType: "passport.revoked", outcome: "SUCCESS", details: { passportId: current.id, version: current.version, revocationEpoch: epoch!.epoch, propagation } }, signer);
+    return { revoked: true, version: current.version, propagation };
   });
 }
 

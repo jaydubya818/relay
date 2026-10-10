@@ -11,7 +11,7 @@ try {
   await execFile(join(bin,'pg_ctl'),['-D',join(directory,'data'),'-l',join(directory,'log'),'-o',`-k ${directory} -h 127.0.0.1 -p 55495`,'-w','start']); started=true;
   const env={...process.env,RELAY_TEST_DATABASE_URL:'postgresql://capability_admin@127.0.0.1:55495/postgres'};
   delete env.RELAY_DATABASE_URL;
-  const {stdout,stderr}=await execFile('pnpm',['exec','vitest','run','tests/v2/capability-administration.test.ts','tests/v2/capability-administration-route.test.ts','tests/v2/policy.test.ts','tests/v2/passports.test.ts','tests/federation/message-policy.test.ts','--fileParallelism=false'],{env,maxBuffer:5_000_000});
+  const {stdout,stderr}=await execFile('pnpm',['exec','vitest','run','tests/v2/policy-propagation.test.ts','tests/v2/leases.test.ts','tests/v2/capability-administration.test.ts','tests/v2/capability-administration-route.test.ts','tests/v2/policy.test.ts','tests/v2/passports.test.ts','tests/federation/message-policy.test.ts','--fileParallelism=false','--testTimeout=20000'],{env,maxBuffer:5_000_000});
   process.stdout.write(stdout); process.stderr.write(stderr);
   await mkdir('docs/capability-control/evidence',{recursive:true});
   await writeFile('docs/capability-control/evidence/administration.txt',(stdout+'\n'+stderr).trim()+'\n');

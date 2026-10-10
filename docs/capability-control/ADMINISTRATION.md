@@ -20,3 +20,32 @@ Run `node scripts/qualify-capability-administration.mjs` for disposable PostgreS
 ## Preview-build incident
 
 The initial checkpoint push exposed a missing Vercel exclusion for this new branch and triggered two unintended preview builds. Both were explicitly cancelled, verified CANCELED with target null and aliasAssigned false, before readiness. The branch exclusion is now explicit in vercel.json. No production target, alias promotion, active external-alpha installation or paid execution was changed. Exact cancellation metadata is retained in evidence/preview-cancellation.json. The no-deployment boundary was not perfectly observed; this incident must remain visible in the checkpoint report.
+
+
+## Cross-system checkpoint
+
+Policy activation/retirement and Passport issuance/revocation now append signed
+policy-change envelopes to Relay's existing control outbox. This creates no
+capability registry. Passport revocation also increments the canonical execution
+revocation epoch and revokes active leases in the same transaction. Retry returns
+the original propagation reference. Lease issuance and online use serialize with
+revocation through the existing account lock.
+
+New leases require the current active bundle hashes and original action/Passport
+digests. The digests are computed before evidence redaction. Old decisions without
+them require reevaluation. Ordinary policy changes preserve previously admitted
+leases; explicit revocation invalidates their authority.
+
+Backend acknowledgments require an exact server-owned account, backend,
+installation, and public-key binding. Signatures bind the source event hash,
+sequence, admission fence, writer fence, authority invalidation, cleanup state,
+and evidence references. Concurrent duplicates deduplicate; older or regressive
+receipts fail. Delivery alone is not acknowledgment. Missing bindings and pending
+cleanup remain PENDING_BACKEND. Inspection rechecks source cancellation and the
+current verification key. Accounting remains PRESERVE_UNKNOWN throughout.
+
+Transport dispatch and receiver integration remain unqualified. These functions
+are not an authenticated HTTP receiver or proof of cross-database ordering.
+No live binding, backend worker, or production signing configuration was changed.
+The database qualification runner allows 20 seconds per test for local database
+setup; runtime deadlines and revocation SLO assertions are unchanged.

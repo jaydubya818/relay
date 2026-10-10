@@ -1,10 +1,11 @@
+import { lockActiveAccount } from "@/lib/account-fence";
 import { purposeSigner } from "@/lib/v2/evidence/signing-provider";
 import { createHash, createPublicKey, randomBytes, verify as verifySignature } from "node:crypto";
-import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { hashSecret } from "@/lib/crypto";
 import { db, withTransaction } from "@/lib/db";
-import { agentPassports, agentRevocationEpochs, budgetReservations, budgets, capabilityDefinitions, capabilityLeases, leaseCallReceipts, policyDecisions, runtimeClients, workloadBootstraps, workloads } from "@/lib/db/schema";
+import { agentPassports, agentRevocationEpochs, budgetReservations, budgets, capabilityDefinitions, capabilityLeases, leaseCallReceipts, policyBundles, policyDecisions, runtimeClients, workloadBootstraps, workloads } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { consumeApprovalInTransaction } from "@/lib/v2/approvals";
@@ -113,15 +114,25 @@ export async function issueCapabilityLease(input: { accountId: string; action: A
   if (action.accountId !== input.accountId || canonicalHash({ capability: action.capability, resource: action.resource, parameters: action.parameters }) !== action.canonicalHash) throw new RelayError("INVALID_INPUT", "Action intent binding is invalid.");
   const workloadIdentity = await authenticateWorkloadToken(input.workloadIdentityToken, keyResolver, { accountId: input.accountId, workloadId: input.workloadId, audience: input.audience });
   if (workloadIdentity.agentId !== action.agentId || workloadIdentity.runtimeClientId !== action.runtimeClientId || workloadIdentity.taskId !== action.taskId) throw new RelayError("CAPABILITY_DENIED", "Workload identity does not match the action.", undefined, 403);
-  const issuedAt = now();
   return await withTransaction(async (transaction) => {
+    await transaction.execute(sql`SELECT pg_advisory_xact_lock_shared(hashtextextended('relay-safety-policy', 0))`);
+    await lockActiveAccount(transaction, input.accountId);
+    const issuedAt = now();
     const [workload] = await transaction.select().from(workloads).where(and(eq(workloads.accountId, input.accountId), eq(workloads.id, input.workloadId), eq(workloads.agentId, action.agentId), eq(workloads.runtimeClientId, action.runtimeClientId), eq(workloads.taskId, action.taskId), eq(workloads.audience, input.audience), eq(workloads.status, "ACTIVE"), gt(workloads.expiresAt, issuedAt))).limit(1);
     if (!workload) throw new RelayError("CAPABILITY_DENIED", "Active workload is unavailable.", undefined, 403);
     const [decision] = await transaction.select().from(policyDecisions).where(and(eq(policyDecisions.accountId, input.accountId), eq(policyDecisions.actionIntentId, action.id), eq(policyDecisions.agentId, action.agentId), gt(policyDecisions.expiresAt, issuedAt))).orderBy(desc(policyDecisions.createdAt)).limit(1);
     if (!decision || ["DENY", "ESCALATE"].includes(decision.outcome)) throw new RelayError("CAPABILITY_DENIED", "Policy decision does not permit lease issuance.", undefined, 403);
+    const currentBundles = await transaction.select({ hash: policyBundles.bundleHash }).from(policyBundles)
+      .where(and(or(isNull(policyBundles.accountId), eq(policyBundles.accountId, input.accountId)), eq(policyBundles.status, 'ACTIVE')));
+    if (canonicalHash(currentBundles.map(bundle => bundle.hash).sort()) !== canonicalHash([...decision.policyBundleHashes].sort()))
+      throw new RelayError('CAPABILITY_DENIED', 'Policy decision is stale; reevaluate current policy before admission.', undefined, 403);
     const [capability] = await transaction.select().from(capabilityDefinitions).where(and(eq(capabilityDefinitions.definitionHash, decision.capabilityDefinitionHash), eq(capabilityDefinitions.name, action.capability.name), eq(capabilityDefinitions.version, action.capability.version), eq(capabilityDefinitions.enabled, true))).limit(1);
     const [passportRow] = await transaction.select().from(agentPassports).where(and(eq(agentPassports.accountId, input.accountId), eq(agentPassports.agentId, action.agentId), eq(agentPassports.status, "ACTIVE"), gt(agentPassports.expiresAt, issuedAt))).orderBy(desc(agentPassports.version)).limit(1);
     if (!capability || !passportRow) throw new RelayError("CAPABILITY_DENIED", "Capability or Passport is unavailable.", undefined, 403);
+    const evaluated = decision.evaluationSnapshot as { actionDigest?: string; passportDigest?: string };
+    if (evaluated.actionDigest !== canonicalHash(action)
+      || evaluated.passportDigest !== canonicalHash(passportRow.payload))
+      throw new RelayError('CAPABILITY_DENIED', 'Action or Passport changed after policy evaluation.', undefined, 403);
     const meteringDimensions = capability.meteringDimensions;
     if (meteringDimensions.length && !input.budgetReservationId) throw new RelayError("CAPABILITY_DENIED", "A live budget reservation is required for this metered capability.", undefined, 403);
     let budgetReservation: typeof budgetReservations.$inferSelect | undefined;
@@ -201,6 +212,7 @@ export async function authorizeLeaseCall(input: { token: string; expectedAccount
     return { leaseId: claims.jti, claims, enforcement: "OFFLINE" as const };
   }
   return await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, input.expectedAccountId);
     const timestamp = now();
     const [lease] = await transaction.select().from(capabilityLeases).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, claims.jti), eq(capabilityLeases.tokenHash, canonicalHash(input.token)), eq(capabilityLeases.workloadId, input.expectedWorkloadId), eq(capabilityLeases.status, "ACTIVE"), gt(capabilityLeases.expiresAt, timestamp), isNull(capabilityLeases.revokedAt))).limit(1);
     if (!lease) throw new RelayError("CAPABILITY_DENIED", "Lease is inactive, expired, or revoked.", undefined, 403);
@@ -221,9 +233,9 @@ export async function authorizeLeaseCall(input: { token: string; expectedAccount
     }
     const inserted = await transaction.insert(leaseCallReceipts).values({ id: id("lcr"), accountId: input.expectedAccountId, leaseId: lease.id, callId: input.callId, actionHash: input.action.canonicalHash, workloadId: input.expectedWorkloadId }).onConflictDoNothing().returning({ id: leaseCallReceipts.id });
     if (!inserted.length) throw new RelayError("CAPABILITY_DENIED", "Lease call was replayed.", undefined, 409);
-    const [used] = await transaction.update(capabilityLeases).set({ callCount: sql`${capabilityLeases.callCount} + 1` }).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, lease.id), sql`${capabilityLeases.callCount} + ${capabilityLeases.delegatedCallCount} < ${capabilityLeases.maxCalls}`)).returning({ callCount: capabilityLeases.callCount, maxCalls: capabilityLeases.maxCalls, delegatedCallCount: capabilityLeases.delegatedCallCount });
+    const [used] = await transaction.update(capabilityLeases).set({ callCount: sql`${capabilityLeases.callCount} + 1` }).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, lease.id), eq(capabilityLeases.status, "ACTIVE"), isNull(capabilityLeases.revokedAt), sql`${capabilityLeases.callCount} + ${capabilityLeases.delegatedCallCount} < ${capabilityLeases.maxCalls}`)).returning({ callCount: capabilityLeases.callCount, maxCalls: capabilityLeases.maxCalls, delegatedCallCount: capabilityLeases.delegatedCallCount });
     if (!used) throw new RelayError("CAPABILITY_DENIED", "Lease call limit is exhausted.", undefined, 409);
-    if (used.callCount + used.delegatedCallCount >= used.maxCalls) await transaction.update(capabilityLeases).set({ status: "EXHAUSTED" }).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, lease.id)));
+    if (used.callCount + used.delegatedCallCount >= used.maxCalls) await transaction.update(capabilityLeases).set({ status: "EXHAUSTED" }).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, lease.id), eq(capabilityLeases.status, "ACTIVE"), isNull(capabilityLeases.revokedAt)));
     await appendAuditRecordInTransaction(transaction, { accountId: input.expectedAccountId, agentId: claims.sub, runtimeClientId: claims.runtimeClientId, taskId: claims.taskId, actionIntentId: input.action.id, policyDecisionId: claims.policyDecisionId, approvalDecisionId: claims.approvalDecisionId, leaseId: claims.jti, eventType: "lease.call_authorized", outcome: "SUCCESS", details: { callId: input.callId, callCount: used.callCount, maxCalls: used.maxCalls } }, signer);
     return { leaseId: claims.jti, claims, enforcement: "ONLINE" as const, remainingCalls: used.maxCalls - used.callCount - used.delegatedCallCount };
   });
@@ -253,6 +265,7 @@ export async function introspectLease(accountId: string, leaseId: string) {
 
 export async function revokeLease(input: { accountId: string; leaseId: string; reason: string }, signer: AuditSigner) {
   return await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, input.accountId);
     const active = await transaction.select().from(capabilityLeases).where(and(eq(capabilityLeases.accountId, input.accountId), eq(capabilityLeases.status, "ACTIVE")));
     const lease = active.find((entry) => entry.id === input.leaseId); if (!lease) return false;
     const revokedIds = new Set([lease.id]); let changed = true;
@@ -265,6 +278,7 @@ export async function revokeLease(input: { accountId: string; leaseId: string; r
 
 export async function emergencyRevokeAgent(accountId: string, agentId: string, signer: AuditSigner) {
   return await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, accountId);
     await transaction.insert(agentRevocationEpochs).values({ accountId, agentId, epoch: 1 }).onConflictDoUpdate({ target: [agentRevocationEpochs.accountId, agentRevocationEpochs.agentId], set: { epoch: sql`${agentRevocationEpochs.epoch} + 1`, updatedAt: now() } });
     const [epoch] = await transaction.select().from(agentRevocationEpochs).where(and(eq(agentRevocationEpochs.accountId, accountId), eq(agentRevocationEpochs.agentId, agentId))).limit(1);
     const revoked = await transaction.update(capabilityLeases).set({ status: "REVOKED", revokedAt: now() }).where(and(eq(capabilityLeases.accountId, accountId), eq(capabilityLeases.agentId, agentId), eq(capabilityLeases.status, "ACTIVE"))).returning({ id: capabilityLeases.id });
