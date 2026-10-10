@@ -176,3 +176,93 @@ describe("Relay V2 capability leases and workload identity", () => {
     await expect(authorizeLeaseCall(request, fixture.resolver, fixture.signer, counter)).rejects.toMatchObject({ status: 409 });
   });
 });
+
+it('ordered remote lease issuance requires durable exact ACKs and preserves duplicate retry', async () => {
+  const { createServer } = await import('node:http');
+  const { and, eq } = await import('drizzle-orm');
+  const { controlOutbox } = await import('@/lib/db/schema');
+  const { withTransaction } = await import('@/lib/db');
+  const { lockActiveAccount } = await import('@/lib/account-fence');
+  const { advanceRelayPolicyFence, flushRelayPolicyFences, forwardOwnerPolicyFence } = await import('@/lib/v2/policy/ordering');
+  const { signPolicyMessage, verifyPolicyMessage, policyMessageHash } = await import('@/lib/v2/policy/ordering-wire');
+  const makeKey = async (keyId: string) => {
+    const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    return { keyId, jwk: await crypto.subtle.exportKey('jwk', pair.privateKey) };
+  };
+  const f = await setup();
+  const source = await makeKey('owner-source'), receiver = await makeKey('receiver'), relay = await makeKey('relay');
+  let rejectDelivery = true, deliveries = 0;
+  const server = createServer(async (req, res) => {
+    try {
+      deliveries++;
+      if (rejectDelivery) { res.writeHead(503); res.end(); return; }
+      let body = ''; for await (const part of req) body += part;
+      const envelope = JSON.parse(body).envelope;
+      const fence = await verifyPolicyMessage(envelope, JSON.parse(envelope.message).authority === 'myeve' ? source : relay);
+      if (fence.kind !== 'FENCE') throw Error('expected fence');
+      const { kind: _kind, capabilityId: _capabilityId, operation: _operation, ...identity } = fence;
+      void _kind; void _capabilityId; void _operation;
+      const ack = await signPolicyMessage({ ...identity, kind: 'FENCE_ACK', fenceHash: await policyMessageHash(fence) }, receiver);
+      // The receiver fixture durably stores before responding; it is not native MissionControl admission.
+      await db().insert(controlOutbox).values({ id: 'ack_' + crypto.randomUUID(), accountId: f.accountId, aggregateType: 'test_receiver_ack', aggregateId: fence.policyId, type: 'test.ack', payload: ack, idempotencyKey: 'test-ack:' + fence.authority + ':' + fence.version, publishedAt: new Date().toISOString() }).onConflictDoNothing();
+      res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(ack));
+    } catch { res.writeHead(500); res.end(); }
+  });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const identity = { ownerId: 'owner', organizationId: f.accountId, installationId: 'isolated', backendId: 'missioncontrol', incarnation: 'boot-1', enrollmentVersion: 1 };
+    const destination = { ...identity, accountId: f.accountId, agentId: f.agentId, capabilityNames: { 'enterprise.missions': f.capabilityName }, endpoint: `http://127.0.0.1:${(server.address() as { port: number }).port}/fence`, sourceKey: source, backendKey: receiver };
+    process.env.RELAY_CAPABILITY_ENVIRONMENT = 'qualification';
+    process.env.RELAY_CAPABILITY_COORDINATION_JSON = JSON.stringify({ signer: relay, destinations: [destination] });
+    await withTransaction(async tx => { await lockActiveAccount(tx, f.accountId); await advanceRelayPolicyFence(tx, f.accountId); });
+    const issuedAt = Date.now();
+    const permit = { ...identity, kind: 'PERMIT' as const, authority: 'myeve' as const, version: 1, policyId: 'owner-policy-1', referenceId: crypto.randomUUID(), capabilityId: 'enterprise.missions', requiredCapabilities: ['work', 'missioncontrol', 'enterprise.missions'], registryVersion: 'test', agentId: f.agentId, agentRevision: 1, workId: 'mission-1', missionId: 'mission-1', workGeneration: 1, actionDigest: 'a'.repeat(64), budgetMicros: 0, issuedAt, expiresAt: issuedAt + 30000, sourcePermitHash: 'SELF' };
+    const remoteAdmission = await signPolicyMessage(permit, source);
+    f.action.parameters = { capabilityAdmissionDigest: await policyMessageHash(permit) };
+    f.action.canonicalHash = canonicalHash({ capability: f.action.capability, resource: f.action.resource, parameters: f.action.parameters });
+    await evaluatePolicy({ accountId: f.accountId, action: f.action, resourceResolver: { resolveOwnership: async () => ({ name: 'resource.account_id', value: f.accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'test:1' }) } }, f.signer);
+    const request = { accountId: f.accountId, action: f.action, workloadId: f.workload.workloadId, workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 1, remoteAdmission };
+    await expect(issueCapabilityLease(request, f.signer, f.resolver)).rejects.toThrow('PROPAGATION_PENDING');
+    await expect(flushRelayPolicyFences(f.accountId)).rejects.toThrow('DELIVERY_UNAVAILABLE');
+    rejectDelivery = false;
+    await flushRelayPolicyFences(f.accountId);
+    const [a, b] = await Promise.all([issueCapabilityLease(request, f.signer, f.resolver), issueCapabilityLease(request, f.signer, f.resolver)]);
+    expect(a).toEqual(b);
+    const proof = await verifyPolicyMessage(a.remotePermit!, relay);
+    expect(proof).toMatchObject({ kind: 'PERMIT', authority: 'relay', sourcePermitHash: await policyMessageHash(permit), referenceId: a.leaseId });
+    const ownerFence = await signPolicyMessage({ ...identity, kind: 'FENCE', authority: 'myeve', version: 2, policyId: 'owner-policy-2', capabilityId: 'missioncontrol', operation: 'disable' }, source);
+    const ack = await forwardOwnerPolicyFence(ownerFence), count = deliveries;
+    expect(await forwardOwnerPolicyFence(ownerFence)).toEqual(ack); expect(deliveries).toBe(count);
+    const [saved] = await db().select().from(controlOutbox).where(and(eq(controlOutbox.accountId, f.accountId), eq(controlOutbox.aggregateType, 'capability_owner_fence')));
+    expect(saved.payload).toMatchObject({ acknowledgment: ack });
+    await revokeLease({ accountId: f.accountId, leaseId: a.leaseId, reason: 'qualification' }, f.signer);
+    const [epoch] = await db().select().from(controlOutbox).where(and(eq(controlOutbox.accountId, f.accountId), eq(controlOutbox.aggregateType, 'capability_epoch')));
+    expect(epoch.payload).toMatchObject({ version: 2 });
+    expect((epoch.payload as { pending: string[] }).pending).toHaveLength(1);
+    await flushRelayPolicyFences(f.accountId);
+    expect(await introspectLease(f.accountId, a.leaseId)).toMatchObject({ active: false });
+    const freshSource = { ...permit, referenceId: crypto.randomUUID() };
+    const freshEnvelope = await signPolicyMessage(freshSource, source);
+    f.action = { ...f.action, id: `act_${crypto.randomUUID().replaceAll('-', '')}`, parameters: { capabilityAdmissionDigest: await policyMessageHash(freshSource) } };
+    f.action.canonicalHash = canonicalHash({ capability: f.action.capability, resource: f.action.resource, parameters: f.action.parameters });
+    await evaluatePolicy({ accountId: f.accountId, action: f.action, resourceResolver: { resolveOwnership: async () => ({ name: 'resource.account_id', value: f.accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'test:2' }) } }, f.signer);
+    const { revokeRuntimeClient } = await import('@/lib/v2/runtime-clients');
+    await revokeRuntimeClient({ accountId: f.accountId, actorPrincipalId: f.principalId, runtimeClientId: f.runtimeClientId }, f.signer);
+    await flushRelayPolicyFences(f.accountId);
+    await expect(issueCapabilityLease({ ...request, action: f.action, remoteAdmission: freshEnvelope }, f.signer, f.resolver)).rejects.toThrow('runtime authority');
+  } finally {
+    delete process.env.RELAY_CAPABILITY_COORDINATION_JSON; delete process.env.RELAY_CAPABILITY_ENVIRONMENT;
+    await new Promise<void>(resolve => server.close(() => resolve())); await cleanupDatabase();
+  }
+});
+
+
+it('a suspended canonical owner cannot turn a previously evaluated action into a new lease', async () => {
+  const f = await setup();
+  try {
+    const { suspendPrincipal } = await import('@/lib/v2/identity');
+    await suspendPrincipal({ accountId: f.accountId, principalId: f.principalId });
+    await expect(issueCapabilityLease({ accountId: f.accountId, action: f.action, workloadId: f.workload.workloadId,
+      workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 1 }, f.signer, f.resolver)).rejects.toThrow('Passport');
+  } finally { await cleanupDatabase(); }
+});

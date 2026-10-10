@@ -45,3 +45,19 @@ it('authenticates exact event/account/installation and distinguishes delivery, f
   await db().update(controlOutbox).set({ cancelledAt: new Date().toISOString() }).where(eq(controlOutbox.id, event.eventId));
   expect(await inspectPolicyPropagation(actor.accountId, event.eventId, [binding])).toMatchObject({ status: 'PENDING_BACKEND' });
 });
+
+
+it('dedicated policy deliveries cannot starve unrelated outbox publication', async () => {
+  const actor = await freshDatabase();
+  const { publishOutboxBatch } = await import('@/lib/v2/orchestration');
+  await db().insert(controlOutbox).values(Array.from({ length: 100 }, (_, index) => ({
+    id: `fence-${index}`, accountId: actor.accountId, aggregateType: index % 2 ? 'capability_fence' : 'capability_owner_fence',
+    aggregateId: 'old-epoch', type: 'capability.fence', payload: {}, idempotencyKey: `pending-${index}`,
+    createdAt: '2020-01-01T00:00:00.000Z',
+  })));
+  await db().insert(controlOutbox).values({ id: 'ordinary-event', accountId: actor.accountId,
+    aggregateType: 'task', aggregateId: 'task', type: 'task.command.ready', payload: {}, idempotencyKey: 'ordinary-event' });
+  const published: string[] = [];
+  expect(await publishOutboxBatch({ publish: async message => { published.push(message.id); } }, 100)).toBe(1);
+  expect(published).toEqual(['ordinary-event']);
+});

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lte, notInArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type RelayDatabase, withTransaction } from "@/lib/db";
 import { accounts, agents, controlOutbox, deadLetterEntries, eventRoutes, eventSourceCursors, federationRequests, taskCommands, taskStateHistory, v2Events, v2Tasks } from "@/lib/db/schema";
@@ -243,7 +243,7 @@ export async function replayDeadLetter(input: { accountId: string; actorPrincipa
 }
 
 export async function publishOutboxBatch(publisher: { publish(message: typeof controlOutbox.$inferSelect): Promise<void> }, limit = 100) {
-  const pending = await db().select().from(controlOutbox).where(and(isNull(controlOutbox.publishedAt), isNull(controlOutbox.cancelledAt))).orderBy(asc(controlOutbox.createdAt)).limit(limit);
+  const pending = await db().select().from(controlOutbox).where(and(isNull(controlOutbox.publishedAt), isNull(controlOutbox.cancelledAt), notInArray(controlOutbox.aggregateType, ["capability_fence", "capability_owner_fence"]))).orderBy(asc(controlOutbox.createdAt)).limit(limit);
   let published = 0;
   for (const message of pending) {
     const sent = await withTransaction(async (transaction) => {

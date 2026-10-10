@@ -1,8 +1,9 @@
 import { enqueuePolicyPropagation } from "./propagation";
+import { advanceRelayPolicyFence } from './ordering';
 import { lockActiveAccount } from "@/lib/account-fence";
 import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
-import { capabilityDefinitions, policyBundles, policyDecisions, stepUpChallenges } from "@/lib/db/schema";
+import { capabilityDefinitions, policyBundles, policyDecisions, stepUpChallenges, controlOutbox } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { actionIntentSchema, canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
@@ -54,6 +55,10 @@ async function createPolicyBundleDocument(input: { accountId: string | null; nam
     const signature = await signer.sign(bundleHash);
     const bundleId = id("pol");
     await transaction.insert(policyBundles).values({ id: bundleId, accountId: input.accountId, name: input.name, layer: input.layer, version: document.version, status: activate ? "ACTIVE" : "STAGED", rules: document.rules, bundleHash, signature, signingKeyId: signer.keyId, createdByPrincipalId: input.createdByPrincipalId, activatedAt: activate ? now() : undefined });
+    if (!input.accountId && activate) {
+      const enrolled = await transaction.select({ accountId: controlOutbox.accountId }).from(controlOutbox).where(eq(controlOutbox.aggregateType, 'capability_epoch'));
+      for (const row of enrolled) { await lockActiveAccount(transaction, row.accountId); await advanceRelayPolicyFence(transaction, row.accountId); }
+    }
     if (input.accountId) await appendAuditRecordInTransaction(transaction, {
       accountId: input.accountId, actorPrincipalId: input.createdByPrincipalId,
       eventType: "policy.staged", outcome: "SUCCESS",

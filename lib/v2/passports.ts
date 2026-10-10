@@ -1,3 +1,4 @@
+import { advanceRelayPolicyFence } from "@/lib/v2/policy/ordering";
 import { enqueuePolicyPropagation } from "@/lib/v2/policy/propagation";
 import { createPublicKey } from "node:crypto";
 import { purposeSigner } from "@/lib/v2/evidence/signing-provider";
@@ -188,6 +189,7 @@ export async function downgradeAgentTrust(input: { accountId: string; agentId: s
     if (TRUST_RANK[input.trustTier] >= TRUST_RANK[current.trustTier]) throw new RelayError("INVALID_INPUT", "New tier is not a trust downgrade.");
     const revocationEpoch = current.revocationEpoch + 1;
     await transaction.update(agentPassports).set({ trustTier: input.trustTier, revocationEpoch, status: "REVOKED", revokedAt: now() }).where(and(eq(agentPassports.accountId, input.accountId), eq(agentPassports.id, current.id)));
+    await advanceRelayPolicyFence(transaction, input.accountId, "revoke");
     await transaction.update(agents).set({ status: "DRAFT", updatedAt: now() }).where(and(eq(agents.accountId, input.accountId), eq(agents.id, input.agentId)));
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.actorPrincipalId, agentId: input.agentId, eventType: "passport.trust_downgraded", outcome: "SUCCESS", details: { from: current.trustTier, to: input.trustTier, revocationEpoch } }, signer);
     return { revocationEpoch };

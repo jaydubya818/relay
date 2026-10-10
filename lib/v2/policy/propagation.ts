@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+import { advanceRelayPolicyFence } from './ordering';
 import { z } from 'zod';
 import { lockActiveAccount } from '@/lib/account-fence';
 import { db, withTransaction, type RelayDatabase } from '@/lib/db';
@@ -29,6 +30,7 @@ export async function enqueuePolicyPropagation(transaction: RelayDatabase,
   input: { accountId: string; aggregateId: string; kind: 'POLICY_CHANGED' | 'AGENT_REVOKED'; revision: number; source: Record<string, unknown> },
   signer: AuditSigner) {
   signer = purposeSigner(signer, 'evidence');
+  await advanceRelayPolicyFence(transaction, input.accountId, input.kind === 'AGENT_REVOKED' ? 'revoke' : 'disable');
   const eventId = id('obx');
   const payload = { schema: 'relay.policy-change.v1', eventId, ...input, issuedAt: now(), accounting: 'PRESERVE_UNKNOWN' };
   const payloadHash = canonicalHash(payload);
