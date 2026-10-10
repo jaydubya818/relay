@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, like, sql } from 'drizzle-orm';
 import { withTransaction, type RelayDatabase } from '@/lib/db';
 import { controlOutbox } from '@/lib/db/schema';
 import { lockAccountDelivery } from '@/lib/account-fence';
@@ -124,13 +124,14 @@ export async function forwardOwnerPolicyFence(envelope: SignedPolicyMessage) {
     await lockAccountDelivery(transaction, destination.accountId);
     const [row] = await transaction.select().from(controlOutbox).where(and(eq(controlOutbox.accountId, destination.accountId), eq(controlOutbox.idempotencyKey, key))).limit(1);
     if (row) {
-      const saved = row.payload as { envelope: SignedPolicyMessage; acknowledgment?: SignedPolicyMessage };
+      const saved = row.payload as { envelope: SignedPolicyMessage; destination?: OrderedDestination; acknowledgment?: SignedPolicyMessage };
       if (saved.envelope.message !== envelope.message) throw Error('CAPABILITY_FENCE_CONFLICT');
+      if (!saved.destination || canonicalHash(saved.destination) !== canonicalHash(destination)) throw Error('CAPABILITY_ENROLLMENT_CHANGED');
       return saved.acknowledgment;
     }
     await transaction.insert(controlOutbox).values({ id: id('obx'), accountId: destination.accountId,
       aggregateType: 'capability_owner_fence', aggregateId: fence.policyId, type: 'capability.owner-fence',
-      payload: { envelope }, idempotencyKey: key });
+      payload: { envelope, destination }, idempotencyKey: key });
     return undefined;
   });
   const acknowledgment = prior ?? await deliverCapabilityFence(destination, envelope);
@@ -139,10 +140,35 @@ export async function forwardOwnerPolicyFence(envelope: SignedPolicyMessage) {
   if (ack.kind !== 'FENCE_ACK' || ack.fenceHash !== await policyMessageHash(fence)) throw Error('CAPABILITY_ACK_MISMATCH');
   await withTransaction(async transaction => {
     await lockAccountDelivery(transaction, destination.accountId);
-    await transaction.update(controlOutbox).set({ payload: { envelope, acknowledgment }, publishedAt: now() })
+    await transaction.update(controlOutbox).set({ payload: { envelope, destination, acknowledgment }, publishedAt: now() })
       .where(and(eq(controlOutbox.accountId, destination.accountId), eq(controlOutbox.idempotencyKey, key)));
   });
   return acknowledgment;
+}
+
+export async function flushOwnerPolicyFences(accountId: string) {
+  const destinations = orderingConfiguration()?.destinations.filter(item => item.accountId === accountId) ?? [];
+  if (destinations.length > 100) throw Error('CAPABILITY_DESTINATION_LIMIT');
+  const results: { backendId: string; status: 'ACKNOWLEDGED' | 'PENDING_BACKEND' }[] = [];
+  for (const destination of destinations) {
+    const latest = await withTransaction(async transaction => {
+      await lockAccountDelivery(transaction, accountId);
+      const [row] = await transaction.select().from(controlOutbox).where(and(eq(controlOutbox.accountId, accountId),
+        eq(controlOutbox.aggregateType, 'capability_owner_fence'),
+        like(controlOutbox.idempotencyKey, `owner-fence:${destinationId(destination)}:%`)))
+        .orderBy(sql`((${controlOutbox.payload}->'envelope'->>'message')::jsonb->>'version')::bigint desc`).limit(1);
+      return row;
+    });
+    if (!latest || latest.publishedAt) continue;
+    try {
+      const saved = latest.payload as { envelope: SignedPolicyMessage };
+      await forwardOwnerPolicyFence(saved.envelope);
+      results.push({ backendId: destination.backendId, status: 'ACKNOWLEDGED' });
+    } catch {
+      results.push({ backendId: destination.backendId, status: 'PENDING_BACKEND' });
+    }
+  }
+  return results;
 }
 
 export async function flushRelayPolicyFences(accountId: string) {

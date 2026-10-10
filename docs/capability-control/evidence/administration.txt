@@ -1,46 +1,45 @@
 RUN  v3.2.4 /Users/jaywest/Documents/ChatGPT/MissoionControl_Enterprise_Factory_of_Factories/worktrees/Relay-capabilities
 
- ✓ tests/v2/leases.test.ts (14 tests) 7824ms
-   ✓ Relay V2 capability leases and workload identity > Passport revocation fences existing leases and durably requests backend cleanup  513ms
-   ✓ Relay V2 capability leases and workload identity > rejects a prior ALLOW decision after account policy activates DENY while preserving an admitted lease  530ms
-   ✓ Relay V2 capability leases and workload identity > serializes concurrent lease calls and revocation without resurrecting authority  384ms
-   ✓ Relay V2 capability leases and workload identity > binds original action digests while keeping secret-bearing evidence redacted  378ms
-   ✓ Relay V2 capability leases and workload identity > uses one-time proof-of-possession workload bootstrap with tenant binding  408ms
-   ✓ Relay V2 capability leases and workload identity > requires and atomically binds an action-scoped reservation for metered capabilities  418ms
-   ✓ Relay V2 capability leases and workload identity > rejects wrong tenant, audience, workload, resource, replay, and exhaustion at the reference PEP  406ms
-   ✓ Relay V2 capability leases and workload identity > atomically consumes approval while issuing a consequential lease  403ms
-   ✓ Relay V2 capability leases and workload identity > rejects child leases after parent revocation and reserves parent call authority  403ms
-   ✓ Relay V2 capability leases and workload identity > propagates emergency revocation within the online five-second SLO  431ms
-   ✓ Relay V2 capability leases and workload identity > denies offline financial leases and detects cryptographic expiry  2021ms
-   ✓ Relay V2 capability leases and workload identity > permits only short low-risk read leases through an offline local counter  467ms
-   ✓ ordered remote lease issuance requires durable exact ACKs and preserves duplicate retry  575ms
-   ✓ a suspended canonical owner cannot turn a previously evaluated action into a new lease  486ms
- ✓ tests/v2/passports.test.ts (5 tests) 2334ms
-   ✓ Relay V2 Agent Passport and runtime attribution > creates a draft Agent, signs a versioned Passport, and requires it for activation  463ms
-   ✓ Relay V2 Agent Passport and runtime attribution > quarantines a valid imported Passport without creating grants  514ms
-   ✓ Relay V2 Agent Passport and runtime attribution > rejects forged imports and cross-account Passport access  508ms
-   ✓ Relay V2 Agent Passport and runtime attribution > increments the revocation epoch and invokes incompatible-work revocation on trust downgrade  432ms
-   ✓ Relay V2 Agent Passport and runtime attribution > keeps product labels self-declared until trusted verification and isolates credentials  416ms
- ✓ tests/federation/message-policy.test.ts (3 tests) 3227ms
-   ✓ explicit owner peer-message policy > requires fresh password and exact owner/hash scope before allowing all six correlated directions  1631ms
-   ✓ explicit owner peer-message policy > rejects generic reserved-name policies and durable document tampering  974ms
-   ✓ explicit owner peer-message policy > preserves unrelated allowed capabilities while requiring facts for applicable message rules  622ms
- ✓ tests/v2/capability-administration.test.ts (5 tests) 2023ms
-   ✓ capability administration uses canonical Relay contracts > stages, step-up activates and retires the existing signed account bundle  554ms
-   ✓ capability administration uses canonical Relay contracts > denies cross-account and revoked administrative membership  518ms
-   ✓ capability administration uses canonical Relay contracts > rejects activating an older staged version after concurrent policy changes  505ms
-   ✓ capability administration uses canonical Relay contracts > version-fences agent eligibility and revokes the exact current Passport  444ms
- ✓ tests/v2/policy.test.ts (6 tests) 1887ms
-   ✓ Relay V2 capability registry and policy engine > persists and reproduces the exact historic decision  421ms
-   ✓ Relay V2 capability registry and policy engine > accepts an authoritative fact observed while the resolver is running  457ms
-   ✓ Relay V2 capability registry and policy engine > fails closed for missing, stale, and conflicting authoritative facts  494ms
-   ✓ Relay V2 capability registry and policy engine > requires action-bound step-up to activate account policy and rejects tenant substitution  501ms
- ✓ tests/v2/policy-propagation.test.ts (2 tests) 845ms
-   ✓ authenticates exact event/account/installation and distinguishes delivery, fencing and cleanup  421ms
-   ✓ dedicated policy deliveries cannot starve unrelated outbox publication  424ms
+ ✓ tests/v2/leases.test.ts (14 tests) 6035ms
+   ✓ Relay V2 capability leases and workload identity > Passport revocation fences existing leases and durably requests backend cleanup  346ms
+   ✓ Relay V2 capability leases and workload identity > rejects a prior ALLOW decision after account policy activates DENY while preserving an admitted lease  345ms
+   ✓ Relay V2 capability leases and workload identity > serializes concurrent lease calls and revocation without resurrecting authority  314ms
+   ✓ Relay V2 capability leases and workload identity > binds original action digests while keeping secret-bearing evidence redacted  353ms
+   ✓ Relay V2 capability leases and workload identity > uses one-time proof-of-possession workload bootstrap with tenant binding  331ms
+   ✓ Relay V2 capability leases and workload identity > requires and atomically binds an action-scoped reservation for metered capabilities  341ms
+   ✓ Relay V2 capability leases and workload identity > rejects wrong tenant, audience, workload, resource, replay, and exhaustion at the reference PEP  346ms
+   ✓ Relay V2 capability leases and workload identity > atomically consumes approval while issuing a consequential lease  311ms
+   ✓ Relay V2 capability leases and workload identity > rejects child leases after parent revocation and reserves parent call authority  325ms
+   ✓ Relay V2 capability leases and workload identity > propagates emergency revocation within the online five-second SLO  322ms
+   ✓ Relay V2 capability leases and workload identity > denies offline financial leases and detects cryptographic expiry  1715ms
+   ✓ Relay V2 capability leases and workload identity > permits only short low-risk read leases through an offline local counter  314ms
+   ✓ ordered remote lease issuance requires durable exact ACKs and preserves duplicate retry  369ms
+   ✓ a suspended canonical owner cannot turn a previously evaluated action into a new lease  302ms
+ ✓ tests/federation/message-policy.test.ts (3 tests) 1972ms
+   ✓ explicit owner peer-message policy > requires fresh password and exact owner/hash scope before allowing all six correlated directions  1160ms
+   ✓ explicit owner peer-message policy > rejects generic reserved-name policies and durable document tampering  378ms
+   ✓ explicit owner peer-message policy > preserves unrelated allowed capabilities while requiring facts for applicable message rules  432ms
+ ✓ tests/v2/passports.test.ts (5 tests) 1448ms
+   ✓ Relay V2 Agent Passport and runtime attribution > creates a draft Agent, signs a versioned Passport, and requires it for activation  319ms
+ ✓ tests/v2/capability-administration.test.ts (5 tests) 1298ms
+   ✓ capability administration uses canonical Relay contracts > stages, step-up activates and retires the existing signed account bundle  391ms
+   ✓ capability administration uses canonical Relay contracts > rejects activating an older staged version after concurrent policy changes  310ms
+   ✓ capability administration uses canonical Relay contracts > version-fences agent eligibility and revokes the exact current Passport  304ms
+ ✓ tests/v2/policy.test.ts (6 tests) 1219ms
+   ✓ Relay V2 capability registry and policy engine > persists and reproduces the exact historic decision  320ms
+   ✓ Relay V2 capability registry and policy engine > requires action-bound step-up to activate account policy and rejects tenant substitution  313ms
+ ✓ tests/v2/policy-propagation.test.ts (2 tests) 596ms
+   ✓ authenticates exact event/account/installation and distinguishes delivery, fencing and cleanup  309ms
  ✓ tests/v2/capability-administration-route.test.ts (4 tests) 4ms
+stdout | tests/v2/capability-maintenance.test.ts > one unavailable receiver cannot starve another owner revocation delivery
+{"level":"info","event":"maintenance_cycle","sandboxes":0,"browsers":0,"policyDeliveries":[{"accountId":"owner-a","owner":"DRAINED","relay":"PENDING_BACKEND"},{"accountId":"owner-b","owner":"DRAINED","relay":"DRAINED"}],"durationMs":0}
 
- Test Files  7 passed (7)
-      Tests  39 passed (39)
-   Start at  23:29:14
-   Duration  20.82s (transform 199ms, setup 0ms, collect 1.64s, tests 18.15s, environment 0ms, prepare 196ms)
+stdout | tests/v2/capability-maintenance.test.ts > an owner-delivery failure preserves independent Relay and other-owner progress
+{"level":"info","event":"maintenance_cycle","sandboxes":0,"browsers":0,"policyDeliveries":[{"accountId":"owner-a","owner":"PENDING_BACKEND","relay":"DRAINED"},{"accountId":"owner-b","owner":"DRAINED","relay":"DRAINED"}],"durationMs":0}
+
+ ✓ tests/v2/capability-maintenance.test.ts (2 tests) 2ms
+
+ Test Files  8 passed (8)
+      Tests  41 passed (41)
+   Start at  09:42:23
+   Duration  15.23s (transform 196ms, setup 0ms, collect 1.55s, tests 12.58s, environment 0ms, prepare 204ms)

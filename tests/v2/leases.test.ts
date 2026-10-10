@@ -183,7 +183,7 @@ it('ordered remote lease issuance requires durable exact ACKs and preserves dupl
   const { controlOutbox } = await import('@/lib/db/schema');
   const { withTransaction } = await import('@/lib/db');
   const { lockActiveAccount } = await import('@/lib/account-fence');
-  const { advanceRelayPolicyFence, flushRelayPolicyFences, forwardOwnerPolicyFence } = await import('@/lib/v2/policy/ordering');
+  const { advanceRelayPolicyFence, flushRelayPolicyFences, forwardOwnerPolicyFence, flushOwnerPolicyFences } = await import('@/lib/v2/policy/ordering');
   const { signPolicyMessage, verifyPolicyMessage, policyMessageHash } = await import('@/lib/v2/policy/ordering-wire');
   const makeKey = async (keyId: string) => {
     const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
@@ -191,7 +191,7 @@ it('ordered remote lease issuance requires durable exact ACKs and preserves dupl
   };
   const f = await setup();
   const source = await makeKey('owner-source'), receiver = await makeKey('receiver'), relay = await makeKey('relay');
-  let rejectDelivery = true, deliveries = 0;
+  let rejectDelivery = true, loseAcknowledgment = false, deliveries = 0;
   const server = createServer(async (req, res) => {
     try {
       deliveries++;
@@ -200,11 +200,12 @@ it('ordered remote lease issuance requires durable exact ACKs and preserves dupl
       const envelope = JSON.parse(body).envelope;
       const fence = await verifyPolicyMessage(envelope, JSON.parse(envelope.message).authority === 'myeve' ? source : relay);
       if (fence.kind !== 'FENCE') throw Error('expected fence');
-      const { kind: _kind, capabilityId: _capabilityId, operation: _operation, ...identity } = fence;
-      void _kind; void _capabilityId; void _operation;
+      const { kind: _kind, capabilityId: _capabilityId, operation: _operation, controls: _controls, ...identity } = fence;
+      void _kind; void _capabilityId; void _operation; void _controls;
       const ack = await signPolicyMessage({ ...identity, kind: 'FENCE_ACK', fenceHash: await policyMessageHash(fence) }, receiver);
       // The receiver fixture durably stores before responding; it is not native MissionControl admission.
       await db().insert(controlOutbox).values({ id: 'ack_' + crypto.randomUUID(), accountId: f.accountId, aggregateType: 'test_receiver_ack', aggregateId: fence.policyId, type: 'test.ack', payload: ack, idempotencyKey: 'test-ack:' + fence.authority + ':' + fence.version, publishedAt: new Date().toISOString() }).onConflictDoNothing();
+      if (loseAcknowledgment) { res.destroy(); return; }
       res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(ack));
     } catch { res.writeHead(500); res.end(); }
   });
@@ -235,6 +236,24 @@ it('ordered remote lease issuance requires durable exact ACKs and preserves dupl
     expect(await forwardOwnerPolicyFence(ownerFence)).toEqual(ack); expect(deliveries).toBe(count);
     const [saved] = await db().select().from(controlOutbox).where(and(eq(controlOutbox.accountId, f.accountId), eq(controlOutbox.aggregateType, 'capability_owner_fence')));
     expect(saved.payload).toMatchObject({ acknowledgment: ack });
+    const replayFence = await signPolicyMessage({ ...identity, kind: 'FENCE', authority: 'myeve', version: 3, policyId: 'owner-policy-3', capabilityId: 'missioncontrol', operation: 'revoke' }, source);
+    loseAcknowledgment = true;
+    await expect(forwardOwnerPolicyFence(replayFence)).rejects.toBeDefined();
+    expect(await flushOwnerPolicyFences(f.accountId)).toEqual([{ backendId: 'missioncontrol', status: 'PENDING_BACKEND' }]);
+    const { closeDatabasesForTests } = await import('@/lib/db');
+    await closeDatabasesForTests();
+    loseAcknowledgment = false;
+    expect(await flushOwnerPolicyFences(f.accountId)).toEqual([{ backendId: 'missioncontrol', status: 'ACKNOWLEDGED' }]);
+    const recovered = await forwardOwnerPolicyFence(replayFence), afterRecovery = deliveries;
+    expect(await flushOwnerPolicyFences(f.accountId)).toEqual([]);
+    expect(await forwardOwnerPolicyFence(replayFence)).toEqual(recovered);
+    expect(deliveries).toBe(afterRecovery);
+    const [received] = await db().select().from(controlOutbox).where(and(eq(controlOutbox.accountId, f.accountId), eq(controlOutbox.idempotencyKey, 'test-ack:myeve:3')));
+    expect(received).toBeDefined();
+    const changedDestination = { ...destination, endpoint: destination.endpoint + '/changed' };
+    process.env.RELAY_CAPABILITY_COORDINATION_JSON = JSON.stringify({ signer: relay, destinations: [changedDestination] });
+    await expect(forwardOwnerPolicyFence(replayFence)).rejects.toThrow('ENROLLMENT_CHANGED');
+    process.env.RELAY_CAPABILITY_COORDINATION_JSON = JSON.stringify({ signer: relay, destinations: [destination] });
     await revokeLease({ accountId: f.accountId, leaseId: a.leaseId, reason: 'qualification' }, f.signer);
     const [epoch] = await db().select().from(controlOutbox).where(and(eq(controlOutbox.accountId, f.accountId), eq(controlOutbox.aggregateType, 'capability_epoch')));
     expect(epoch.payload).toMatchObject({ version: 2 });
