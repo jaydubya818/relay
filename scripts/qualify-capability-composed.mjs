@@ -26,11 +26,14 @@ const execFile = promisify(callback), fixture = JSON.parse(await readFile(proces
 const fixtureUrl = new URL(fixture.url);
 if (fixtureUrl.protocol !== 'http:' || !['127.0.0.1', '[::1]'].includes(fixtureUrl.hostname)
   || fixtureUrl.username || fixtureUrl.password || fixtureUrl.search || fixtureUrl.hash) throw Error('Composed qualification requires an isolated loopback Convex backend');
+const missionControlRoot = dirname(dirname(dirname(dirname(fixture.cli))));
+const { delegatedFixture } = await import(join(missionControlRoot, 'scripts/capability-qualification/delegated-fixture.mjs'));
 const mcRequire = createRequire(join(dirname(dirname(fixture.cli)), '../package.json'));
 const { ConvexHttpClient } = mcRequire('convex/browser'), { makeFunctionReference } = mcRequire('convex/server');
 const { CapabilityStore } = await import(join(fixture.myeveRoot, 'apps/eve/lib/capability-control/store.ts'));
 const { issueBackendOrderedPermit } = await import(join(fixture.myeveRoot, 'packages/capability-enforcement/src/ordering-source.ts'));
 const { propagateCapabilityPolicy } = await import(join(fixture.myeveRoot, 'packages/capability-enforcement/src/ordering-transport.ts'));
+const { reconcileBackendControls } = await import(join(fixture.myeveRoot, 'packages/capability-enforcement/src/lifecycle-transport.ts'));
 const eveRequire = createRequire(join(fixture.myeveRoot, 'package.json'));
 const { capabilityRegistry } = await import(eveRequire.resolve('@mission-control/capability-control'));
 const directory = await mkdtemp('/private/tmp/cap-composed-');
@@ -52,11 +55,11 @@ try {
   const { accountId, principalId } = await freshDatabase();
   const signer = createLocalEd25519Signer('composed-synthetic'), resolver = { publicKeyForKeyId: async id => id === signer.keyId ? signer.publicKeyPem() : undefined };
   const nativeRuntime = await registerRuntimeClient({ accountId, actorPrincipalId: principalId, displayName: 'Isolated runner', selfDeclaredProduct: 'custom' }, signer);
-  const capabilityName = 'resource.composed.mission';
-  await registerCapabilityDefinition({ name: capabilityName, version: '1.0', domain: 'resource', description: 'Isolated admission qualification', effectClass: 'read', riskClass: 'low', resourceType: 'target', inputSchema: {}, outputSchema: {}, meteringDimensions: [] }, signer);
-  await publishRelaySafetyPolicy({ name: 'composed-safety', rules: [{ id: 'bounded', effect: 'ALLOW', match: { capability: { name: capabilityName, version: '1.0' } }, reasonCode: 'ISOLATED_QUALIFICATION' }] }, signer);
+  const capabilityName = 'resource.composed.mission', fleetCapabilityName = 'resource.composed.fleet';
+  for (const name of [capabilityName, fleetCapabilityName]) await registerCapabilityDefinition({ name, version: '1.0', domain: 'resource', description: 'Isolated admission qualification', effectClass: 'read', riskClass: 'low', resourceType: 'target', inputSchema: {}, outputSchema: {}, meteringDimensions: [] }, signer);
+  await publishRelaySafetyPolicy({ name: 'composed-safety', rules: [capabilityName, fleetCapabilityName].map((name, index) => ({ id: `bounded-${index}`, effect: 'ALLOW', match: { capability: { name, version: '1.0' } }, reasonCode: 'ISOLATED_QUALIFICATION' })) }, signer);
   const agent = await createV2Agent({ accountId, ownerPrincipalId: principalId, name: 'Synthetic Sofie' }, signer);
-  await issueAgentPassport({ accountId, agentId: agent.agentId, ownerPrincipalId: principalId, policy: { trustTier: 'HIGH_ASSURANCE', capabilityEligibility: [{ name: capabilityName, version: '1.0' }], policyReferences: ['composed-safety'], budgetReferences: [], allowedEnvironments: { providerIds: ['relay-managed'], minimumAssurance: 'managed-equivalent' }, dataAccess: [], expiresAt: new Date(Date.now() + 3600000).toISOString() } }, signer);
+  await issueAgentPassport({ accountId, agentId: agent.agentId, ownerPrincipalId: principalId, policy: { trustTier: 'HIGH_ASSURANCE', capabilityEligibility: [capabilityName, fleetCapabilityName].map(name => ({ name, version: '1.0' })), policyReferences: ['composed-safety'], budgetReferences: [], allowedEnvironments: { providerIds: ['relay-managed'], minimumAssurance: 'managed-equivalent' }, dataAccess: [], expiresAt: new Date(Date.now() + 3600000).toISOString() } }, signer);
   const pair = generateKeyPairSync('ed25519');
   const bootstrap = await createWorkloadBootstrap({ accountId, agentId: agent.agentId, runtimeClientId: nativeRuntime.runtimeClientId, taskId: 'tsk_composed1', providerId: 'relay-managed', assurance: 'managed-equivalent', audience: 'composed-pep', publicKeyPem: pair.publicKey.export({ type: 'spki', format: 'pem' }).toString() }, signer);
   const workload = await exchangeWorkloadBootstrap({ accountId, secret: bootstrap.secret, proofSignature: sign(null, Buffer.from(bootstrap.challenge), pair.privateKey).toString('base64url') }, signer);
@@ -65,7 +68,7 @@ try {
     MC_CAPABILITY_RECEIVER_RECOVERY_STATE: 'ACTIVE', MC_CAPABILITY_RECEIVER_EPOCH: binding.incarnation })) {
     await execFile(process.execPath, [fixture.cli, 'env', 'set', name, value, '--url', fixture.url, '--admin-key', fixture.admin], { env: process.env, cwd: dirname(process.argv[2]) }).catch(error => { throw Error(String(error.stderr ?? 'Isolated Convex configuration failed').replaceAll(fixture.admin, '[synthetic key]')); });
   }
-  const destination = { ...binding, accountId, capabilityNames: { 'enterprise.missions': capabilityName }, endpoint: `http://127.0.0.1:${fixture.sitePort}/capability-control/fence`, sourceKey: fixture.sourceKey, backendKey: fixture.backendKey };
+  const destination = { ...binding, accountId, capabilityNames: { 'enterprise.missions': capabilityName, 'enterprise.fleet': fleetCapabilityName }, endpoint: `http://127.0.0.1:${fixture.sitePort}/capability-control/fence`, sourceKey: fixture.sourceKey, backendKey: fixture.backendKey };
   process.env.RELAY_CAPABILITY_ENVIRONMENT = 'qualification';
   process.env.RELAY_CAPABILITY_COORDINATION_JSON = JSON.stringify({ signer: fixture.relayKey, destinations: [destination] });
   await withTransaction(async tx => { await lockActiveAccount(tx, accountId); await advanceRelayPolicyFence(tx, accountId); });
@@ -80,13 +83,13 @@ try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const relayEndpoint = `http://127.0.0.1:${server.address().port}/capability-fences`;
   admin = new pg.Pool({ connectionString: databaseUrl });
-  for (const file of ['migration.sql', 'enforcement.sql', 'decisions.sql', 'ordering.sql'])
+  for (const file of ['migration.sql', 'enforcement.sql', 'decisions.sql', 'ordering.sql', 'lifecycle.sql'])
     await admin.query(await readFile(join(fixture.myeveRoot, 'docs/capability-control', file), 'utf8'));
   await admin.query('CREATE ROLE capability_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS');
   await admin.query('GRANT USAGE ON SCHEMA capability_control TO capability_runtime');
   await admin.query('GRANT SELECT ON ALL TABLES IN SCHEMA capability_control TO capability_runtime');
   await admin.query('GRANT INSERT,UPDATE ON capability_control.owner_state,capability_control.policy_changes,capability_control.policy_deliveries TO capability_runtime');
-  await admin.query('GRANT INSERT ON capability_control.commands,capability_control.audit,capability_control.control_requests,capability_control.policy_decisions TO capability_runtime');
+  await admin.query('GRANT INSERT ON capability_control.commands,capability_control.audit,capability_control.control_requests,capability_control.policy_decisions,capability_control.lifecycle_receipts TO capability_runtime');
   await admin.query('GRANT EXECUTE ON FUNCTION capability_control.lock_admission_policy(text,text,text) TO capability_runtime');
   await admin.query('INSERT INTO capability_control.installations(id,organization_id,environment) VALUES($1,$2,$3)', [binding.installationId, accountId, 'qualification']);
   if (platformOwner) await admin.query(`INSERT INTO capability_control.platform_owner_bindings VALUES($1,$2,$3,'composed-platform',1,'synthetic-auth','synthetic-admin','synthetic-membership','synthetic-installation','synthetic-audit','ACTIVE',clock_timestamp()+interval '1 hour')`, [binding.installationId, accountId, principalId]);
@@ -97,7 +100,11 @@ try {
   await admin.query('INSERT INTO capability_control.policy_destinations VALUES($1,$2,$3,$4,$5,$6,$7)', [binding.installationId, principalId, binding.backendId, binding.incarnation, binding.enrollmentVersion, fixture.backendKey.keyId, publicKey]);
   runtime = new pg.Pool({ connectionString: 'postgresql://capability_runtime@127.0.0.1:55497/postgres' });
   const scope = { ownerId: principalId, organizationId: accountId, installationId: binding.installationId, agentId: agent.agentId, environment: 'qualification' };
-  const deliver = () => propagateCapabilityPolicy(runtime, scope, fixture.sourceKey, relayEndpoint);
+  const lifecycleEndpoints = { [binding.backendId]: `http://127.0.0.1:${fixture.sitePort}/capability-control/lifecycle` };
+  const deliver = async () => {
+    await propagateCapabilityPolicy(runtime, scope, fixture.sourceKey, relayEndpoint);
+    await reconcileBackendControls(runtime, scope, lifecycleEndpoints, fixture.sourceKey);
+  };
   const store = new CapabilityStore(runtime, { id: binding.installationId, environment: 'qualification' }, { ownerId: principalId, source: 'settings' }, deliver);
   const sofie = new CapabilityStore(runtime, { id: binding.installationId, environment: 'qualification' }, { ownerId: principalId, source: 'sofie' }, deliver);
   const command = async operation => store.command({ requestId: randomUUID(), expectedRevision: (await store.inspect()).revision, capabilityId: 'missioncontrol', operation });
@@ -109,23 +116,63 @@ try {
     await insert('workOrders', { tenantId, projectId, missionId, ownerMemberId, owningTeamId: teamId, title: 'Bounded qualification', desiredOutcome: 'No paid execution', priority: 3, riskLevel: 'LOW', acceptanceCriteria: [], state: 'READY', verificationStatus: 'PENDING', approvalStatus: 'APPROVED', releasedAt: now, createdAt: now, updatedAt: now });
     return missionId;
   }
-  async function proposal(missionId) {
-    const native = await mc.action(makeFunctionReference('capabilityChallenges:create'), { missionId, idempotencyKey: randomUUID(), budgetMicros: 0 });
+  async function proposal(missionId, dispatch, budgetMicros = 0) {
+    const native = await mc.action(makeFunctionReference('capabilityChallenges:create'), { missionId, idempotencyKey: dispatch?.idempotencyKey ?? randomUUID(), budgetMicros, ...(dispatch ? { workOrderId: dispatch.workOrderId, dispatch } : {}) });
     const source = await transaction(c => issueBackendOrderedPermit(c, native.challenge, scope, binding.backendId, fixture.sourceKey));
-    const material = { capability: { name: capabilityName, version: '1.0' }, resource: { type: 'target', ids: [missionId], attributes: { accountId } }, parameters: { capabilityAdmissionDigest: await policyMessageHash(JSON.parse(source.message)) } };
+    const material = { capability: { name: dispatch ? fleetCapabilityName : capabilityName, version: '1.0' }, resource: { type: 'target', ids: dispatch ? [missionId, dispatch.workOrderId] : [missionId], attributes: { accountId } }, parameters: { capabilityAdmissionDigest: await policyMessageHash(JSON.parse(source.message)) } };
     const action = { schemaVersion: 'relay.action-intent.v2', id: 'act_' + randomUUID().replaceAll('-', ''), accountId, agentId: agent.agentId, runtimeClientId: nativeRuntime.runtimeClientId, taskId: 'tsk_composed1', ...material, idempotencyKey: randomUUID(), createdAt: new Date().toISOString(), canonicalHash: canonicalHash(material) };
     await evaluatePolicy({ accountId, action, resourceResolver: { resolveOwnership: async () => ({ name: 'resource.account_id', value: accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'composed' }) } }, signer);
     const lease = await issueCapabilityLease({ accountId, action, workloadId: workload.workloadId, workloadIdentityToken: workload.token, audience: 'composed-pep', maxCalls: 1, remoteAdmission: source }, signer, resolver);
     return { ...native.nativeArgs, capabilityPermits: { myeve: source, relay: lease.remotePermit } };
   }
   assert.equal((await store.inspect()).capabilities.filter(item => item.preference === 'ENABLED').length, platformOwner ? 36 : 5);
-  if (!platformOwner) for (const capabilityId of ['work', 'enterprise.missions']) await store.command({ requestId: randomUUID(), expectedRevision: (await store.inspect()).revision, capabilityId, operation: 'enable' });
+  if (!platformOwner) for (const capabilityId of ['work', 'enterprise.missions', 'enterprise.fleet']) await store.command({ requestId: randomUUID(), expectedRevision: (await store.inspect()).revision, capabilityId, operation: 'enable' });
   await command('enable'); assert.equal((await store.inspect()).propagation.status, 'ACKNOWLEDGED');
   const first = await mission(), second = await mission();
   const admitted = await proposal(first), stale = await proposal(second);
   assert.equal((await mutation('missions:start', admitted)).created, true);
   assert.equal((await mutation('missions:start', admitted)).created, false);
   pass('MyEve persists enable; native Relay propagates exact ACK; backend challenge and native lease authorize exact-owner Mission once');
+  const member = await query('qualificationFixture:read', { id: fixture.ownerMemberId });
+  assert.equal(member.tenantId, fixture.tenantId);
+  assert.equal(member.projectId, fixture.projectId);
+  const operator = await query('qualificationFixture:read', { id: member.operatorId });
+  assert.equal(operator.authId, 'synthetic-owner');
+  const firstWork = (await query('qualificationFixture:rows', { table: 'workOrders' })).filter(row => row.missionId === first);
+  assert.equal(firstWork.length, 1);
+  const invoke = args => execFile(process.execPath, [fixture.cli, ...args, '--url', fixture.url, '--admin-key', fixture.admin],
+    { env: process.env, cwd: dirname(process.argv[2]) }).catch(error => { throw Error(String(error.stderr ?? 'Isolated Convex configuration failed').replaceAll(fixture.admin, '[synthetic key]')); });
+  const nativeFactory = await delegatedFixture({ insert, mutate: mutation, query, invoke, tenantId: fixture.tenantId,
+    projectId: fixture.projectId, ownerMemberId: fixture.ownerMemberId, operatorId: member.operatorId,
+    missionId: first, workOrderId: firstWork[0]._id, teamId: fixture.teamId, namespace: `composed-${platformOwner ? 'platform' : 'ordinary'}` });
+  const dispatch = { workOrderId: firstWork[0]._id, actorType: 'HUMAN', idempotencyKey: randomUUID(),
+    factoryDefinitionVersionId: nativeFactory.versionId, taskId: nativeFactory.taskId, workflowId: nativeFactory.workflowKey,
+    executionEnvironment: 'LOCAL', executorHostId: nativeFactory.hostId };
+  const beforeReferences = (await query('qualificationFixture:rows', { table: 'capabilityAdmissionReferences' })).length;
+  const beforeRuns = (await query('qualificationFixture:rows', { table: 'workflowRuns' })).length;
+  await assert.rejects(mutation('workOrders:dispatch', await proposal(first, dispatch, 9999)), /CAPABILITY_NATIVE_AUTHORITY_OR_BUDGET_REQUIRED/);
+  assert.equal((await query('qualificationFixture:rows', { table: 'capabilityAdmissionReferences' })).length, beforeReferences);
+  assert.equal((await query('qualificationFixture:rows', { table: 'workflowRuns' })).length, beforeRuns);
+  const delegated = await proposal(first, dispatch, 10000);
+  const positiveWork = await mutation('workOrders:dispatch', delegated);
+  assert.equal(positiveWork.created, true);
+  assert.equal(positiveWork.run.factoryDefinitionVersionId, nativeFactory.versionId);
+  assert.equal(positiveWork.run.workOrderId, firstWork[0]._id);
+  assert.equal(positiveWork.run.missionId, first);
+  assert.equal(positiveWork.run.factoryConfigurationDigest, nativeFactory.configurationDigest);
+  for (const envelope of Object.values(delegated.capabilityPermits)) {
+    const permit = JSON.parse(envelope.message);
+    assert(positiveWork.run.capabilityAuthorities.some(authority => authority.policyId === permit.policyId
+      && authority.version === permit.version && authority.capabilityId === 'enterprise.fleet'));
+  }
+  assert.equal(positiveWork.run.executionCostAuthorization.maxProviderCalls, 0);
+  assert.equal(positiveWork.run.executionCostAuthorization.actualCost.status, 'UNAVAILABLE');
+  assert.equal(positiveWork.run.reservedCostUsd, 0.01);
+  assert.equal((await mutation('workOrders:dispatch', delegated)).created, false);
+  assert.equal((await query('qualificationFixture:rows', { table: 'workflowRuns' })).length, beforeRuns + 1);
+  assert.equal((await query('qualificationFixture:rows', { table: 'capabilityAdmissionReferences' })).length, beforeReferences + 2);
+  pass('source challenge and native Relay lease compose into exact WorkOrder/FactoryVersion admission; insufficient budget rolls back and retry creates one Attempt with zero provider authority');
+
   async function disabled(_view, cookies) {
     let sofieView = await sofie.inspect();
     if (cookies) {
@@ -154,17 +201,24 @@ try {
     const view = await sofie.inspect();
     assert.equal(view.capabilities.find(item => item.id === 'missioncontrol').control, 'REVOKE_REQUESTED');
     assert.equal(view.activeWork.status, 'UNKNOWN');
+    const observation = view.backendControls.find(item => item.capabilityId === 'missioncontrol');
+    assert.equal(observation.complete, false);
+    assert.equal(observation.backends[0].receipt.backendId, binding.backendId);
+    const original = (await admin.query('SELECT policy_id FROM capability_control.policy_changes WHERE installation_id=$1 AND owner_id=$2 AND revision=$3', [binding.installationId, principalId, observation.revision])).rows[0];
+    assert.equal(observation.backends[0].receipt.policyId, original.policy_id);
+    assert.equal(observation.backends[0].state, 'PENDING_BACKEND');
+    assert.equal(observation.backends[0].inventoryComplete, false);
     assert.equal((await query('qualificationFixture:read', { id: first })).state, 'IN_PROGRESS');
     assert.deepEqual(await flushOwnerPolicyFences(accountId), []);
     const controls = await query('qualificationFixture:rows', { table: 'capabilityWorkControls' });
     assert(controls.some(item => item.scope.includes(principalId) && item.operation === 'revoke' && item.capabilityId === 'missioncontrol'));
-    pass('re-enable requires fresh proof; revoke commits durable active-Work control and never reports a resource stopped');
+    pass('re-enable requires fresh proof; revoke commits durable active-Work control and authenticated lifecycle readback; incomplete inventory never reports stopped');
   }
   if (process.env.CAPABILITY_COMPOSED_BROWSER === '1') {
     const configuration = { MYEVE_CAPABILITY_CONTROL_ENABLED: 'true', MYEVE_CAPABILITY_ENVIRONMENT: 'qualification',
       MYEVE_CAPABILITY_INSTALLATION_ID: binding.installationId, MYEVE_CAPABILITY_DATABASE_URL: 'postgresql://capability_runtime@127.0.0.1:55497/postgres',
       MYEVE_OWNER_ID: principalId, MYEVE_ACCESS_PASSWORD: 'synthetic-composed-password', MYEVE_SESSION_SECRET: 'synthetic-composed-session-secret-000000000',
-      MYEVE_CAPABILITY_ORIGIN: 'http://localhost:3318', MYEVE_CAPABILITY_PROPAGATION_JSON: JSON.stringify({ signer: fixture.sourceKey, relayEndpoint }) };
+      MYEVE_CAPABILITY_ORIGIN: 'http://localhost:3318', MYEVE_CAPABILITY_PROPAGATION_JSON: JSON.stringify({ signer: fixture.sourceKey, relayEndpoint, lifecycleEndpoints }) };
     Object.assign(process.env, configuration);
     closeEve = (await import(join(fixture.myeveRoot, 'apps/eve/lib/capability-control/runtime.ts'))).closeCapabilityDatabase;
     const { qualifyComposedBrowser } = await import(join(fixture.myeveRoot, 'apps/eve/scripts/qualify-capability-composed-browser.mjs'));
@@ -174,7 +228,7 @@ try {
     await command('disable'); await disabled(); await command('enable'); await enabled(); await command('revoke'); await revoked();
   }
   await mkdir('docs/capability-control/evidence', { recursive: true });
-  await writeFile(`docs/capability-control/evidence/composed-${platformOwner ? 'platform' : 'ordinary'}.json`, JSON.stringify({ status: 'PASS', checks, scope: 'real PostgreSQL + native Relay APIs/HTTP route + real Convex Mission admission', activeResourceStop: 'PENDING_BACKEND', paidOperations: 0 }, null, 2) + '\n');
+  await writeFile(`docs/capability-control/evidence/composed-${platformOwner ? 'platform' : 'ordinary'}.json`, JSON.stringify({ status: 'PASS', checks, scope: 'real PostgreSQL + native Relay APIs/HTTP route + real Convex Mission and delegated WorkOrder admission; synthetic offline Factory with no provider operations', activeResourceStop: 'PENDING_BACKEND', paidOperations: 0 }, null, 2) + '\n');
 } catch (error) {
   console.error(await readFile(join(directory, 'log'), 'utf8').catch(() => 'Disposable PostgreSQL log unavailable.'));
   throw error;
