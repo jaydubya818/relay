@@ -10,7 +10,7 @@ import { listAuditRecords, verifyAuditRecords } from "@/lib/v2/evidence/audit";
 import { canonicalHash } from "@/lib/v2/contracts";
 import { consumerResource } from "@/lib/integrations/consumer";
 import { providerUserId, type IntegrationBinding, type IntegrationScope } from "@/lib/integrations/contracts";
-import { IntegrationConnectionStore, readIntegrationConnection } from "@/lib/integrations/persistence";
+import { IntegrationConnectionStore, ownerIntegrationConnection, ownerIntegrationConnections, readIntegrationConnection } from "@/lib/integrations/persistence";
 import { IntegrationGateway, type DiscoveryProjection } from "@/lib/integrations/gateway";
 import { integrationConnections } from "@/lib/integrations/schema";
 import { binding as template, fixture, qualification } from "./fixtures";
@@ -69,6 +69,32 @@ describe("PostgreSQL provider lifecycle and bounded Golden Journey", () => {
     await expect(readIntegrationConnection(scope, "")).rejects.toThrow();
     await expect(store.revokeLocal(scope, "")).rejects.toThrow();
     expect((await readIntegrationConnection(scope, binding.connectionId)).status).toBe("CONNECTED");
+  });
+  it("pages all owner records and revokes an exact connection beyond the first 100", async () => {
+    const rows = Array.from({ length: 101 }, (_, index) => {
+      const connectionId = `cnx_page_${String(index).padStart(3, "0")}`;
+      const connectedAccountId = `ca_page_${index}`;
+      return { id: connectionId, ...scope, connectedAccountId,
+        binding: { ...binding, connectionId, connectedAccountId, toolkit: index === 100 ? "slack" as const : "github" as const },
+        updatedAt: new Date(index === 100 ? 0 : Date.now()).toISOString() };
+    });
+    await db().insert(integrationConnections).values(rows);
+    const first = await ownerIntegrationConnections(scope.accountId, scope.ownerPrincipalId);
+    expect(first.records).toHaveLength(100);
+    expect(first.records.some(row => row.id === rows[100].id)).toBe(false);
+    const last = await ownerIntegrationConnections(scope.accountId, scope.ownerPrincipalId, { after: first.nextCursor! });
+    expect(last.records.map(row => row.id)).toEqual([rows[100].id]); expect(last.nextCursor).toBeNull();
+    expect((await ownerIntegrationConnections(scope.accountId, scope.ownerPrincipalId, { toolkits: ["slack"] })).records).toHaveLength(1);
+    for (const [accountId, ownerId, connectionId] of [["foreign", scope.ownerPrincipalId, rows[100].id], [scope.accountId, "foreign", rows[100].id], [scope.accountId, scope.ownerPrincipalId, ""]]) {
+      await expect(ownerIntegrationConnection(accountId, ownerId, connectionId)).rejects.toThrow();
+    }
+    const record = await ownerIntegrationConnection(scope.accountId, scope.ownerPrincipalId, rows[100].id);
+    const resolved = { accountId: scope.accountId, ownerPrincipalId: scope.ownerPrincipalId, agentId: record.agentId, installationId: record.installationId };
+    expect((await store.revokeLocal(resolved, record.id)).status).toBe("REVOKED");
+    const connected = await ownerIntegrationConnections(scope.accountId, scope.ownerPrincipalId, { toolkits: ["slack"], connectedOnly: true });
+    expect(connected.records).toEqual([]);
+    expect((await ownerIntegrationConnections(scope.accountId, scope.ownerPrincipalId, { after: first.nextCursor! })).records.map(row => row.id)).toEqual([record.id]);
+    expect(await verifyAuditRecords(await listAuditRecords(scope.accountId), signer)).toBe(true);
   });
   it("rejects a canonical agent belonging to another account before provider lookup", async () => {
     const foreign = await createAgent(await secondAccount(), { name: "Other Agent" });

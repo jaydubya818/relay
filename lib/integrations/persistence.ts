@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, withTransaction, type RelayDatabase } from "@/lib/db";
 import { accountMemberships, agents, auditRecords, principals } from "@/lib/db/schema";
@@ -155,9 +155,28 @@ export async function readIntegrationConnection(scope: IntegrationScope, connect
   });
 }
 
-export async function ownerIntegrationConnections(accountId: string, ownerPrincipalId: string) {
-  return db().select().from(integrationConnections).where(and(eq(integrationConnections.accountId, accountId),
-    eq(integrationConnections.ownerPrincipalId, ownerPrincipalId))).orderBy(desc(integrationConnections.updatedAt)).limit(100);
+/** Exact mutation lookup; catalog pagination never limits owner revocation. */
+export async function ownerIntegrationConnection(accountId: string, ownerPrincipalId: string, connectionId: string) {
+  z.string().min(1).max(255).parse(connectionId);
+  const [record] = await db().select().from(integrationConnections).where(and(eq(integrationConnections.accountId, accountId),
+    eq(integrationConnections.ownerPrincipalId, ownerPrincipalId), eq(integrationConnections.id, connectionId)));
+  if (!record) throw new IntegrationError("CONNECTION_UNAVAILABLE");
+  return record;
+}
+
+export async function ownerIntegrationConnections(accountId: string, ownerPrincipalId: string,
+  options: { after?: string; toolkits?: string[]; connectedOnly?: boolean } = {}) {
+  if (options.after !== undefined) z.string().min(1).max(255).parse(options.after);
+  // Stable ID ordering avoids skipped records when revocation updates updatedAt.
+  const rows = await db().select().from(integrationConnections).where(and(eq(integrationConnections.accountId, accountId),
+    eq(integrationConnections.ownerPrincipalId, ownerPrincipalId), options.after ? gt(integrationConnections.id, options.after) : undefined,
+    options.toolkits ? inArray(sql<string>`${integrationConnections.binding}->>'toolkit'`, options.toolkits) : undefined,
+    options.connectedOnly ? sql`${integrationConnections.binding}->>'status' = 'CONNECTED'
+      AND ${integrationConnections.binding}->>'revokedAt' IS NULL
+      AND (${integrationConnections.binding}->>'expiresAt' IS NULL OR (${integrationConnections.binding}->>'expiresAt')::timestamptz > now())` : undefined))
+    .orderBy(asc(integrationConnections.id)).limit(101);
+  const records = rows.slice(0, 100);
+  return { records, nextCursor: rows.length > 100 ? records[99].id : null };
 }
 
 export async function integrationStorageReady() {

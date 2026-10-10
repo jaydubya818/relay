@@ -35,6 +35,20 @@ test("other owner cannot see records or Agent metadata", async ({ page }) => {
   await expect(page.getByText("No recorded connection.")).toHaveCount(4);
   await expect(page.getByRole("button", { name: "Revoke Relay access" })).toHaveCount(0);
 });
+test("owner reaches and revokes an older connection beyond the first 100 records", async ({ page }) => {
+  await login(page, "paginated");
+  await expect(page.getByRole("button", { name: "Revoke Relay access" })).toHaveCount(100);
+  await expect(page.getByText("cnx_paged_100", { exact: true })).toHaveCount(0);
+  await page.getByRole("link", { name: "Next connections" }).click();
+  await expect(page.getByText("cnx_paged_100", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Revoke Relay access" })).toHaveCount(1);
+  await page.getByRole("button", { name: "Revoke Relay access" }).click();
+  await expect(page.getByText("Pending — Relay access blocked", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Revoke Relay access" })).toHaveCount(0);
+  await page.getByRole("link", { name: "First connections" }).click();
+  await expect(page.getByRole("button", { name: "Revoke Relay access" })).toHaveCount(100);
+});
 test("owner revokes locally and refresh retains denial with provider revocation pending", async ({ page }) => {
   await login(page);
   await page.getByRole("button", { name: "Revoke Relay access" }).click();

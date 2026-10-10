@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { integrationOwner } from "@/lib/integrations/owner";
-import { IntegrationConnectionStore, ownerIntegrationConnections } from "@/lib/integrations/persistence";
+import { IntegrationConnectionStore, ownerIntegrationConnection } from "@/lib/integrations/persistence";
 import { requireV2PlatformBindings } from "@/lib/v2/platform-bindings";
 
 export async function revokeIntegration(_previous: { message: string; ok: boolean }, form: FormData) {
@@ -15,9 +15,7 @@ export async function revokeIntegration(_previous: { message: string; ok: boolea
     const owner = await integrationOwner();
     const connectionId = z.string().min(1).max(255).parse(form.get("connectionId"));
     // Resolve every identity on the server, never from hidden owner/agent fields.
-    const records = await ownerIntegrationConnections(owner.accountId, owner.ownerPrincipalId);
-    const record = records.find(value => value.id === connectionId);
-    if (!record) throw new Error();
+    const record = await ownerIntegrationConnection(owner.accountId, owner.ownerPrincipalId, connectionId);
     const scope = { ...owner, agentId: record.agentId, installationId: record.installationId };
     await new IntegrationConnectionStore(requireV2PlatformBindings().signer).revokeLocal(scope, connectionId);
     revalidatePath("/connections/integrations");
