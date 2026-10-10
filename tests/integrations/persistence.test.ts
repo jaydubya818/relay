@@ -64,6 +64,12 @@ describe("PostgreSQL provider lifecycle and bounded Golden Journey", () => {
     await expect(readIntegrationConnection({ ...scope, [key]: "foreign" }, binding.connectionId)).rejects.toThrow();
     await expect(store.revokeLocal({ ...scope, [key]: "foreign" }, binding.connectionId)).rejects.toThrow();
   });
+  it("rejects an empty connection selector without broadening the query", async () => {
+    await persist();
+    await expect(readIntegrationConnection(scope, "")).rejects.toThrow();
+    await expect(store.revokeLocal(scope, "")).rejects.toThrow();
+    expect((await readIntegrationConnection(scope, binding.connectionId)).status).toBe("CONNECTED");
+  });
   it("rejects a canonical agent belonging to another account before provider lookup", async () => {
     const foreign = await createAgent(await secondAccount(), { name: "Other Agent" });
     const changed = { ...scope, agentId: foreign.agentId };

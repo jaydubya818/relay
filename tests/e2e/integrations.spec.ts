@@ -42,5 +42,5 @@ test("owner revokes locally and refresh retains denial with provider revocation 
   await page.reload();
   await expect(page.getByRole("button", { name: "Revoke Relay access" })).toHaveCount(0);
   await expect(page.getByText("Pending — Relay access blocked", { exact: true })).toBeVisible();
-  await expect(page.getByText("integration.connection.revoked — LOCAL_DENIAL_PROVIDER_PENDING", { exact: true })).toBeVisible();
+  await expect(page.getByText("Relay access revoked", { exact: true })).toBeVisible();
 });

@@ -10,10 +10,11 @@ import { assertBinding, assertBindingIdentity, IntegrationError, integrationBind
 import { integrationConnections, integrationReceipts } from "./schema";
 
 const requestKey = z.string().min(8).max(255);
-export function connectionWhere(scope: IntegrationScope, connectionId?: string) {
+export function connectionWhere(scope: IntegrationScope, connectionId: string) {
+  z.string().min(1).max(255).parse(connectionId);
   return and(eq(integrationConnections.accountId, scope.accountId), eq(integrationConnections.ownerPrincipalId, scope.ownerPrincipalId),
     eq(integrationConnections.installationId, scope.installationId), eq(integrationConnections.agentId, scope.agentId),
-    connectionId ? eq(integrationConnections.id, connectionId) : undefined);
+    eq(integrationConnections.id, connectionId));
 }
 
 /** Canonical account, membership and agent records remain the local authority. */

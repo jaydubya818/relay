@@ -9,6 +9,11 @@ import { db } from "@/lib/db";
 import { agents, auditRecords } from "@/lib/db/schema";
 
 export const metadata = { title: "Integration catalog" };
+const activityLabels: Record<string, string> = {
+  "integration.connection.confirmed": "Connection recorded", "integration.connection.revoked": "Relay access revoked",
+  "integration.connection.provider-revoked": "Provider revocation confirmed", "integration.execution.denied": "Tool request blocked",
+  "integration.event.received": "Provider event recorded",
+};
 const catalog = [
   { slug: "github", name: "GitHub", description: "Repository, issue, pull request and workflow context." },
   { slug: "gmail", name: "Gmail", description: "Authorized messages, search and email threads." },
@@ -40,7 +45,7 @@ export default async function IntegrationCatalog({ searchParams }: { searchParam
   return <><PageHeader eyebrow="SERVICES & INTEGRATIONS" title="Integration catalog" description="Review connected apps and the access assigned to each Agent." action={<Link className="button secondary" href="/connections">All connections</Link>} />
     <p className="notice"><strong>Integration qualification in progress.</strong> Live connection setup and remote tool execution are unavailable. Connecting an app does not grant execution permission.</p>
     {unavailable && <p role="alert" className="notice error">Connection records are unavailable. Refresh to try again. Setup may need to be completed by your administrator.</p>}
-    <form className="card" method="get"><label htmlFor="integration-search">Search integrations</label><input id="integration-search" name="q" defaultValue={params.q} maxLength={200} placeholder="Search by app or task" /><label htmlFor="integration-state">Connection filter</label><select id="integration-state" name="state" defaultValue={params.state ?? "all"}><option value="all">All integrations</option><option value="connected">Connected apps</option></select><button className="button secondary">Search</button></form>
+    <section className="card"><form className="directory-toolbar" method="get"><div className="field"><label htmlFor="integration-search">Search integrations</label><input id="integration-search" name="q" defaultValue={params.q} maxLength={200} placeholder="Search by app or task" /></div><div className="field"><label htmlFor="integration-state">Connection filter</label><select id="integration-state" name="state" defaultValue={params.state ?? "all"}><option value="all">All integrations</option><option value="connected">Connected apps</option></select></div><button className="button secondary">Search</button></form></section>
     {!shown.length && <section className="card"><h2>No integrations match these filters</h2><Link href="/connections/integrations" className="text-link">Clear filters</Link></section>}
     <section className="card" aria-label="Integration catalog">{shown.map(app => <article className="integration-record" key={app.slug}>
       <div><h2>{app.name}</h2><p className="subtle">{app.description}</p><p>Provider: Composio</p><p>Available in the catalog. Live setup requires qualification.</p></div>
@@ -58,6 +63,6 @@ export default async function IntegrationCatalog({ searchParams }: { searchParam
             </dl>{!binding.revokedAt && <IntegrationRevoke connectionId={record.id} />}
           </section>;
         })}</div></article>)}</section>
-    <section className="card"><h2>Recent integration activity</h2>{recent.length ? <ul>{recent.map(event => <li key={event.id}>{event.eventType} — {event.outcome}</li>)}</ul> : <p>No recorded integration activity.</p>}</section>
+    <section className="card"><h2>Recent integration activity</h2>{recent.length ? <ul>{recent.map(event => <li key={event.id}>{activityLabels[event.eventType] ?? "Integration activity recorded"}</li>)}</ul> : <p>No recorded integration activity.</p>}</section>
   </>;
 }
