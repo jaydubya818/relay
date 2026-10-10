@@ -123,3 +123,69 @@ test("unauthenticated advanced routes and APIs retain authentication", async ({ 
   }
   expect((await page.request.get("/api/agents")).status()).toBe(401);
 });
+
+for (const width of [1440, 768, 390, 320]) {
+  test(`Advanced connections remain readable at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await signIn(page, "connection");
+    await page.goto("/advanced/connections");
+    await expect(page.getByRole("heading", { name: "Connection setup", exact: true })).toBeVisible();
+    const badges = page.locator(".connection-summary .status");
+    await expect(badges).toHaveText(["CONNECTED", "NOT CONNECTED"]);
+    for (const label of await badges.all()) {
+      expect(await label.evaluate((element) => {
+        const range = document.createRange(); range.selectNodeContents(element);
+        return range.getClientRects().length;
+      })).toBe(1);
+    }
+    const table = page.getByRole("region", { name: "Recent connection activity" });
+    await expect(table.getByRole("cell", { name: "github.repo.read", exact: true })).toBeVisible();
+    for (const heading of await table.getByRole("columnheader").all()) {
+      expect(await heading.evaluate((element) => {
+        const range = document.createRange(); range.selectNodeContents(element);
+        return range.getClientRects().length;
+      })).toBe(1);
+    }
+    await expect(page.getByRole("button", { name: "Test connection", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Disconnect", exact: true })).toBeVisible();
+    await expect(page.getByLabel("Fine-grained personal access token")).not.toBeVisible();
+    await accessible(page);
+    if (!process.env.RELAY_OWNER_SKIP_VISUAL) await expect(page).toHaveScreenshot(`advanced-connections-${width}.png`, { fullPage: true });
+    if (width <= 390) {
+      await table.focus(); await page.keyboard.press("ArrowRight");
+      await expect.poll(() => table.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    }
+  });
+}
+
+test("GitHub management works with token setup closed without provider or credential mutations", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await signIn(page, "connection");
+  await page.goto("/advanced/connections");
+  const testConnection = page.getByRole("button", { name: "Test connection", exact: true });
+  const disconnect = page.getByRole("button", { name: "Disconnect", exact: true });
+  const methods: string[] = [];
+  let releaseResponse: (() => void) | undefined;
+  const pending = new Promise<void>((resolve) => { releaseResponse = resolve; });
+  await page.route("**/api/connections/github", async (route) => {
+    methods.push(route.request().method());
+    if (methods.length === 1) {
+      await pending;
+      await route.fulfill({ status: 502, json: { error: { message: "Synthetic connection check failed." } } });
+    } else {
+      await route.fulfill({ json: { ok: true } });
+    }
+  });
+  await testConnection.focus(); await page.keyboard.press("Enter");
+  await expect(testConnection).toBeDisabled(); await expect(disconnect).toBeDisabled();
+  releaseResponse!();
+  await expect(page.getByRole("status")).toHaveText("Synthetic connection check failed.");
+  await expect(testConnection).toBeEnabled();
+  await testConnection.click();
+  await expect(page.getByRole("status")).toHaveText("GitHub connection is healthy.");
+  await disconnect.focus(); await page.keyboard.press("Enter");
+  await expect(page.getByRole("status")).toHaveText("GitHub disconnected.");
+  expect(methods).toEqual(["POST", "POST", "DELETE"]);
+  await expect(page.getByLabel("Fine-grained personal access token")).not.toBeVisible();
+  await accessible(page);
+});

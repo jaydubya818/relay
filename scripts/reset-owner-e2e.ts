@@ -16,11 +16,15 @@ async function main() {
   } finally { await client.end(); }
   await migrateDatabase();
   const timestamp = "2026-01-15T12:00:00.000Z";
-  for (const persona of ["owner", "empty", "member", "operator"] as const) {
+  for (const persona of ["owner", "empty", "member", "operator", "connection"] as const) {
     const user = await createAccountOwner({ accountName: `Synthetic ${persona}`, name: `Synthetic ${persona}`, email: `${persona}@owner-fixture.example`, password: "synthetic-owner-password" });
     if (persona === "member" || persona === "operator") {
       await db().update(users).set({ role: "MEMBER" }).where(eq(users.id, user.id));
       await db().update(accountMemberships).set({ role: persona === "operator" ? "OPERATOR" : "MEMBER" }).where(eq(accountMemberships.accountId, user.accountId));
+    }
+    if (persona === "connection") {
+      await db().insert(connections).values({ id: "conn_layout_fixture", accountId: user.accountId, provider: "GITHUB", displayName: "Synthetic repository connection", status: "CONNECTED", scopes: [], createdAt: timestamp, updatedAt: timestamp });
+      await db().insert(activities).values({ id: "act_connection_fixture", accountId: user.accountId, sessionId: "session_layout_fixture", provider: "GITHUB", action: "github.repo.get", capability: "github.repo.read", status: "SUCCESS", durationMs: 24, createdAt: timestamp });
     }
     if (persona !== "owner") continue;
     await db().insert(agents).values({ id: "agt_owner_fixture_sofie", accountId: user.accountId, name: "Sofie", description: "Personal Agent", status: "ACTIVE", createdAt: timestamp, updatedAt: timestamp });

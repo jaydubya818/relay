@@ -223,3 +223,11 @@ tr:last-child td { border-bottom: 0; }
 .app-shell .filters { flex-wrap: wrap; }
 
 .app-shell .status.pending { color: #815018; }
+
+/* Advanced connections retain whole status labels and readable table columns. */
+.app-shell .connection-summary { flex-wrap: wrap; gap: 12px; }
+.app-shell .connection-summary > div { flex: 1 1 180px; min-width: 0; }
+.app-shell .connection-summary .status { flex-shrink: 0; white-space: nowrap; }
+.app-shell .connection-activity table { min-width: 640px; }
+.app-shell .connection-activity th { white-space: nowrap; overflow-wrap: normal; }
+.app-shell .connection-activity:focus-visible { outline: 3px solid #367d67; outline-offset: -3px; }
