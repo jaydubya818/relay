@@ -39,7 +39,7 @@ export async function createV2Agent(input: { accountId: string; ownerPrincipalId
   return { agentId, status: "DRAFT" as const };
 }
 
-const passportPolicySchema = agentPassportSchema.innerType().pick({ trustTier: true, capabilityEligibility: true, policyReferences: true, budgetReferences: true, allowedEnvironments: true, dataAccess: true, expiresAt: true }).strict();
+export const passportPolicySchema = agentPassportSchema.innerType().pick({ trustTier: true, capabilityEligibility: true, policyReferences: true, budgetReferences: true, allowedEnvironments: true, dataAccess: true, expiresAt: true }).strict();
 
 type IssuePassportInput = { accountId: string; agentId: string; ownerPrincipalId: string; policy: PassportPolicy; expectedVersion?: number };
 

@@ -52,6 +52,11 @@ async function createPolicyBundleDocument(input: { accountId: string | null; nam
     const signature = await signer.sign(bundleHash);
     const bundleId = id("pol");
     await transaction.insert(policyBundles).values({ id: bundleId, accountId: input.accountId, name: input.name, layer: input.layer, version: document.version, status: activate ? "ACTIVE" : "STAGED", rules: document.rules, bundleHash, signature, signingKeyId: signer.keyId, createdByPrincipalId: input.createdByPrincipalId, activatedAt: activate ? now() : undefined });
+    if (input.accountId) await appendAuditRecordInTransaction(transaction, {
+      accountId: input.accountId, actorPrincipalId: input.createdByPrincipalId,
+      eventType: "policy.staged", outcome: "SUCCESS",
+      details: { bundleId, bundleHash, layer: input.layer, version: document.version },
+    }, signer);
     return { bundleId, document, bundleHash, signature, signingKeyId: signer.keyId };
   });
 }
@@ -77,6 +82,10 @@ export async function activateAccountPolicy(input: { accountId: string; actorPri
     await requireMembership({ accountId: input.accountId, principalId: input.actorPrincipalId, allowedRoles: ["OWNER", "ADMIN"] });
     const [bundle] = await transaction.select().from(policyBundles).where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.id, input.bundleId), eq(policyBundles.status, "STAGED"))).limit(1);
     if (!bundle) throw new RelayError("INVALID_INPUT", "Staged policy bundle not found.", undefined, 404);
+    const [latest] = await transaction.select({ version: policyBundles.version }).from(policyBundles)
+      .where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.name, bundle.name), eq(policyBundles.layer, bundle.layer)))
+      .orderBy(desc(policyBundles.version)).limit(1);
+    if (latest?.version !== bundle.version) throw new RelayError("INVALID_INPUT", "Policy version changed; stage and review the current policy.", undefined, 409);
     verifyPolicyDocumentHash(bundle);
     const freshnessFloor = new Date(Date.now() - 10 * 60_000).toISOString();
     const [stepUp] = await transaction.select({ id: stepUpChallenges.id }).from(stepUpChallenges).where(and(eq(stepUpChallenges.id, input.stepUpChallengeId), eq(stepUpChallenges.accountId, input.accountId), eq(stepUpChallenges.principalId, input.actorPrincipalId), eq(stepUpChallenges.actionClass, "policy.activate"), eq(stepUpChallenges.actionHash, bundle.bundleHash), eq(stepUpChallenges.status, "CONSUMED"), gt(stepUpChallenges.consumedAt, freshnessFloor))).limit(1);
