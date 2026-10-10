@@ -2,7 +2,7 @@ name: Owner experience browser qualification
 on:
   pull_request:
   push:
-    branches: [codex/relay-owner-experience, codex/relay-owner-checkpoint-b]
+    branches: [codex/relay-owner-experience, codex/relay-owner-checkpoint-b, codex/relay-composio-integration]
 permissions:
   contents: read
 jobs:
@@ -25,6 +25,7 @@ jobs:
       # Committed screenshots are macOS Chromium baselines. Linux runs all
       # journeys, viewport/overflow checks and axe checks without comparing fonts.
       RELAY_OWNER_SKIP_VISUAL: 'true'
+      RELAY_INTEGRATION_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/relay_e2e_integrations
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -37,6 +38,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm exec playwright test --config=playwright.owner.config.ts
+      - run: pnpm exec playwright test --config=playwright.integrations.config.ts
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

@@ -3,7 +3,7 @@ name: Relay qualification
 on:
   pull_request:
   push:
-    branches: [main, codex/relay-owner-experience, codex/relay-owner-checkpoint-b]
+    branches: [main, codex/relay-owner-experience, codex/relay-owner-checkpoint-b, codex/relay-composio-integration]
 
 permissions:
   contents: read
@@ -52,7 +52,7 @@ jobs:
       - run: pnpm v2:frontier:check
       - run: pnpm db:check
       - run: pnpm exec tsx scripts/verify-owner-contracts.ts
-        if: github.ref == 'refs/heads/codex/relay-owner-checkpoint-b' || github.head_ref == 'codex/relay-owner-checkpoint-b'
+        if: contains(github.ref, 'relay-owner-checkpoint-b') || contains(github.head_ref, 'relay-owner-checkpoint-b') || contains(github.ref, 'relay-composio-integration') || contains(github.head_ref, 'relay-composio-integration')
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test:ci
