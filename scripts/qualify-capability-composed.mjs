@@ -23,6 +23,9 @@ const { policyMessageHash } = require('../lib/v2/policy/ordering-wire.ts');
 process.env.LC_ALL = 'C';
 process.env.LANG = 'C';
 const execFile = promisify(callback), fixture = JSON.parse(await readFile(process.argv[2], 'utf8'));
+const fixtureUrl = new URL(fixture.url);
+if (fixtureUrl.protocol !== 'http:' || !['127.0.0.1', '[::1]'].includes(fixtureUrl.hostname)
+  || fixtureUrl.username || fixtureUrl.password || fixtureUrl.search || fixtureUrl.hash) throw Error('Composed qualification requires an isolated loopback Convex backend');
 const mcRequire = createRequire(join(dirname(dirname(fixture.cli)), '../package.json'));
 const { ConvexHttpClient } = mcRequire('convex/browser'), { makeFunctionReference } = mcRequire('convex/server');
 const { CapabilityStore } = await import(join(fixture.myeveRoot, 'apps/eve/lib/capability-control/store.ts'));
@@ -58,7 +61,10 @@ try {
   const bootstrap = await createWorkloadBootstrap({ accountId, agentId: agent.agentId, runtimeClientId: nativeRuntime.runtimeClientId, taskId: 'tsk_composed1', providerId: 'relay-managed', assurance: 'managed-equivalent', audience: 'composed-pep', publicKeyPem: pair.publicKey.export({ type: 'spki', format: 'pem' }).toString() }, signer);
   const workload = await exchangeWorkloadBootstrap({ accountId, secret: bootstrap.secret, proofSignature: sign(null, Buffer.from(bootstrap.challenge), pair.privateKey).toString('base64url') }, signer);
   const binding = { ...fixture.binding, ownerId: principalId, organizationId: accountId, agentId: agent.agentId, registryVersion: capabilityRegistry.version };
-  await execFile(process.execPath, [fixture.cli, 'env', 'set', 'MC_CAPABILITY_BINDINGS_JSON', JSON.stringify([binding]), '--url', fixture.url, '--admin-key', fixture.admin], { env: process.env, cwd: dirname(process.argv[2]) }).catch(error => { throw Error(String(error.stderr ?? 'Isolated Convex configuration failed').replaceAll(fixture.admin, '[synthetic key]')); });
+  for (const [name, value] of Object.entries({ MC_CAPABILITY_BINDINGS_JSON: JSON.stringify([binding]),
+    MC_CAPABILITY_RECEIVER_RECOVERY_STATE: 'ACTIVE', MC_CAPABILITY_RECEIVER_EPOCH: binding.incarnation })) {
+    await execFile(process.execPath, [fixture.cli, 'env', 'set', name, value, '--url', fixture.url, '--admin-key', fixture.admin], { env: process.env, cwd: dirname(process.argv[2]) }).catch(error => { throw Error(String(error.stderr ?? 'Isolated Convex configuration failed').replaceAll(fixture.admin, '[synthetic key]')); });
+  }
   const destination = { ...binding, accountId, capabilityNames: { 'enterprise.missions': capabilityName }, endpoint: `http://127.0.0.1:${fixture.sitePort}/capability-control/fence`, sourceKey: fixture.sourceKey, backendKey: fixture.backendKey };
   process.env.RELAY_CAPABILITY_ENVIRONMENT = 'qualification';
   process.env.RELAY_CAPABILITY_COORDINATION_JSON = JSON.stringify({ signer: fixture.relayKey, destinations: [destination] });
