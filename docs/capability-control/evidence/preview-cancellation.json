@@ -1,0 +1,33 @@
+{
+  "incident": "Branch exclusion was missing before initial push; unintended previews cancelled. No promotion or production mutation was performed.",
+  "deployments": [
+    {
+      "id": "dpl_8fSXkri4vUStwLjicuhsaZG1GNpm",
+      "name": "relay",
+      "readyState": "CANCELED",
+      "target": null,
+      "url": "relay-pmd7tp87g-jaydubya818.vercel.app",
+      "alias": [
+        "relay-git-codex-unified-capability-control-plane-jaydubya818.vercel.app"
+      ],
+      "aliasAssigned": false,
+      "createdAt": 1791607137602,
+      "buildingAt": 1791607139137,
+      "ready": 1791607189697
+    },
+    {
+      "id": "dpl_29nHgCJBhvXgXHdfKDFWX7fwdmoZ",
+      "name": "relay-v2-owner-qualification",
+      "readyState": "CANCELED",
+      "target": null,
+      "url": "relay-v2-owner-qualification-bqlo4bjkl-jaydubya818.vercel.app",
+      "alias": [
+        "relay-v2-owner-qualification-git-codex-unifi-e33e7a-jaydubya818.vercel.app"
+      ],
+      "aliasAssigned": false,
+      "createdAt": 1791607137585,
+      "buildingAt": 1791607138994,
+      "ready": 1791607192499
+    }
+  ]
+}

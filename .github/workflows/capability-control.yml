@@ -1,0 +1,29 @@
+name: Capability administration qualification
+on:
+  push:
+    branches: [codex/unified-capability-control-plane]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm typecheck
+      - run: pnpm exec eslint lib/v2/policy/ordering.ts lib/v2/policy/ordering-wire.ts lib/worker.ts tests/v2/capability-maintenance.test.ts lib/v2/policy/administration.ts lib/v2/policy/propagation.ts lib/v2/policy/service.ts lib/v2/passports.ts lib/v2/leases.ts tests/v2/policy-propagation.test.ts app/api/v2/operator/capability-policy/route.ts tests/v2/capability-administration.test.ts
+      - run: CAPABILITY_TEST_POSTGRES_BIN="$(pg_config --bindir)" node scripts/qualify-capability-administration.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capability-administration-evidence
+          path: docs/capability-control/evidence

@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "checks": [
+    "MyEve persists enable; native Relay propagates exact ACK; backend challenge and native lease authorize exact-owner Mission once",
+    "disable reaches real receiver, denies stale and fresh admissions, preserves admitted Mission and authenticated Sofie readback",
+    "re-enable requires fresh proof; revoke commits durable active-Work control and never reports a resource stopped",
+    "real password login and canonical owner-scoped Settings readback",
+    "browser disable durably propagates, Sofie reads preference, backend denies admission, existing Mission survives",
+    "browser enable receives exact acknowledgment before owner-authorized native Mission admission",
+    "revoke, native fence, browser reconnect and durable pending cleanup/UNKNOWN readback",
+    "capability panel accessibility, keyboard refresh and narrow viewport"
+  ],
+  "scope": "real PostgreSQL + native Relay APIs/HTTP route + real Convex Mission admission",
+  "activeResourceStop": "PENDING_BACKEND",
+  "paidOperations": 0
+}

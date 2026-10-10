@@ -1,3 +1,5 @@
+import { db } from '@/lib/db';
+import { policyDecisions } from '@/lib/db/schema';
 import { generateKeyPairSync, sign } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApprovalRequest, decideApproval } from "@/lib/v2/approvals";
@@ -5,9 +7,10 @@ import { createBudget, releaseBudgetReservation, reserveBudget } from "@/lib/v2/
 import { canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
 import { createLocalEd25519Signer } from "@/lib/v2/evidence";
 import { authorizeLeaseCall, createWorkloadBootstrap, emergencyRevokeAgent, exchangeWorkloadBootstrap, introspectLease, issueCapabilityLease, revokeLease } from "@/lib/v2/leases";
-import { createV2Agent, issueAgentPassport } from "@/lib/v2/passports";
+import { createV2Agent, issueAgentPassport, exportAgentPassport, revokeAgentPassport } from "@/lib/v2/passports";
 import { evaluatePolicy, publishRelaySafetyPolicy, registerCapabilityDefinition, type PolicyRule } from "@/lib/v2/policy";
 import { registerRuntimeClient } from "@/lib/v2/runtime-clients";
+import { manageCapabilityAdministration } from "@/lib/v2/policy/administration";
 import { cleanupDatabase, freshDatabase, secondAccount } from "../helpers";
 
 function proposedAction(accountId: string, agentId: string, runtimeClientId: string, capabilityName: string, target = "target-1"): ActionIntent {
@@ -15,7 +18,7 @@ function proposedAction(accountId: string, agentId: string, runtimeClientId: str
   return { schemaVersion: "relay.action-intent.v2", id: `act_${crypto.randomUUID().replaceAll("-", "")}`, accountId, agentId, runtimeClientId, taskId: "tsk_12345678", ...material, idempotencyKey: crypto.randomUUID(), createdAt: new Date().toISOString(), canonicalHash: canonicalHash(material) };
 }
 
-async function setup(effectClass: "read" | "financial" = "read", policyEffect: "ALLOW" | "REQUIRE_APPROVAL" = "ALLOW", meteringDimensions: Array<"TOKENS"> = []) {
+async function setup(effectClass: "read" | "financial" = "read", policyEffect: "ALLOW" | "REQUIRE_APPROVAL" = "ALLOW", meteringDimensions: Array<"TOKENS"> = [], parameters?: ActionIntent["parameters"]) {
   const { accountId, principalId } = await freshDatabase();
   const signer = createLocalEd25519Signer("lease-key");
   const resolver = { publicKeyForKeyId: async (keyId: string) => keyId === signer.keyId ? await signer.publicKeyPem() : undefined };
@@ -27,6 +30,7 @@ async function setup(effectClass: "read" | "financial" = "read", policyEffect: "
   const agent = await createV2Agent({ accountId, ownerPrincipalId: principalId, name: "Lease Agent" }, signer);
   await issueAgentPassport({ accountId, agentId: agent.agentId, ownerPrincipalId: principalId, policy: { trustTier: "HIGH_ASSURANCE", capabilityEligibility: [{ name: capabilityName, version: "1.0" }], policyReferences: ["lease-safety"], budgetReferences: [], allowedEnvironments: { providerIds: ["relay-managed"], minimumAssurance: "managed-equivalent" }, dataAccess: [], expiresAt: "2099-01-01T00:00:00.000Z" } }, signer);
   const action = proposedAction(accountId, agent.agentId, runtime.runtimeClientId, capabilityName);
+  if (parameters) { action.parameters = parameters; action.canonicalHash = canonicalHash({ capability: action.capability, resource: action.resource, parameters }); }
   const policy = await evaluatePolicy({ accountId, action, resourceResolver: { resolveOwnership: async () => ({ name: "resource.account_id", value: accountId, authoritative: true, observedAt: new Date(Date.now() - 100).toISOString(), expiresAt: new Date(Date.now() + 60_000).toISOString(), sourceRevision: "target:1" }) } }, signer);
   const pair = generateKeyPairSync("ed25519");
   const publicKeyPem = pair.publicKey.export({ type: "spki", format: "pem" }).toString();
@@ -39,6 +43,52 @@ function capabilityDomain(value: string) { return value === "read" ? "resource" 
 
 describe("Relay V2 capability leases and workload identity", () => {
   afterEach(cleanupDatabase);
+
+  it("Passport revocation fences existing leases and durably requests backend cleanup", async () => {
+    const fixture = await setup();
+    const lease = await issueCapabilityLease({ accountId: fixture.accountId, action: fixture.action, workloadId: fixture.workload.workloadId, workloadIdentityToken: fixture.workload.token, audience: "relay-pep", maxCalls: 2 }, fixture.signer, fixture.resolver);
+    const passport = await exportAgentPassport(fixture.accountId, fixture.agentId);
+    const result = await revokeAgentPassport({ accountId: fixture.accountId, agentId: fixture.agentId, ownerPrincipalId: fixture.principalId, passportId: passport.passport.passportId }, fixture.signer);
+    expect(result.propagation).toMatchObject({ status: 'PENDING_BACKEND' });
+    expect(await revokeAgentPassport({ accountId: fixture.accountId, agentId: fixture.agentId, ownerPrincipalId: fixture.principalId, passportId: passport.passport.passportId }, fixture.signer)).toEqual(result);
+    expect(await introspectLease(fixture.accountId, lease.leaseId)).toMatchObject({ active: false });
+    await expect(authorizeLeaseCall({ token: lease.token, expectedAccountId: fixture.accountId, expectedAudience: 'relay-pep', expectedWorkloadId: fixture.workload.workloadId, action: fixture.action, callId: 'after-passport-revocation', online: true }, fixture.resolver, fixture.signer)).rejects.toMatchObject({ status: 403 });
+    await expect(issueCapabilityLease({ accountId: fixture.accountId, action: fixture.action, workloadId: fixture.workload.workloadId, workloadIdentityToken: fixture.workload.token, audience: 'relay-pep', maxCalls: 1 }, fixture.signer, fixture.resolver)).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('rejects a prior ALLOW decision after account policy activates DENY while preserving an admitted lease', async () => {
+    const f = await setup();
+    const request = { accountId: f.accountId, action: f.action, workloadId: f.workload.workloadId, workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 1 };
+    const admitted = await issueCapabilityLease(request, f.signer, f.resolver);
+    const staged = await manageCapabilityAdministration(f, { operation: 'stage_policy', name: 'new-denial', layer: 'ACCOUNT',
+      rules: [{ id: 'deny', effect: 'DENY', reasonCode: 'ADMINISTRATOR_DENIED', match: { capability: { name: f.capabilityName, version: '1.0' } } }] }, f.signer) as { bundleId: string };
+    await manageCapabilityAdministration(f, { operation: 'activate_policy', bundleId: staged.bundleId, password: 'correct-horse-battery-staple' }, f.signer);
+    await expect(issueCapabilityLease(request, f.signer, f.resolver)).rejects.toThrow('stale');
+    expect(await introspectLease(f.accountId, admitted.leaseId)).toMatchObject({ active: true });
+  });
+
+  it('serializes concurrent lease calls and revocation without resurrecting authority', async () => {
+    const f = await setup();
+    const lease = await issueCapabilityLease({ accountId: f.accountId, action: f.action, workloadId: f.workload.workloadId, workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 2 }, f.signer, f.resolver);
+    await Promise.allSettled([
+      authorizeLeaseCall({ token: lease.token, expectedAccountId: f.accountId, expectedAudience: 'relay-pep', expectedWorkloadId: f.workload.workloadId, action: f.action, callId: 'racing', online: true }, f.resolver, f.signer),
+      revokeLease({ accountId: f.accountId, leaseId: lease.leaseId, reason: 'qualification' }, f.signer),
+    ]);
+    expect(await introspectLease(f.accountId, lease.leaseId)).toMatchObject({ active: false });
+    await expect(authorizeLeaseCall({ token: lease.token, expectedAccountId: f.accountId, expectedAudience: 'relay-pep', expectedWorkloadId: f.workload.workloadId, action: f.action, callId: 'after-revocation', online: true }, f.resolver, f.signer)).rejects.toBeDefined();
+  });
+
+  it('binds original action digests while keeping secret-bearing evidence redacted', async () => {
+    const secret = 'synthetic-private-token';
+    const f = await setup('read', 'ALLOW', [], { token: secret });
+    const rows = await db().select().from(policyDecisions);
+    expect(JSON.stringify(rows)).not.toContain(secret);
+    const request = { accountId: f.accountId, action: f.action, workloadId: f.workload.workloadId, workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 1 };
+    await expect(issueCapabilityLease(request, f.signer, f.resolver)).resolves.toHaveProperty('leaseId');
+    const changed = { ...f.action, parameters: { token: 'changed' } };
+    changed.canonicalHash = canonicalHash({ capability: changed.capability, resource: changed.resource, parameters: changed.parameters });
+    await expect(issueCapabilityLease({ ...request, action: changed }, f.signer, f.resolver)).rejects.toThrow('Action or Passport changed');
+  });
 
   it("uses one-time proof-of-possession workload bootstrap with tenant binding", async () => {
     const fixture = await setup();
@@ -125,4 +175,113 @@ describe("Relay V2 capability leases and workload identity", () => {
     await expect(authorizeLeaseCall(request, fixture.resolver, fixture.signer, counter)).resolves.toMatchObject({ enforcement: "OFFLINE" });
     await expect(authorizeLeaseCall(request, fixture.resolver, fixture.signer, counter)).rejects.toMatchObject({ status: 409 });
   });
+});
+
+it('ordered remote lease issuance requires durable exact ACKs and preserves duplicate retry', async () => {
+  const { createServer } = await import('node:http');
+  const { and, eq } = await import('drizzle-orm');
+  const { controlOutbox } = await import('@/lib/db/schema');
+  const { withTransaction } = await import('@/lib/db');
+  const { lockActiveAccount } = await import('@/lib/account-fence');
+  const { advanceRelayPolicyFence, flushRelayPolicyFences, forwardOwnerPolicyFence, flushOwnerPolicyFences } = await import('@/lib/v2/policy/ordering');
+  const { signPolicyMessage, verifyPolicyMessage, policyMessageHash } = await import('@/lib/v2/policy/ordering-wire');
+  const makeKey = async (keyId: string) => {
+    const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    return { keyId, jwk: await crypto.subtle.exportKey('jwk', pair.privateKey) };
+  };
+  const f = await setup();
+  const source = await makeKey('owner-source'), receiver = await makeKey('receiver'), relay = await makeKey('relay');
+  let rejectDelivery = true, loseAcknowledgment = false, deliveries = 0;
+  const server = createServer(async (req, res) => {
+    try {
+      deliveries++;
+      if (rejectDelivery) { res.writeHead(503); res.end(); return; }
+      let body = ''; for await (const part of req) body += part;
+      const envelope = JSON.parse(body).envelope;
+      const fence = await verifyPolicyMessage(envelope, JSON.parse(envelope.message).authority === 'myeve' ? source : relay);
+      if (fence.kind !== 'FENCE') throw Error('expected fence');
+      const { kind: _kind, capabilityId: _capabilityId, operation: _operation, controls: _controls, ...identity } = fence;
+      void _kind; void _capabilityId; void _operation; void _controls;
+      const ack = await signPolicyMessage({ ...identity, kind: 'FENCE_ACK', fenceHash: await policyMessageHash(fence) }, receiver);
+      // The receiver fixture durably stores before responding; it is not native MissionControl admission.
+      await db().insert(controlOutbox).values({ id: 'ack_' + crypto.randomUUID(), accountId: f.accountId, aggregateType: 'test_receiver_ack', aggregateId: fence.policyId, type: 'test.ack', payload: ack, idempotencyKey: 'test-ack:' + fence.authority + ':' + fence.version, publishedAt: new Date().toISOString() }).onConflictDoNothing();
+      if (loseAcknowledgment) { res.destroy(); return; }
+      res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(ack));
+    } catch { res.writeHead(500); res.end(); }
+  });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const identity = { ownerId: 'owner', organizationId: f.accountId, installationId: 'isolated', backendId: 'missioncontrol', incarnation: 'boot-1', enrollmentVersion: 1 };
+    const destination = { ...identity, accountId: f.accountId, agentId: f.agentId, capabilityNames: { 'enterprise.missions': f.capabilityName }, endpoint: `http://127.0.0.1:${(server.address() as { port: number }).port}/fence`, sourceKey: source, backendKey: receiver };
+    process.env.RELAY_CAPABILITY_ENVIRONMENT = 'qualification';
+    process.env.RELAY_CAPABILITY_COORDINATION_JSON = JSON.stringify({ signer: relay, destinations: [destination] });
+    await withTransaction(async tx => { await lockActiveAccount(tx, f.accountId); await advanceRelayPolicyFence(tx, f.accountId); });
+    const issuedAt = Date.now();
+    const permit = { ...identity, kind: 'PERMIT' as const, authority: 'myeve' as const, version: 1, policyId: 'owner-policy-1', referenceId: crypto.randomUUID(), capabilityId: 'enterprise.missions', requiredCapabilities: ['work', 'missioncontrol', 'enterprise.missions'], registryVersion: 'test', agentId: f.agentId, agentRevision: 1, workId: 'mission-1', missionId: 'mission-1', workGeneration: 1, actionDigest: 'a'.repeat(64), budgetMicros: 0, issuedAt, expiresAt: issuedAt + 30000, sourcePermitHash: 'SELF' };
+    const remoteAdmission = await signPolicyMessage(permit, source);
+    f.action.parameters = { capabilityAdmissionDigest: await policyMessageHash(permit) };
+    f.action.canonicalHash = canonicalHash({ capability: f.action.capability, resource: f.action.resource, parameters: f.action.parameters });
+    await evaluatePolicy({ accountId: f.accountId, action: f.action, resourceResolver: { resolveOwnership: async () => ({ name: 'resource.account_id', value: f.accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'test:1' }) } }, f.signer);
+    const request = { accountId: f.accountId, action: f.action, workloadId: f.workload.workloadId, workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 1, remoteAdmission };
+    await expect(issueCapabilityLease(request, f.signer, f.resolver)).rejects.toThrow('PROPAGATION_PENDING');
+    await expect(flushRelayPolicyFences(f.accountId)).rejects.toThrow('DELIVERY_UNAVAILABLE');
+    rejectDelivery = false;
+    await flushRelayPolicyFences(f.accountId);
+    const [a, b] = await Promise.all([issueCapabilityLease(request, f.signer, f.resolver), issueCapabilityLease(request, f.signer, f.resolver)]);
+    expect(a).toEqual(b);
+    const proof = await verifyPolicyMessage(a.remotePermit!, relay);
+    expect(proof).toMatchObject({ kind: 'PERMIT', authority: 'relay', sourcePermitHash: await policyMessageHash(permit), referenceId: a.leaseId });
+    const ownerFence = await signPolicyMessage({ ...identity, kind: 'FENCE', authority: 'myeve', version: 2, policyId: 'owner-policy-2', capabilityId: 'missioncontrol', operation: 'disable' }, source);
+    const ack = await forwardOwnerPolicyFence(ownerFence), count = deliveries;
+    expect(await forwardOwnerPolicyFence(ownerFence)).toEqual(ack); expect(deliveries).toBe(count);
+    const [saved] = await db().select().from(controlOutbox).where(and(eq(controlOutbox.accountId, f.accountId), eq(controlOutbox.aggregateType, 'capability_owner_fence')));
+    expect(saved.payload).toMatchObject({ acknowledgment: ack });
+    const replayFence = await signPolicyMessage({ ...identity, kind: 'FENCE', authority: 'myeve', version: 3, policyId: 'owner-policy-3', capabilityId: 'missioncontrol', operation: 'revoke' }, source);
+    loseAcknowledgment = true;
+    await expect(forwardOwnerPolicyFence(replayFence)).rejects.toBeDefined();
+    expect(await flushOwnerPolicyFences(f.accountId)).toEqual([{ backendId: 'missioncontrol', status: 'PENDING_BACKEND' }]);
+    const { closeDatabasesForTests } = await import('@/lib/db');
+    await closeDatabasesForTests();
+    loseAcknowledgment = false;
+    expect(await flushOwnerPolicyFences(f.accountId)).toEqual([{ backendId: 'missioncontrol', status: 'ACKNOWLEDGED' }]);
+    const recovered = await forwardOwnerPolicyFence(replayFence), afterRecovery = deliveries;
+    expect(await flushOwnerPolicyFences(f.accountId)).toEqual([]);
+    expect(await forwardOwnerPolicyFence(replayFence)).toEqual(recovered);
+    expect(deliveries).toBe(afterRecovery);
+    const [received] = await db().select().from(controlOutbox).where(and(eq(controlOutbox.accountId, f.accountId), eq(controlOutbox.idempotencyKey, 'test-ack:myeve:3')));
+    expect(received).toBeDefined();
+    const changedDestination = { ...destination, endpoint: destination.endpoint + '/changed' };
+    process.env.RELAY_CAPABILITY_COORDINATION_JSON = JSON.stringify({ signer: relay, destinations: [changedDestination] });
+    await expect(forwardOwnerPolicyFence(replayFence)).rejects.toThrow('ENROLLMENT_CHANGED');
+    process.env.RELAY_CAPABILITY_COORDINATION_JSON = JSON.stringify({ signer: relay, destinations: [destination] });
+    await revokeLease({ accountId: f.accountId, leaseId: a.leaseId, reason: 'qualification' }, f.signer);
+    const [epoch] = await db().select().from(controlOutbox).where(and(eq(controlOutbox.accountId, f.accountId), eq(controlOutbox.aggregateType, 'capability_epoch')));
+    expect(epoch.payload).toMatchObject({ version: 2 });
+    expect((epoch.payload as { pending: string[] }).pending).toHaveLength(1);
+    await flushRelayPolicyFences(f.accountId);
+    expect(await introspectLease(f.accountId, a.leaseId)).toMatchObject({ active: false });
+    const freshSource = { ...permit, referenceId: crypto.randomUUID() };
+    const freshEnvelope = await signPolicyMessage(freshSource, source);
+    f.action = { ...f.action, id: `act_${crypto.randomUUID().replaceAll('-', '')}`, parameters: { capabilityAdmissionDigest: await policyMessageHash(freshSource) } };
+    f.action.canonicalHash = canonicalHash({ capability: f.action.capability, resource: f.action.resource, parameters: f.action.parameters });
+    await evaluatePolicy({ accountId: f.accountId, action: f.action, resourceResolver: { resolveOwnership: async () => ({ name: 'resource.account_id', value: f.accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'test:2' }) } }, f.signer);
+    const { revokeRuntimeClient } = await import('@/lib/v2/runtime-clients');
+    await revokeRuntimeClient({ accountId: f.accountId, actorPrincipalId: f.principalId, runtimeClientId: f.runtimeClientId }, f.signer);
+    await flushRelayPolicyFences(f.accountId);
+    await expect(issueCapabilityLease({ ...request, action: f.action, remoteAdmission: freshEnvelope }, f.signer, f.resolver)).rejects.toThrow('runtime authority');
+  } finally {
+    delete process.env.RELAY_CAPABILITY_COORDINATION_JSON; delete process.env.RELAY_CAPABILITY_ENVIRONMENT;
+    await new Promise<void>(resolve => server.close(() => resolve())); await cleanupDatabase();
+  }
+});
+
+
+it('a suspended canonical owner cannot turn a previously evaluated action into a new lease', async () => {
+  const f = await setup();
+  try {
+    const { suspendPrincipal } = await import('@/lib/v2/identity');
+    await suspendPrincipal({ accountId: f.accountId, principalId: f.principalId });
+    await expect(issueCapabilityLease({ accountId: f.accountId, action: f.action, workloadId: f.workload.workloadId,
+      workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 1 }, f.signer, f.resolver)).rejects.toThrow('Passport');
+  } finally { await cleanupDatabase(); }
 });

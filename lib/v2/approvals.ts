@@ -1,3 +1,5 @@
+import { lockActiveAccount } from "@/lib/account-fence";
+import { advanceRelayPolicyFence } from "@/lib/v2/policy/ordering";
 import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import { db, withTransaction, type RelayDatabase } from "@/lib/db";
 import { accountMemberships, approvalConsumptions, approvalDecisions, approvalNotifications, approvalRequests, capabilityDefinitions, policyDecisions, principals } from "@/lib/db/schema";
@@ -119,8 +121,10 @@ export async function consumeApproval(input: Parameters<typeof consumeApprovalIn
 export async function revokeApproval(input: { accountId: string; requestId: string; principalId: string }, signer: AuditSigner) {
   await requireMembership({ accountId: input.accountId, principalId: input.principalId, allowedRoles: ["OWNER", "ADMIN", "APPROVER"] });
   await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, input.accountId);
     const [request] = await transaction.update(approvalRequests).set({ status: "REVOKED", revokedAt: now() }).where(and(eq(approvalRequests.accountId, input.accountId), eq(approvalRequests.id, input.requestId), eq(approvalRequests.status, "APPROVED"))).returning();
     if (!request) throw new RelayError("INVALID_INPUT", "Approved request not found.", undefined, 404);
+    await advanceRelayPolicyFence(transaction, input.accountId, "revoke");
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.principalId, agentId: request.agentId, taskId: request.taskId, actionIntentId: request.actionIntentId, policyDecisionId: request.policyDecisionId, eventType: "approval.revoked", outcome: "REVOKED", details: { requestId: request.id } }, signer);
   });
 }

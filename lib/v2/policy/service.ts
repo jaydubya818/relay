@@ -1,7 +1,9 @@
+import { enqueuePolicyPropagation } from "./propagation";
+import { advanceRelayPolicyFence } from './ordering';
 import { lockActiveAccount } from "@/lib/account-fence";
 import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
-import { capabilityDefinitions, policyBundles, policyDecisions, stepUpChallenges } from "@/lib/db/schema";
+import { capabilityDefinitions, policyBundles, policyDecisions, stepUpChallenges, controlOutbox } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { actionIntentSchema, canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
@@ -40,6 +42,7 @@ export async function registerCapabilityDefinition(input: CapabilityDefinition, 
 
 async function createPolicyBundleDocument(input: { accountId: string | null; name: string; layer: PolicyBundleDocument["layer"]; rules: PolicyBundleDocument["rules"]; createdByPrincipalId?: string }, signer: AuditSigner, activate: boolean) {
   return await withTransaction(async (transaction) => {
+    if (!input.accountId) await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended('relay-safety-policy', 0))`);
     if (input.accountId) {
       await lockActiveAccount(transaction, input.accountId);
       await requireMembership({ accountId: input.accountId, principalId: input.createdByPrincipalId!, allowedRoles: ["OWNER", "ADMIN"] });
@@ -52,6 +55,15 @@ async function createPolicyBundleDocument(input: { accountId: string | null; nam
     const signature = await signer.sign(bundleHash);
     const bundleId = id("pol");
     await transaction.insert(policyBundles).values({ id: bundleId, accountId: input.accountId, name: input.name, layer: input.layer, version: document.version, status: activate ? "ACTIVE" : "STAGED", rules: document.rules, bundleHash, signature, signingKeyId: signer.keyId, createdByPrincipalId: input.createdByPrincipalId, activatedAt: activate ? now() : undefined });
+    if (!input.accountId && activate) {
+      const enrolled = await transaction.select({ accountId: controlOutbox.accountId }).from(controlOutbox).where(eq(controlOutbox.aggregateType, 'capability_epoch'));
+      for (const row of enrolled) { await lockActiveAccount(transaction, row.accountId); await advanceRelayPolicyFence(transaction, row.accountId); }
+    }
+    if (input.accountId) await appendAuditRecordInTransaction(transaction, {
+      accountId: input.accountId, actorPrincipalId: input.createdByPrincipalId,
+      eventType: "policy.staged", outcome: "SUCCESS",
+      details: { bundleId, bundleHash, layer: input.layer, version: document.version },
+    }, signer);
     return { bundleId, document, bundleHash, signature, signingKeyId: signer.keyId };
   });
 }
@@ -77,12 +89,18 @@ export async function activateAccountPolicy(input: { accountId: string; actorPri
     await requireMembership({ accountId: input.accountId, principalId: input.actorPrincipalId, allowedRoles: ["OWNER", "ADMIN"] });
     const [bundle] = await transaction.select().from(policyBundles).where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.id, input.bundleId), eq(policyBundles.status, "STAGED"))).limit(1);
     if (!bundle) throw new RelayError("INVALID_INPUT", "Staged policy bundle not found.", undefined, 404);
+    const [latest] = await transaction.select({ version: policyBundles.version }).from(policyBundles)
+      .where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.name, bundle.name), eq(policyBundles.layer, bundle.layer)))
+      .orderBy(desc(policyBundles.version)).limit(1);
+    if (latest?.version !== bundle.version) throw new RelayError("INVALID_INPUT", "Policy version changed; stage and review the current policy.", undefined, 409);
     verifyPolicyDocumentHash(bundle);
     const freshnessFloor = new Date(Date.now() - 10 * 60_000).toISOString();
     const [stepUp] = await transaction.select({ id: stepUpChallenges.id }).from(stepUpChallenges).where(and(eq(stepUpChallenges.id, input.stepUpChallengeId), eq(stepUpChallenges.accountId, input.accountId), eq(stepUpChallenges.principalId, input.actorPrincipalId), eq(stepUpChallenges.actionClass, "policy.activate"), eq(stepUpChallenges.actionHash, bundle.bundleHash), eq(stepUpChallenges.status, "CONSUMED"), gt(stepUpChallenges.consumedAt, freshnessFloor))).limit(1);
     if (!stepUp) throw new RelayError("INVALID_CREDENTIAL", "Fresh action-bound step-up evidence is required.", undefined, 401);
     await transaction.update(policyBundles).set({ status: "RETIRED", retiredAt: now() }).where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.name, bundle.name), eq(policyBundles.layer, bundle.layer), eq(policyBundles.status, "ACTIVE")));
     await transaction.update(policyBundles).set({ status: "ACTIVE", activatedAt: now() }).where(and(eq(policyBundles.accountId, input.accountId), eq(policyBundles.id, bundle.id)));
+    await enqueuePolicyPropagation(transaction, { accountId: input.accountId, aggregateId: bundle.id + ':activated',
+      kind: 'POLICY_CHANGED', revision: bundle.version, source: { bundleHash: bundle.bundleHash, status: 'ACTIVATED', layer: bundle.layer } }, signer);
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.actorPrincipalId, eventType: "policy.activated", outcome: "SUCCESS", details: { bundleId: bundle.id, bundleHash: bundle.bundleHash, layer: bundle.layer, version: bundle.version } }, signer);
   });
 }
@@ -97,6 +115,8 @@ export async function retireAccountPolicy(input: { accountId: string; actorPrinc
     const [stepUp] = await transaction.select({ id: stepUpChallenges.id }).from(stepUpChallenges).where(and(eq(stepUpChallenges.id, input.stepUpChallengeId), eq(stepUpChallenges.accountId, input.accountId), eq(stepUpChallenges.principalId, input.actorPrincipalId), eq(stepUpChallenges.actionClass, "policy.retire"), eq(stepUpChallenges.actionHash, bundle.bundleHash), eq(stepUpChallenges.status, "CONSUMED"), gt(stepUpChallenges.consumedAt, new Date(Date.now() - 600000).toISOString()))).limit(1);
     if (!stepUp) throw new RelayError("INVALID_CREDENTIAL", "Fresh action-bound step-up evidence is required.", undefined, 401);
     await transaction.update(policyBundles).set({ status: "RETIRED", retiredAt: now() }).where(eq(policyBundles.id, bundle.id));
+    await enqueuePolicyPropagation(transaction, { accountId: input.accountId, aggregateId: bundle.id + ':retired',
+      kind: 'POLICY_CHANGED', revision: bundle.version, source: { bundleHash: bundle.bundleHash, status: 'RETIRED', layer: bundle.layer } }, signer);
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.actorPrincipalId, eventType: "policy.retired", outcome: "SUCCESS", details: { bundleId: bundle.id, bundleHash: bundle.bundleHash, layer: bundle.layer, version: bundle.version } }, signer);
   });
 }
@@ -135,7 +155,7 @@ async function persistDecision(input: { accountId: string; action: ActionIntent;
   const expiresAt = new Date(Math.min(Date.now() + 60_000, ...(factExpiry.length ? factExpiry : [Date.now() + 60_000]))).toISOString();
   const persistableSnapshot = redactForEvidence(input.snapshot) as unknown as PolicyEvaluationSnapshot;
   await withTransaction(async (transaction) => {
-    await transaction.insert(policyDecisions).values({ id: decisionId, accountId: input.accountId, actionIntentId: input.action.id, agentId: input.action.agentId, outcome: input.result.outcome, reasonCodes: input.result.reasonCodes, obligations: input.result.obligations, capabilityDefinitionHash: input.capabilityHash, policyBundleHashes: input.bundleHashes, materialFacts: persistableSnapshot.facts, evaluationSnapshot: { snapshot: persistableSnapshot, result: input.result }, expiresAt });
+    await transaction.insert(policyDecisions).values({ id: decisionId, accountId: input.accountId, actionIntentId: input.action.id, agentId: input.action.agentId, outcome: input.result.outcome, reasonCodes: input.result.reasonCodes, obligations: input.result.obligations, capabilityDefinitionHash: input.capabilityHash, policyBundleHashes: input.bundleHashes, materialFacts: persistableSnapshot.facts, evaluationSnapshot: { snapshot: persistableSnapshot, result: input.result, actionDigest: canonicalHash(input.snapshot.action), passportDigest: canonicalHash(input.snapshot.passport) }, expiresAt });
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, agentId: input.action.agentId, runtimeClientId: input.action.runtimeClientId, taskId: input.action.taskId, actionIntentId: input.action.id, policyDecisionId: decisionId, eventType: "policy.evaluated", outcome: input.result.outcome, details: { reasonCodes: input.result.reasonCodes, matchedRuleIds: input.result.matchedRuleIds, capabilityDefinitionHash: input.capabilityHash, policyBundleHashes: input.bundleHashes } }, input.signer);
   });
   return { decisionId, expiresAt, ...input.result };
