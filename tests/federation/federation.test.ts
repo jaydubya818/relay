@@ -72,9 +72,12 @@ describe("federation trust boundaries", () => {
     expect(result.idempotentReplay).toBe(false);
     const [cancelled] = await db().select().from(controlOutbox).where(eq(controlOutbox.id, queued.id));
     expect(cancelled.cancelledAt).not.toBeNull();
-    const published: string[] = [];
-    expect(await publishOutboxBatch({ publish: async (message) => { published.push(message.id); } })).toBe(0);
-    expect(published).toEqual([]);
+    const published: Array<{ id: string; accountId: string; aggregateType: string }> = [];
+    expect(await publishOutboxBatch({ publish: async ({ id, accountId, aggregateType }) => {
+      published.push({ id, accountId, aggregateType });
+    } })).toBe(1);
+    expect(published).toEqual([{ id: expect.any(String), accountId: f.jay.accountId, aggregateType: "capability_policy" }]);
+    expect(published.map(message => message.id)).not.toContain(queued.id);
     expect((await pollFederationInbox(f.sofie.credential, f.bindings)).deliveries).toEqual([]);
     await expect(submitFederationRequest(f.ava.credential,
       { ...f.submission, idempotencyKey: "after-retirement" }, f.bindings)).rejects.toMatchObject({ code: "INVALID_CREDENTIAL" });
