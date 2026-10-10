@@ -4,6 +4,7 @@ import { canonicalHash } from "@/lib/v2/contracts";
 import { redactForEvidence } from "@/lib/v2/evidence/redaction";
 import { assertBinding, assertBindingIdentity, IntegrationError, providerUserId, toolkitSchema, type IntegrationAction, type IntegrationBinding, type IntegrationProviderAdapter, type IntegrationResult, type IntegrationScope, type Toolkit } from "./contracts";
 import { bindExecution, type ExecutionBindingContext } from "./execution-binding";
+import { captureResultIntegrity } from "./result-custody";
 
 export const COMPOSIO_SDK_VERSION = "0.22.0";
 type ClientExecute = ReturnType<Composio["getClient"]>["tools"]["execute"];
@@ -161,19 +162,20 @@ export class ComposioProviderAdapter implements IntegrationProviderAdapter {
     const evidence = { provider: "composio" as const, adapterVersion: this.version, scopeDigest: canonicalHash(scope), connectionId: binding.connectionId, authorityVersion: binding.authorityVersion, tool: slug, version: qualified.version,
       schemaHash: qualified.schemaHash, argumentDigest: canonicalHash(dispatchArguments), executionBindingDigest: execution.digest,
       actionHash: execution.request.action.canonicalHash, policyDecisionId: execution.lease.policyDecisionId, leaseId: execution.lease.jti,
-      ...(execution.lease.approvalDecisionId ? { approvalDecisionId: execution.lease.approvalDecisionId } : {}), durationMs: 0 };
+      ...(execution.lease.approvalDecisionId ? { approvalDecisionId: execution.lease.approvalDecisionId } : {}) };
+    const checkedResult = captureResultIntegrity(evidence);
     try {
       // Public generated client transport; no descriptor lookup, middleware, file
       // transformations or custom auth. Retry policy is explicit for this request.
       const result = await this.call(async signal => this.sdk.getClient().tools.execute(descriptor.slug, { user_id: binding.providerUserId,
         connected_account_id: binding.connectedAccountId, version: descriptor.version, arguments: dispatchArguments, allow_tracing: false }, { signal, maxRetries: 0 }), true);
-      if (result.successful !== true) return { state: "UNKNOWN", trust: "UNTRUSTED_EXTERNAL_DATA", evidence: { ...evidence, errorCode: "PROVIDER_REPORTED_FAILURE", durationMs: performance.now() - started } };
+      if (result.successful !== true) return checkedResult({ state: "UNKNOWN", trust: "UNTRUSTED_EXTERNAL_DATA", evidence: { ...evidence, errorCode: "PROVIDER_REPORTED_FAILURE", durationMs: performance.now() - started } });
       const data = redactForEvidence(qualified.projectResult(result.data));
       if (Buffer.byteLength(JSON.stringify(data)) > 64 * 1024) throw new IntegrationError("RESULT_TOO_LARGE", "UNKNOWN");
-      return { state: "SUCCEEDED", trust: "UNTRUSTED_EXTERNAL_DATA", data, evidence: { ...evidence, resultDigest: canonicalHash(data), durationMs: performance.now() - started } };
+      return checkedResult({ state: "SUCCEEDED", trust: "UNTRUSTED_EXTERNAL_DATA", data, evidence: { ...evidence, resultDigest: canonicalHash(data), durationMs: performance.now() - started } });
     } catch (error) {
       const failure = normalizeError(error, true);
-      return { state: "UNKNOWN", trust: "UNTRUSTED_EXTERNAL_DATA", evidence: { ...evidence, errorCode: failure.code, durationMs: performance.now() - started } };
+      return checkedResult({ state: "UNKNOWN", trust: "UNTRUSTED_EXTERNAL_DATA", evidence: { ...evidence, errorCode: failure.code, durationMs: performance.now() - started } });
     }
   }
 

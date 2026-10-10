@@ -1,50 +1,97 @@
 import { createRequire } from "node:module";
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { afterAll, describe, expect, it } from "vitest";
 
-// Resolve the real audited consumer chain, not an extra direct test dependency.
-let require = createRequire(import.meta.url);
-for (const name of ["eslint-config-next", "@next/eslint-plugin-next", "fast-glob"]) {
-  require = createRequire(require.resolve(name));
+// Exercise the actual replacement used by Next ESLint, not a direct test dependency.
+const require = createRequire(import.meta.url);
+const nextRequire = createRequire(require.resolve("eslint-config-next"));
+const pluginPath = nextRequire.resolve("@next/eslint-plugin-next");
+const pluginRequire = createRequire(pluginPath);
+const { getRootDirs } = pluginRequire("./utils/get-root-dirs.js");
+const root = mkdtempSync(join(tmpdir(), "relay-glob-test-"));
+for (const name of ["apps/alpha/pages", "apps/beta/app", "apps/.hidden/pages", "space app/pages"]) {
+  mkdirSync(join(root, name), { recursive: true });
 }
-const micromatch = require("micromatch");
-require = createRequire(require.resolve("micromatch"));
-const braces = require("braces");
+writeFileSync(join(root, "apps/file.txt"), "fixture");
+symlinkSync(join(root, "apps/alpha"), join(root, "linked"), "dir");
+afterAll(() => rmSync(root, { recursive: true, force: true }));
+const resolve = rootDir => getRootDirs({
+  cwd: root,
+  settings: { next: rootDir === undefined ? {} : { rootDir } },
+});
 const nested = (open, close, depth) => open.repeat(depth) + "x" + close.repeat(depth);
-const methods = ["parse", "compile", "expand", "stringify"];
 
-describe("braces registry patch: bounded string parsing on the actual lint path", () => {
-  it.each(methods)("%s rejects reproduced deep patterns without stack exhaustion", method => {
-    for (const pattern of [nested("{", "}", 4500), nested("(", ")", 4500),
-      nested("({", "})", 2200), "{".repeat(4500), "(".repeat(4500)]) {
-      expect(() => braces[method](pattern)).toThrow(new SyntaxError("Input exceeds max nesting depth (100)"));
+describe("real lint dependency replacement", () => {
+  it("preserves default cwd, literal directories and symlink roots", () => {
+    expect(resolve(undefined)).toEqual([root]);
+    for (const path of ["apps/alpha", "linked", "space app"]) {
+      expect(resolve(join(root, path))).toEqual([join(root, path)]);
     }
+    expect(resolve(join(root, "missing"))).toEqual([]);
+    expect(resolve(join(root, "apps/file.txt"))).toEqual([]);
   });
-  it.each(methods)("%s accepts depth 100 and denies depth 101, including mixed nesting", method => {
-    for (const pattern of [nested("{", "}", 100), nested("(", ")", 100), nested("({", "})", 50)]) {
-      expect(() => braces[method](pattern)).not.toThrow();
+
+  it("preserves absolute directory sets, braces, hidden roots and path separators", () => {
+    for (const pattern of ["apps/*", "apps/{alpha,beta}", "apps/@(alpha|beta)"]) {
+      const expected = [join(root, "apps/alpha"), join(root, "apps/beta")];
+      expect(resolve(join(root, pattern)).sort()).toEqual(expected);
+      expect(resolve(join(root, pattern).replaceAll("/", "\\")).sort()).toEqual(expected);
     }
-    for (const pattern of [nested("{", "}", 101), nested("(", ")", 101), "(" + nested("({", "})", 50) + ")"]) {
-      expect(() => braces[method](pattern, { maxDepth: Infinity, maxLength: Infinity })).toThrow(SyntaxError);
-    }
+    expect(resolve(join(root, "apps/.hidden"))).toEqual([join(root, "apps/.hidden")]);
   });
-  it("protects default and expand entrypoints used by micromatch", () => {
-    const pattern = nested("{", "}", 4500);
-    for (const expand of [false, true]) {
-      expect(() => braces(pattern, { expand })).toThrow(SyntaxError);
-      expect(() => micromatch.braces(pattern, { expand })).toThrow(SyntaxError);
-    }
+
+  it("preserves explicit array order and ignores non-string entries", () => {
+    expect(resolve([join(root, "apps/beta"), null, 3, join(root, "apps/alpha")]))
+      .toEqual([join(root, "apps/beta"), join(root, "apps/alpha")]);
+    expect(resolve([])).toEqual([]);
   });
-  it("preserves ordinary glob, range, escaped, quoted and bracketed behavior", () => {
-    expect(braces.compile("src/{a,b}/*.ts")).toBe("src/(a|b)/*.ts");
-    expect(braces.expand("file-{01..03}.{js,ts}")).toEqual([
-      "file-01.js", "file-01.ts", "file-02.js", "file-02.ts", "file-03.js", "file-03.ts",
-    ]);
-    expect(micromatch(["src/a/x.ts", "src/b/y.ts", "src/c/z.ts"], "src/{a,b}/*.ts")).toEqual(["src/a/x.ts", "src/b/y.ts"]);
-    for (const pattern of ["\\{".repeat(500), '"' + "{".repeat(500) + '"', "[" + "{".repeat(500) + "]", "x".repeat(9000)]) {
-      for (const method of methods) expect(() => braces[method](pattern)).not.toThrow();
-    }
-    // Many sibling blocks do not consume nested depth.
-    expect(() => braces.compile("{a,b}".repeat(500))).not.toThrow();
-    expect(braces.expand("a/{b,c")).toEqual(["a/{b,c"]);
+
+  it("retains per-entry negative-pattern semantics and globstar base behavior", () => {
+    expect(resolve([join(root, "apps/*"), "!" + join(root, "apps/beta")]).sort())
+      .toEqual([join(root, "apps/alpha"), join(root, "apps/beta")]);
+    expect(resolve(join(root, "apps/**")).sort()).toEqual([
+      "apps/alpha", "apps/alpha/pages", "apps/beta", "apps/beta/app",
+    ].map(path => join(root, path)).sort());
+  });
+
+  it("physically removes the vulnerable dependency chain without aliases", () => {
+    const metadata = pluginRequire("../package.json");
+    expect(metadata.name).toBe("@next/eslint-plugin-next");
+    expect(metadata.version).toBe("15.5.27");
+    expect(metadata.dependencies).toEqual({ tinyglobby: "0.2.17" });
+    // Inspect the installed dependency graph: an unrelated ancestor node_modules
+    // directory on a developer machine is not part of this repository installation.
+    const lockfile = readFileSync(new URL("../../pnpm-lock.yaml", import.meta.url), "utf8");
+    expect(lockfile).not.toMatch(/^ {2}['"]?(?:fast-glob|micromatch|braces)@/m);
+    const typescriptRequire = createRequire(require.resolve("typescript-eslint"));
+    const typescriptMetadata = typescriptRequire("@typescript-eslint/typescript-estree/package.json");
+    expect(typescriptMetadata.version).toBe("8.48.0");
+    expect(typescriptMetadata.dependencies["fast-glob"]).toBeUndefined();
+    expect(typescriptMetadata.dependencies.tinyglobby).toBeTruthy();
+  });
+
+  it.each([
+    nested("{", "}", 4500), nested("(", ")", 4500), nested("({", "})", 2200),
+    "{".repeat(4500), "(".repeat(4500), nested("{a,", "}", 2000),
+  ])("handles retained malicious patterns without stack exhaustion", pattern => {
+    // Isolate malicious patterns and enforce a wall-clock bound, including regressions
+    // that hang or overflow before an exception can reach the normal test runner.
+    const script = `
+      const pluginRequire = require("node:module").createRequire(${JSON.stringify(pluginPath)});
+      const getRootDirs = pluginRequire("./utils/get-root-dirs.js").getRootDirs;
+      try {
+        getRootDirs({ cwd: process.cwd(), settings: { next: { rootDir: ${JSON.stringify(pattern)} } } });
+      } catch (error) {
+        if (error instanceof RangeError || /call stack/i.test(error.message)) process.exit(2);
+        if (!(error instanceof SyntaxError) && error.code !== "ENAMETOOLONG") process.exit(3);
+      }
+    `;
+    const result = spawnSync(process.execPath, ["-e", script], { encoding: "utf8", timeout: 5000 });
+    expect(result.error).toBeUndefined();
+    expect(result.signal).toBeNull();
+    expect(result.status, result.stderr).toBe(0);
   });
 });
