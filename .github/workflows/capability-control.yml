@@ -54,7 +54,6 @@ jobs:
       RELAY_SESSION_SECRET: synthetic-ci-only
       RELAY_ENCRYPTION_KEY: synthetic-ci-only
       RELAY_MYEVE_TESTS: '1'
-      RELAY_MYEVE_SOURCE: ${{ runner.temp }}/relay-myeve-571320d
       RELAY_LIVE_PLAYWRIGHT: '1'
       RELAY_LIVE_DOCKER: '1'
     steps:
@@ -69,6 +68,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Select the disposable MyEve checkout directory
+        run: echo "RELAY_MYEVE_SOURCE=$RUNNER_TEMP/relay-myeve-571320d" >> "$GITHUB_ENV"
       - name: Materialize the exact public MyEve owner-channel source
         run: |
           git init "$RELAY_MYEVE_SOURCE"
