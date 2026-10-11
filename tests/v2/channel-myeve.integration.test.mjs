@@ -25,7 +25,7 @@ suite('Relay to canonical MyEve component golden path',()=>{
   if(!myeveDatabaseName)return;
   if(!/^relay_test_myeve_[a-f0-9]{32}$/.test(myeveDatabaseName))throw new Error('Unsafe qualification database name.');
   const admin=new Pool({connectionString:process.env.RELAY_TEST_DATABASE_URL});
-  try{await admin.query(`DROP DATABASE IF EXISTS ${myeveDatabaseName} WITH (FORCE)`);}finally{await admin.end();}
+  try{await admin.query(`DROP DATABASE IF EXISTS ${myeveDatabaseName}`);}finally{await admin.end();}
  };
  const database={query,transaction:async(build)=>{const client=await pool.connect();try{await client.query('BEGIN');const statements=build((strings,...params)=>({text:strings.reduce((s,part,i)=>s+(i?`$${i}`:'')+part,''),params}));for(const statement of statements)await client.query(statement.text,statement.params);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}}};
  beforeAll(async()=>{
