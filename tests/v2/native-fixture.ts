@@ -72,4 +72,3 @@ export async function setup(requireApproval = false) {
   const input = { binding, source, idempotencyKey: 'native-fixture', lease: { accountId, action, workloadId: workload.workloadId, workloadIdentityToken: workload.token, audience: enrollment.audience, budgetReservationId: reservation.reservationId } };
   return { accountId, principalId, signer, resolver, binding, input, host, heads, sourceHead, sourceKey, backendKey, reservation, decision };
 }
-

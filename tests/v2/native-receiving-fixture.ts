@@ -55,4 +55,3 @@ export async function receiverFixture(requireApproval = false) {
       return { evidence, keyId: f.signer.keyId, signature: await f.signer.sign(canonicalJson(evidence)) };
     } };
 }
-
