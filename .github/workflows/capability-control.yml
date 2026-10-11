@@ -19,9 +19,13 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm audit
       - run: pnpm typecheck
+      - run: pnpm lint
       - run: pnpm exec eslint lib/v2/native-admission.ts lib/v2/policy/lifecycle-wire.ts tests/v2/native-admission.test.ts lib/v2/policy/ordering.ts lib/v2/policy/ordering-wire.ts lib/worker.ts tests/v2/capability-maintenance.test.ts lib/v2/policy/administration.ts lib/v2/policy/propagation.ts lib/v2/policy/service.ts lib/v2/passports.ts lib/v2/leases.ts tests/v2/policy-propagation.test.ts app/api/v2/operator/capability-policy/route.ts tests/v2/capability-administration.test.ts
       - run: CAPABILITY_TEST_POSTGRES_BIN="$(pg_config --bindir)" node scripts/qualify-capability-administration.mjs
+      - run: CAPABILITY_TEST_POSTGRES_BIN="$(pg_config --bindir)" node scripts/qualify-native-composed.mjs
+      - run: pnpm build
       - uses: actions/upload-artifact@v4
         if: always()
         with:

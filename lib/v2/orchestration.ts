@@ -119,7 +119,7 @@ function workflowId(accountId: string, taskId: string) { return `relay/${account
 
 export async function dispatchClaimedStart(input: { accountId: string; commandId: string; workerId: string; fenceToken: number }, gateway: TemporalGateway, signer: AuditSigner) {
   const timestamp = now();
-  const [command] = await db().select().from(taskCommands).where(and(eq(taskCommands.accountId, input.accountId), eq(taskCommands.id, input.commandId), eq(taskCommands.workerId, input.workerId), eq(taskCommands.fenceToken, input.fenceToken), eq(taskCommands.status, "PROCESSING"), gt(taskCommands.leaseUntil, timestamp))).limit(1);
+  const [command] = await db().select().from(taskCommands).where(and(eq(taskCommands.accountId, input.accountId), eq(taskCommands.id, input.commandId), eq(taskCommands.kind, "START_TASK"), eq(taskCommands.workerId, input.workerId), eq(taskCommands.fenceToken, input.fenceToken), eq(taskCommands.status, "PROCESSING"), gt(taskCommands.leaseUntil, timestamp))).limit(1);
   if (!command) throw new RelayError("CAPABILITY_DENIED", "Command claim is stale.", undefined, 409);
   const [task] = await db().select().from(v2Tasks).where(and(eq(v2Tasks.accountId, input.accountId), eq(v2Tasks.id, command.taskId), eq(v2Tasks.coordinatorId, input.workerId), eq(v2Tasks.fenceToken, input.fenceToken), eq(v2Tasks.status, "STARTING"), gt(v2Tasks.coordinatorLeaseUntil, timestamp))).limit(1);
   if (!task) throw new RelayError("CAPABILITY_DENIED", "Task coordinator fence is stale.", undefined, 409);
@@ -143,7 +143,7 @@ export async function dispatchClaimedStart(input: { accountId: string; commandId
 }
 
 export async function markTaskCommandEffectState(input: { accountId: string; commandId: string; workerId: string; fenceToken: number; effectState: "PRE_EFFECT" | "IDEMPOTENT_SAFE" | "POSSIBLY_COMMITTED" }) {
-  const [updated] = await db().update(taskCommands).set({ effectState: input.effectState, updatedAt: now() }).where(and(eq(taskCommands.accountId, input.accountId), eq(taskCommands.id, input.commandId), eq(taskCommands.workerId, input.workerId), eq(taskCommands.fenceToken, input.fenceToken), eq(taskCommands.status, "PROCESSING"), gt(taskCommands.leaseUntil, now()))).returning({ id: taskCommands.id });
+  const [updated] = await db().update(taskCommands).set({ effectState: input.effectState, updatedAt: now() }).where(and(eq(taskCommands.accountId, input.accountId), eq(taskCommands.id, input.commandId), eq(taskCommands.kind, "START_TASK"), eq(taskCommands.workerId, input.workerId), eq(taskCommands.fenceToken, input.fenceToken), eq(taskCommands.status, "PROCESSING"), gt(taskCommands.leaseUntil, now()))).returning({ id: taskCommands.id });
   if (!updated) throw new RelayError("CAPABILITY_DENIED", "Command effect-state fence is stale.", undefined, 409);
 }
 
@@ -158,7 +158,7 @@ async function deadLetterInTransaction(transaction: RelayDatabase, command: type
 
 export async function failTaskCommand(input: { accountId: string; commandId: string; workerId: string; fenceToken: number; classification: FailureClassification; errorClass?: string }, signer: AuditSigner) {
   return await withTransaction(async (transaction) => {
-    const [command] = await transaction.select().from(taskCommands).where(and(eq(taskCommands.accountId, input.accountId), eq(taskCommands.id, input.commandId), eq(taskCommands.workerId, input.workerId), eq(taskCommands.fenceToken, input.fenceToken), eq(taskCommands.status, "PROCESSING"))).limit(1);
+    const [command] = await transaction.select().from(taskCommands).where(and(eq(taskCommands.accountId, input.accountId), eq(taskCommands.id, input.commandId), eq(taskCommands.kind, "START_TASK"), eq(taskCommands.workerId, input.workerId), eq(taskCommands.fenceToken, input.fenceToken), eq(taskCommands.status, "PROCESSING"))).limit(1);
     if (!command) throw new RelayError("CAPABILITY_DENIED", "Command failure fence is stale.", undefined, 409);
     const [task] = await transaction.select().from(v2Tasks).where(and(eq(v2Tasks.accountId, input.accountId), eq(v2Tasks.id, command.taskId), eq(v2Tasks.fenceToken, input.fenceToken), eq(v2Tasks.status, "STARTING"))).limit(1);
     if (!task) throw new RelayError("CAPABILITY_DENIED", "Task failure fence is stale.", undefined, 409);

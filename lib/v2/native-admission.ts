@@ -1,6 +1,6 @@
 import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { lockActiveAccount } from '@/lib/account-fence';
+import { lockActiveAccount, lockAccountDelivery } from '@/lib/account-fence';
 import { withTransaction, type RelayDatabase } from '@/lib/db';
 import { approvalRequests, budgetReservations, budgets, controlOutbox, runtimeClients, workloads } from '@/lib/db/schema';
 import { id, now } from '@/lib/ids';
@@ -116,6 +116,7 @@ export async function admitNativeCommand(input: { binding: NativeWorkBinding; le
   void _credential;
   const requestHash = canonicalHash({ binding, lease: leaseMaterial, source: input.source.message });
   return withTransaction(async transaction => {
+    await transaction.execute(sql`SELECT set_config('statement_timeout', '30000', true), set_config('lock_timeout', '30000', true)`);
     // Same order as canonical lease issuance and policy writers.
     await transaction.execute(sql`SELECT pg_advisory_xact_lock_shared(hashtextextended('relay-safety-policy', 0))`);
     await lockActiveAccount(transaction, binding.accountId);
@@ -227,7 +228,8 @@ export async function receiveNativeControl(envelope: SignedPolicyMessage, host: 
     if (fence[field] !== host.enrollment[field]) deny('CONTROL_ENROLLMENT_MISMATCH');
   if (!['connected-apps', 'work'].includes(fence.capabilityId)) deny('CONTROL_CAPABILITY');
   return withTransaction(async transaction => {
-    await lockActiveAccount(transaction, host.enrollment.accountId);
+    await transaction.execute(sql`SELECT set_config('statement_timeout', '30000', true), set_config('lock_timeout', '30000', true)`);
+    await lockAccountDelivery(transaction, host.enrollment.accountId);
     const heads = await currentHeads(transaction, host);
     // Later policy may retain an earlier explicit control; ordinary disable is not revoke.
     const current = heads.myeve;

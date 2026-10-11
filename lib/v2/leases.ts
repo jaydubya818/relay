@@ -8,7 +8,7 @@ import { and, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { hashSecret, encryptSecret, decryptSecret } from "@/lib/crypto";
 import { db, withTransaction, type RelayDatabase } from "@/lib/db";
-import { agentPassports, agentRevocationEpochs, budgetReservations, budgets, capabilityDefinitions, capabilityLeases, leaseCallReceipts, policyBundles, policyDecisions, runtimeClients, workloadBootstraps, workloads, controlOutbox } from "@/lib/db/schema";
+import { agentPassports, agentRevocationEpochs, approvalDecisions, approvalRequests, budgetReservations, budgets, capabilityDefinitions, capabilityLeases, leaseCallReceipts, policyBundles, policyDecisions, runtimeClients, workloadBootstraps, workloads, controlOutbox } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { consumeApprovalInTransaction } from "@/lib/v2/approvals";
@@ -245,12 +245,14 @@ export async function authorizeLeaseCall(input: { token: string; expectedAccount
   return withTransaction(transaction => authorizeLeaseCallInTransaction(transaction, input, resolver, signer));
 }
 
-/** Online consumption can be atomic with the durable native command receipt. */
-export async function authorizeLeaseCallInTransaction(transaction: RelayDatabase, input: Omit<Parameters<typeof authorizeLeaseCall>[0], "online">, resolver: LeaseKeyResolver, signer: AuditSigner) {
-  const claims = await validateLeaseToken(input, resolver);
+/** Shared online authority validation. Consumed authority is available only to
+ * the exact already-admitted call; it never increments or reissues a lease. */
+async function validateStoredLeaseAuthority(transaction: RelayDatabase,
+  input: Omit<Parameters<typeof authorizeLeaseCall>[0], "online">,
+  claims: CapabilityLeaseClaims, allowConsumed = false) {
     await lockActiveAccount(transaction, input.expectedAccountId);
     const timestamp = now();
-    const [lease] = await transaction.select().from(capabilityLeases).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, claims.jti), eq(capabilityLeases.tokenHash, canonicalHash(input.token)), eq(capabilityLeases.workloadId, input.expectedWorkloadId), eq(capabilityLeases.status, "ACTIVE"), gt(capabilityLeases.expiresAt, timestamp), isNull(capabilityLeases.revokedAt))).limit(1);
+    const [lease] = await transaction.select().from(capabilityLeases).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, claims.jti), eq(capabilityLeases.tokenHash, canonicalHash(input.token)), eq(capabilityLeases.workloadId, input.expectedWorkloadId), allowConsumed ? inArray(capabilityLeases.status, ["ACTIVE", "EXHAUSTED"]) : eq(capabilityLeases.status, "ACTIVE"), gt(capabilityLeases.expiresAt, timestamp), isNull(capabilityLeases.revokedAt))).limit(1);
     if (!lease) throw new RelayError("CAPABILITY_DENIED", "Lease is inactive, expired, or revoked.", undefined, 403);
     const [epoch] = await transaction.select().from(agentRevocationEpochs).where(and(eq(agentRevocationEpochs.accountId, input.expectedAccountId), eq(agentRevocationEpochs.agentId, claims.sub))).limit(1);
     if (!epoch || epoch.epoch !== claims.revocationEpoch) throw new RelayError("CAPABILITY_DENIED", "Lease revocation epoch is stale.", undefined, 403);
@@ -267,6 +269,13 @@ export async function authorizeLeaseCallInTransaction(transaction: RelayDatabase
       const [parent] = await transaction.select({ id: capabilityLeases.id }).from(capabilityLeases).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, claims.parentLeaseId), eq(capabilityLeases.status, "ACTIVE"), gt(capabilityLeases.expiresAt, timestamp), isNull(capabilityLeases.revokedAt))).limit(1);
       if (!parent) throw new RelayError("CAPABILITY_DENIED", "Parent lease is revoked or expired.", undefined, 403);
     }
+  return lease;
+}
+
+/** Online consumption can be atomic with the durable native command receipt. */
+export async function authorizeLeaseCallInTransaction(transaction: RelayDatabase, input: Omit<Parameters<typeof authorizeLeaseCall>[0], "online">, resolver: LeaseKeyResolver, signer: AuditSigner) {
+  const claims = await validateLeaseToken(input, resolver);
+  const lease = await validateStoredLeaseAuthority(transaction, input, claims);
     const inserted = await transaction.insert(leaseCallReceipts).values({ id: id("lcr"), accountId: input.expectedAccountId, leaseId: lease.id, callId: input.callId, actionHash: input.action.canonicalHash, workloadId: input.expectedWorkloadId }).onConflictDoNothing().returning({ id: leaseCallReceipts.id });
     if (!inserted.length) throw new RelayError("CAPABILITY_DENIED", "Lease call was replayed.", undefined, 409);
     const [used] = await transaction.update(capabilityLeases).set({ callCount: sql`${capabilityLeases.callCount} + 1` }).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, lease.id), eq(capabilityLeases.status, "ACTIVE"), isNull(capabilityLeases.revokedAt), sql`${capabilityLeases.callCount} + ${capabilityLeases.delegatedCallCount} < ${capabilityLeases.maxCalls}`)).returning({ callCount: capabilityLeases.callCount, maxCalls: capabilityLeases.maxCalls, delegatedCallCount: capabilityLeases.delegatedCallCount });
@@ -274,6 +283,41 @@ export async function authorizeLeaseCallInTransaction(transaction: RelayDatabase
     if (used.callCount + used.delegatedCallCount >= used.maxCalls) await transaction.update(capabilityLeases).set({ status: "EXHAUSTED" }).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, lease.id), eq(capabilityLeases.status, "ACTIVE"), isNull(capabilityLeases.revokedAt)));
     await appendAuditRecordInTransaction(transaction, { accountId: input.expectedAccountId, agentId: claims.sub, runtimeClientId: claims.runtimeClientId, taskId: claims.taskId, actionIntentId: input.action.id, policyDecisionId: claims.policyDecisionId, approvalDecisionId: claims.approvalDecisionId, leaseId: claims.jti, eventType: "lease.call_authorized", outcome: "SUCCESS", details: { callId: input.callId, callCount: used.callCount, maxCalls: used.maxCalls } }, signer);
     return { leaseId: claims.jti, claims, enforcement: "ONLINE" as const, remainingCalls: used.maxCalls - used.callCount - used.delegatedCallCount };
+}
+
+/** Worker revalidation for an existing durable call receipt. No new admission,
+ * approval consumption, budget release, or call debit is performed. */
+export async function revalidateAdmittedLease(transaction: RelayDatabase, input: {
+  accountId: string; leaseId: string; callId: string; audience: string; action: ActionIntent;
+}, resolver: LeaseKeyResolver) {
+  const [stored] = await transaction.select().from(capabilityLeases).where(and(
+    eq(capabilityLeases.accountId, input.accountId), eq(capabilityLeases.id, input.leaseId))).limit(1);
+  if (!input.action.workloadId || !stored || canonicalHash(stored.claims) !== stored.claimsHash) throw Error("ADMITTED_LEASE_UNAVAILABLE");
+  const token = `${encode({ alg: "EdDSA", kid: stored.signingKeyId, typ: "RLY-LEASE" })}.${encode(stored.claims)}.${stored.signature}`;
+  const request = { token, expectedAccountId: input.accountId, expectedAudience: input.audience,
+    expectedWorkloadId: input.action.workloadId, action: input.action, callId: input.callId };
+  const claims = await validateLeaseToken(request, resolver);
+  const [receipt] = await transaction.select().from(leaseCallReceipts).where(and(
+    eq(leaseCallReceipts.accountId, input.accountId), eq(leaseCallReceipts.leaseId, input.leaseId),
+    eq(leaseCallReceipts.callId, input.callId), eq(leaseCallReceipts.actionHash, input.action.canonicalHash),
+    eq(leaseCallReceipts.workloadId, input.action.workloadId))).limit(1);
+  if (!receipt) throw Error("ADMITTED_CALL_REQUIRED");
+  await validateStoredLeaseAuthority(transaction, request, claims, true);
+  const [runtime] = await transaction.select().from(runtimeClients).where(and(
+    eq(runtimeClients.accountId, input.accountId), eq(runtimeClients.id, claims.runtimeClientId),
+    isNull(runtimeClients.revokedAt), sql`${runtimeClients.verificationStatus} <> 'REVOKED'`)).limit(1);
+  if (!runtime) throw Error("ADMITTED_RUNTIME_REVOKED");
+  if (claims.approvalDecisionId) {
+    const [approval] = await transaction.select({ id: approvalRequests.id }).from(approvalDecisions)
+      .innerJoin(approvalRequests, and(eq(approvalRequests.id, approvalDecisions.approvalRequestId),
+        eq(approvalRequests.accountId, approvalDecisions.accountId)))
+      .where(and(eq(approvalDecisions.accountId, input.accountId), eq(approvalDecisions.id, claims.approvalDecisionId),
+        eq(approvalDecisions.decision, "APPROVE"), eq(approvalRequests.status, "APPROVED"),
+        isNull(approvalRequests.revokedAt), eq(approvalRequests.actionHash, input.action.canonicalHash),
+        gt(approvalRequests.expiresAt, now()))).limit(1);
+    if (!approval) throw Error("ADMITTED_APPROVAL_REVOKED_OR_EXPIRED");
+  }
+  return claims;
 }
 
 export async function introspectLease(accountId: string, leaseId: string) {
