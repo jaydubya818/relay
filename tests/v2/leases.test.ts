@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { policyDecisions } from '@/lib/db/schema';
 import { generateKeyPairSync, sign } from "node:crypto";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApprovalRequest, decideApproval } from "@/lib/v2/approvals";
 import { createBudget, releaseBudgetReservation, reserveBudget } from "@/lib/v2/budgets";
 import { canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
@@ -155,14 +155,18 @@ describe("Relay V2 capability leases and workload identity", () => {
     expect(performance.now() - started).toBeLessThan(5_000);
   });
 
-  it("denies offline financial leases and detects cryptographic expiry", async () => {
+  it("denies offline financial leases", async () => {
     const financial = await setup("financial");
     await expect(issueCapabilityLease({ accountId: financial.accountId, action: financial.action, workloadId: financial.workload.workloadId, workloadIdentityToken: financial.workload.token, audience: "relay-pep", maxCalls: 1, allowOffline: true }, financial.signer, financial.resolver)).rejects.toMatchObject({ status: 403 });
-    await cleanupDatabase();
+  });
+
+  it("detects cryptographic expiry", async () => {
     const expiring = await setup();
     const shortLease = await issueCapabilityLease({ accountId: expiring.accountId, action: expiring.action, workloadId: expiring.workload.workloadId, workloadIdentityToken: expiring.workload.token, audience: "relay-pep", maxCalls: 1, ttlSeconds: 1 }, expiring.signer, expiring.resolver);
-    await new Promise((resolve) => setTimeout(resolve, 1_100));
-    await expect(authorizeLeaseCall({ token: shortLease.token, expectedAccountId: expiring.accountId, expectedAudience: "relay-pep", expectedWorkloadId: expiring.workload.workloadId, action: expiring.action, callId: "expired", online: true }, expiring.resolver, expiring.signer)).rejects.toMatchObject({ status: 403 });
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse(shortLease.expiresAt) + 1_000);
+    try {
+      await expect(authorizeLeaseCall({ token: shortLease.token, expectedAccountId: expiring.accountId, expectedAudience: "relay-pep", expectedWorkloadId: expiring.workload.workloadId, action: expiring.action, callId: "expired", online: true }, expiring.resolver, expiring.signer)).rejects.toMatchObject({ status: 403, message: "Lease is not currently valid." });
+    } finally { clock.mockRestore(); }
   });
 
   it("permits only short low-risk read leases through an offline local counter", async () => {
