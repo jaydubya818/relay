@@ -9,7 +9,8 @@
       "codex/authority-expiry-diagnostics": false,
       "codex/relay-final-integration": false,
       "codex/telegram-current-integration": false,
-      "codex/relay-owner-experience": false
+      "codex/relay-owner-experience": false,
+      "codex/relay-composio-integration": false
     }
   },
   "installCommand": "pnpm install --frozen-lockfile",

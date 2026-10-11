@@ -1,0 +1,42 @@
+{
+  "sourceSHA": "635b1ba6151850c478ff7f955488b76a0926588d",
+  "scope": "Partial adapter checkpoint; no gateway activation",
+  "freshClone": {
+    "install": "PASS_OFFLINE_FROZEN_LOCKFILE",
+    "typecheck": "PASS",
+    "lint": "PASS",
+    "build": "PASS",
+    "focusedTests": 41,
+    "fullRegression": {
+      "passed": 524,
+      "skippedLive": 6,
+      "filesPassed": 78,
+      "filesSkipped": 4,
+      "durationSeconds": 157.18
+    },
+    "clean": true
+  },
+  "browserRegression": {
+    "passed": 13,
+    "durationMinutes": 1.9,
+    "pixelComparisons": "SKIPPED",
+    "newComposioJourney": "NOT_IMPLEMENTED",
+    "note": "Unchanged Owner Experience UI, before internal adapter revocation refinement."
+  },
+  "performance": {
+    "existingSuitesPassed": 2,
+    "newIntegrationLatency": "NOT_QUALIFIED"
+  },
+  "frozenCompatibility": {
+    "identicalGroups": 27,
+    "frozenSHA": "8a8678d675adc8ac7f799d7660071de2256bb231"
+  },
+  "hostedCI": "NOT_RUN",
+  "independentReview": "NOT_RUN",
+  "fullGoldenJourney": "NOT_RUN",
+  "productionIntegration": "NOT_RUN",
+  "paidOperations": 0,
+  "externalAlphaImpact": "NONE",
+  "evidenceDirectory": "/Users/jaywest/Documents/ChatGPT/New project/relay-composio-evidence",
+  "evidenceManifestSHA256": "79e22385b1352e1628d147122cd0edd49295f5341e009efc049fc71669140951"
+}

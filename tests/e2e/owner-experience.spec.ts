@@ -41,7 +41,17 @@ test("Agent management, filtering, capability preview and keyboard disclosure", 
   await page.keyboard.press("Enter"); await expect(page.locator("#owner-content")).toBeFocused();
   await page.goto("/agents"); await page.getByRole("textbox", { name: "Search agents", exact: true }).fill("Sofie"); await page.getByRole("button", { name: "Search", exact: true }).click();
   await page.getByRole("link", { name: "Configure Sofie" }).click(); await expect(page.getByRole("heading", { name: "Sofie", exact: true })).toBeVisible();
-  for (const tab of ["Overview", "Capabilities", "Connections", "Activity", "Security"]) { await page.getByRole("navigation", { name: "Agent sections" }).getByRole("link", { name: tab, exact: true }).click(); await accessible(page); }
+  for (const tab of ["Overview", "Capabilities", "Connections", "Activity", "Security"]) {
+    const link = page.getByRole("navigation", { name: "Agent sections" }).getByRole("link", { name: tab, exact: true });
+    const href = await link.getAttribute("href");
+    expect(href).toBeTruthy();
+    await link.click();
+    // A client navigation can leave the previous page/title visible after click.
+    // Scan only once this destination is selected, then await its own metadata.
+    await expect(page).toHaveURL(new URL(href!, page.url()).href);
+    await expect(link).toHaveAttribute("aria-current", "page");
+    await accessible(page);
+  }
   await page.goto("/activity?status=DENIED"); const summary = page.locator(".activity-record > summary").first(); await summary.focus(); await page.keyboard.press("Enter");
   await expect(page.getByText("Denied — this operation was not allowed.", { exact: true })).toBeVisible();
   await page.getByText("View technical details", { exact: true }).click(); await expect(page.getByText("Audit reference", { exact: true })).toBeVisible();
