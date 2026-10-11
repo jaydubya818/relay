@@ -42,7 +42,9 @@ export async function secondAccount() {
 export async function cleanupDatabase() {
   await closeDatabasesForTests();
   if (databaseName) {
-    await adminQuery(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`);
+    // Let closing pool connections exit normally. FORCE can interrupt sockets
+    // still closing after pool.end(), and would also conceal leaked clients.
+    await adminQuery(`DROP DATABASE IF EXISTS ${databaseName}`);
   }
   databaseName = undefined;
   delete process.env.RELAY_DATABASE_URL;
