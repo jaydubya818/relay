@@ -141,7 +141,7 @@ export class ComposioProviderAdapter implements IntegrationProviderAdapter {
     return { requestId: request.id, redirectUrl: request.redirectUrl };
   }
 
-  async executeRead(scope: IntegrationScope, input: IntegrationBinding, slug: string, args: Record<string, unknown>, context: ExecutionBindingContext): Promise<IntegrationResult> {
+  async executeRead(scope: IntegrationScope, input: IntegrationBinding, slug: string, args: Record<string, unknown>, context: ExecutionBindingContext, receiverSignal?: AbortSignal): Promise<IntegrationResult> {
     const started = performance.now();
     const binding = assertBinding(scope, input);
     const qualified = this.qualified(slug);
@@ -149,6 +149,7 @@ export class ComposioProviderAdapter implements IntegrationProviderAdapter {
     const parameters = qualified.parseArguments(args);
     // The only accepted payload is the exact qualified request, with no silently stripped fields.
     if (canonicalHash(parameters) !== canonicalHash(args)) throw new IntegrationError("INVALID_ARGUMENTS");
+    receiverSignal?.throwIfAborted();
     const execution = bindExecution(scope, binding, slug, parameters, context);
     if (execution.request.toolVersion !== qualified.version || execution.request.toolSchemaHash !== qualified.schemaHash) throw new IntegrationError("TOOL_SCHEMA_DRIFT");
     const status = await this.connectionStatus(scope, binding);
@@ -157,6 +158,7 @@ export class ComposioProviderAdapter implements IntegrationProviderAdapter {
     // Do NOT call sdk.tools.execute: 0.22.0 refetches an unchecked descriptor there.
     const descriptor = await this.getAction(slug);
     if (bindExecution(scope, input, slug, args, context).digest !== execution.digest) throw new IntegrationError("EXECUTION_BINDING_MISMATCH");
+    receiverSignal?.throwIfAborted();
     const dispatchArguments = structuredClone(parameters);
     if (canonicalHash(dispatchArguments) !== execution.argumentDigest) throw new IntegrationError("EXECUTION_BINDING_MISMATCH");
     const evidence = { provider: "composio" as const, adapterVersion: this.version, scopeDigest: canonicalHash(scope), connectionId: binding.connectionId, authorityVersion: binding.authorityVersion, tool: slug, version: qualified.version,
@@ -168,7 +170,7 @@ export class ComposioProviderAdapter implements IntegrationProviderAdapter {
       // Public generated client transport; no descriptor lookup, middleware, file
       // transformations or custom auth. Retry policy is explicit for this request.
       const result = await this.call(async signal => this.sdk.getClient().tools.execute(descriptor.slug, { user_id: binding.providerUserId,
-        connected_account_id: binding.connectedAccountId, version: descriptor.version, arguments: dispatchArguments, allow_tracing: false }, { signal, maxRetries: 0 }), true);
+        connected_account_id: binding.connectedAccountId, version: descriptor.version, arguments: dispatchArguments, allow_tracing: false }, { signal: receiverSignal ? AbortSignal.any([signal, receiverSignal]) : signal, maxRetries: 0 }), true);
       if (result.successful !== true) return checkedResult({ state: "UNKNOWN", trust: "UNTRUSTED_EXTERNAL_DATA", evidence: { ...evidence, errorCode: "PROVIDER_REPORTED_FAILURE", durationMs: performance.now() - started } });
       const data = redactForEvidence(qualified.projectResult(result.data));
       if (Buffer.byteLength(JSON.stringify(data)) > 64 * 1024) throw new IntegrationError("RESULT_TOO_LARGE", "UNKNOWN");
