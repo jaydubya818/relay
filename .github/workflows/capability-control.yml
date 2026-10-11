@@ -56,6 +56,7 @@ jobs:
       RELAY_MYEVE_TESTS: '1'
       RELAY_LIVE_PLAYWRIGHT: '1'
       RELAY_LIVE_DOCKER: '1'
+      RELAY_DOCKER_BIN: docker
     steps:
       - uses: actions/checkout@v4
         with:
