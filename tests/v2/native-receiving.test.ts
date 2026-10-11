@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 import { db, withTransaction } from '@/lib/db';
 import { accounts, approvalRequests, budgetReservations, capabilityLeases, controlOutbox, taskCommands, v2Events, v2Tasks } from '@/lib/db/schema';
@@ -176,11 +176,23 @@ describe('durable native receiver and worker (isolated PostgreSQL; synthetic pro
   });
   it('checks lease expiry after delayed metadata resolution before external dispatch', async () => {
     const f = await receiverFixture();
-    const receipt = await admitNativeCommand({ ...f.input, lease: { ...f.input.lease, ttlSeconds: 2 } }, f.receiver.host, f.signer, f.resolver);
-    const receiver = createNativeReceiver({ ...f.options, provider: { ...f.options.provider,
-      connectionQuery: () => sql`SELECT pg_sleep(2.1)` } });
-    await expect(receiver.execute(receipt.commandId, 'worker')).rejects.toBeDefined();
-    expect(f.execute).not.toHaveBeenCalled();
+    const receipt = await f.admit();
+    const [lease] = await db().select().from(capabilityLeases).where(eq(capabilityLeases.id, receipt.leaseId));
+    const clock = vi.spyOn(Date, 'now');
+    let resolutions = 0;
+    const resolve = vi.fn(() => {
+      const material = f.options.provider.resolve();
+      // Binding resolution is followed by final provider resolution. Expire
+      // only at that final boundary; PostgreSQL and timers remain real.
+      if (++resolutions === 2) clock.mockReturnValue(Date.parse(lease!.expiresAt) + 1_000);
+      return material;
+    });
+    try {
+      const receiver = createNativeReceiver({ ...f.options, provider: { ...f.options.provider, resolve } });
+      await expect(receiver.execute(receipt.commandId, 'worker')).rejects.toThrow('Lease is not currently valid.');
+      expect(resolve).toHaveBeenCalledTimes(2);
+      expect(f.execute).not.toHaveBeenCalled();
+    } finally { clock.mockRestore(); }
   });
 
   it.each(['resolver', 'signer'] as const)('bounds stalled %s and leaves revocation available', async port => {
