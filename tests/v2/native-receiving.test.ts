@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 import { db, withTransaction } from '@/lib/db';
-import { accounts, approvalRequests, budgetReservations, capabilityLeases, controlOutbox, taskCommands, v2Events, v2Tasks } from '@/lib/db/schema';
+import { accounts, approvalRequests, auditRecords, budgetReservations, capabilityLeases, controlOutbox, taskCommands, v2Events, v2Tasks } from '@/lib/db/schema';
 import { admitNativeCommand, receiveNativeControl } from '@/lib/v2/native-admission';
 import { createNativeReceiver } from '@/lib/v2/native-receiving';
 import { signPolicyMessage } from '@/lib/v2/policy/ordering-wire';
 import { verifyLifecycleReceipt } from '@/lib/v2/policy/lifecycle-wire';
 import { createApprovalRequest, decideApproval } from '@/lib/v2/approvals';
 import { cleanupDatabase } from '../helpers';
-import { markTaskCommandEffectState, failTaskCommand } from '@/lib/v2/orchestration';
+import { cancelTask, markTaskCommandEffectState, failTaskCommand } from '@/lib/v2/orchestration';
 
 import { receiverFixture } from './native-receiving-fixture';
 
@@ -25,6 +25,47 @@ describe('durable native receiver and worker (isolated PostgreSQL; synthetic pro
     expect(await f.admit()).toEqual(receipts[0]);
     expect((await db().select().from(capabilityLeases))[0]).toMatchObject({ callCount: 1, status: 'EXHAUSTED' });
     expect((await db().select().from(budgetReservations))[0]).toMatchObject({ status: 'RESERVED' });
+  });
+  it('preserves actual task cancellation committed during dispatch preflight', async () => {
+    const f = await receiverFixture(); const receipt = await f.admit();
+    const readWitness = f.options.recoveryWitness.read;
+    const gateway = { startWorkflow: vi.fn(), cancelWorkflow: vi.fn(async () => {}) };
+    let reads = 0;
+    f.options.recoveryWitness.read = async () => {
+      // Phase one validates and advances; the third read is phase-two preflight,
+      // before the task share lock. Commit cancellation through the real API.
+      if (++reads === 3) await cancelTask({ accountId: f.accountId, actorPrincipalId: f.principalId,
+        taskId: f.binding.taskId, reason: 'owner cancelled' }, gateway, f.signer);
+      return readWitness();
+    };
+    await expect(f.receiver.execute(receipt.commandId, 'worker')).rejects.toThrow('WORKER_FENCED');
+    expect(reads).toBe(3);
+    expect((await db().select().from(v2Tasks))[0]!.status).toBe('CANCELLED');
+    expect((await db().select().from(taskCommands))[0]).toMatchObject({ status: 'CANCELLED', effectState: 'POSSIBLY_COMMITTED' });
+    expect((await db().select().from(controlOutbox)).filter(row => row.type === 'native.result')).toEqual([]);
+    expect((await db().select().from(auditRecords)).filter(row => row.eventType === 'native.result')).toEqual([]);
+    expect(await f.receiver.read(receipt.commandId)).toMatchObject({ outcome: 'UNKNOWN', accounting: 'PRESERVE_UNKNOWN' });
+    expect(await f.receiver.execute(receipt.commandId, 'retry')).toMatchObject({ outcome: 'UNKNOWN' });
+    expect(gateway.cancelWorkflow).toHaveBeenCalledTimes(1);
+    expect(f.execute).not.toHaveBeenCalled();
+    expect((await db().select().from(budgetReservations))[0]!.status).toBe('RESERVED');
+  });
+  it('rejects a late result after a concurrent command cancellation without releasing UNKNOWN exposure', async () => {
+    const f = await receiverFixture(); const receipt = await f.admit();
+    f.execute.mockImplementationOnce(async () => {
+      // An independent legacy writer need not share the receiver's account lock.
+      // Commit its cancellation after dispatch intent and before result custody.
+      await db().update(taskCommands).set({ status: 'CANCELLED' }).where(eq(taskCommands.id, receipt.commandId));
+      return { state: 'SUCCEEDED', data: { fixture: true } };
+    });
+    await expect(f.receiver.execute(receipt.commandId, 'worker')).rejects.toThrow('WORKER_FENCED');
+    expect((await db().select().from(taskCommands))[0]).toMatchObject({ status: 'CANCELLED', effectState: 'POSSIBLY_COMMITTED' });
+    expect((await db().select().from(controlOutbox)).filter(row => row.type === 'native.result')).toEqual([]);
+    expect(await f.receiver.read(receipt.commandId)).toMatchObject({ outcome: 'UNKNOWN', accounting: 'PRESERVE_UNKNOWN' });
+    expect(await f.receiver.recover(receipt.commandId)).toMatchObject({ redispatch: false });
+    await f.receiver.execute(receipt.commandId, 'replacement');
+    expect(f.execute).toHaveBeenCalledTimes(1);
+    expect((await db().select().from(budgetReservations))[0]!.status).toBe('RESERVED');
   });
   it('preserves admitted Work across disable while denying new admission', async () => {
     const f = await receiverFixture(); const receipt = await f.admit();

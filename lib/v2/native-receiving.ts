@@ -279,9 +279,15 @@ export function createNativeReceiver(options: NativeReceiverOptions) {
         result = provider.validateResult(context, supplied);
         if ((result as { state?: string })?.state === 'SUCCEEDED') outcome = 'SUCCEEDED';
       } catch { /* Preserve ambiguous exposure, never provider error bodies. */ }
-      await tx.update(taskCommands).set({ status: outcome === 'SUCCEEDED' ? 'COMPLETED' : 'DEAD_LETTERED',
+      const [completed] = await tx.update(taskCommands).set({ status: outcome === 'SUCCEEDED' ? 'COMPLETED' : 'DEAD_LETTERED',
         payload: { ...payload, outcome }, leaseUntil: null, updatedAt: now() }).where(and(
-          eq(taskCommands.id, commandId), eq(taskCommands.fenceToken, claim), eq(taskCommands.workerId, workerId)));
+          eq(taskCommands.accountId, enrollment.accountId), eq(taskCommands.id, commandId),
+          eq(taskCommands.kind, kind), eq(taskCommands.status, 'PROCESSING'),
+          eq(taskCommands.fenceToken, claim), eq(taskCommands.workerId, workerId)))
+        .returning({ id: taskCommands.id });
+      // A concurrent cancellation must not be overwritten or acquire a result
+      // receipt. The already committed dispatch intent retains UNKNOWN exposure.
+      if (!completed) fail('WORKER_FENCED');
       await tx.insert(controlOutbox).values({ id: id('obx'), accountId: enrollment.accountId,
         aggregateType: 'native_result', aggregateId: commandId, type: 'native.result',
         payload: { commandId, dispatchFence: claim, requestHash: payload.requestHash, outcome, result },

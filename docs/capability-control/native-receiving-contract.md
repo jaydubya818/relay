@@ -12,7 +12,7 @@ Install a durable linearizable recovery witness scoped to this installation/back
 
 Pin consumer `80f759c3eeca318811113856ae9bc4d62c1aa271`, `createNativeConsumerPort`, separately from the canonical source. The consumer retains all 27 frozen owner contract groups. Its reviewed connection SELECT is executed by the receiver under account fencing and a PostgreSQL deadline. The synchronous resolver receives rows, never a transaction handle. Qualified descriptors are installed server-side; the adapter independently checks remote descriptor and connected-account identity before transport.
 
-Consumer source selection is an explicit module boundary, not permission to overwrite either source tree or merge two independent authority implementations. The composed test checks the exact source and clean relevant files before loading the consumer integration modules against the canonical database ABI. Installed packaging and custody still need source-bound qualification.
+Consumer source selection is an explicit module boundary, not permission to overwrite either source tree or merge two independent authority implementations. The composed test checks the exact source and clean relevant files before loading the consumer integration modules against the canonical database ABI. The composed fixture applies the exact pinned consumer's qualification SQL to a disposable canonical database, including its foreign keys and binding constraints. This does not authorize an installed migration. Installed packaging and custody still need source-bound qualification.
 
 ## Execution and recovery
 
@@ -20,7 +20,13 @@ Use `receiver.admit(input)` so admission uses bounded installed cryptographic po
 
 Bound witness/provider waits, cancel local SELECTs in PostgreSQL, propagate receiver cancellation through the adapter, and discard late provider output after timeout. Timeout never means STOPPED. Revocation fences active writers; signed scoped monotonic resource evidence distinguishes STOP_UNKNOWN, STOP_CONFIRMED and CLEANUP_CONFIRMED. Pre-effect commands can confirm no resource exists. Delivery and recovery remain available after account retirement; new admission and dispatch do not.
 
+Result custody requires an exact account/command-kind/worker/fence match and PROCESSING status. A concurrent cancellation that wins this comparison cannot be overwritten by a late result; no result receipt or audit entry commits, and the earlier ambiguous dispatch intent remains.
+
 UNKNOWN accounting exposure is preserved. This receiver does not release, reconcile or alter monetary ceilings, approval use counts, or reservations. Connected-app admission is zero monetary authority and still requires the existing CONNECTOR_CALLS reservation.
+
+## Operational limits
+
+Recovery-witness quarantine gates dispatch, not admission. A restored installation can consume a lease/approval/reservation for a command that subsequently cannot dispatch; this is retained evidence, not renewed execution authority. Pre-send denials after committed dispatch intent conservatively remain UNKNOWN. Provider operations serialize under the account lock; each external wait has a deadline, but the entire transaction can contain multiple such waits. These limits do not authorize bypass or automatic reconciliation.
 
 ## Qualification and holds
 

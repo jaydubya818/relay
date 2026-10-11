@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
@@ -29,10 +31,15 @@ describe('exact-source canonical Relay × consumer positive admission', () => {
     const descriptor = await provider.adapter.getAction(consumerFixtures.tool.slug);
     const scope = { accountId: f.accountId, ownerPrincipalId: f.principalId, installationId: f.binding.installationId, agentId: f.binding.agentId };
     const connection = { ...consumerFixtures.binding, ...scope, connectionId: f.binding.connectionId, providerUserId: providerUserId(scope) };
-    await db().execute(sql`CREATE TABLE integration_connections (id text PRIMARY KEY, account_id text NOT NULL,
-      owner_principal_id text NOT NULL, installation_id text NOT NULL, agent_id text NOT NULL, binding jsonb NOT NULL)`);
-    await db().execute(sql`INSERT INTO integration_connections VALUES (${connection.connectionId}, ${scope.accountId},
-      ${scope.ownerPrincipalId}, ${scope.installationId}, ${scope.agentId}, ${JSON.stringify(connection)}::jsonb)`);
+    // Use the exact consumer qualification DDL, including foreign keys and scope
+    // constraints, against the canonical migrated schema. Never apply it live.
+    await db().execute(sql.raw(await readFile(join(process.env.RELAY_NATIVE_CONSUMER_ROOT!, 'lib/integrations/qualification.sql'), 'utf8')));
+    await db().execute(sql`INSERT INTO integration_connections
+      (id, account_id, owner_principal_id, installation_id, agent_id, connected_account_id, binding)
+      VALUES (${connection.connectionId}, ${scope.accountId}, ${scope.ownerPrincipalId}, ${scope.installationId},
+      ${scope.agentId}, ${connection.connectedAccountId}, ${JSON.stringify(connection)}::jsonb)`);
+    await expect(db().execute(sql`UPDATE integration_connections SET installation_id = 'foreign-installation'
+      WHERE id = ${connection.connectionId}`)).rejects.toThrow();
     const [decision] = await db().select().from(policyDecisions);
     const request = { schemaVersion: 'relay.integration-read.v1', scope, connectionId: connection.connectionId,
       toolkit: connection.toolkit, tool: descriptor.slug, toolVersion: descriptor.version, toolSchemaHash: descriptor.schemaHash,
