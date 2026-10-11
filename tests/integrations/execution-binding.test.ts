@@ -4,6 +4,58 @@ import { bindExecution } from "@/lib/integrations/execution-binding";
 import { binding, executionContext, fixture, scope, tool } from "./fixtures";
 
 describe("Execution integrity consumes canonical contracts but grants no authority", () => {
+  it("keeps canonical admission metadata bound but sends only exact provider arguments", async () => {
+    const { adapter, sdk } = fixture();
+    const args = { per_page: 10 };
+    const context = executionContext({ ...args, capabilityAdmissionDigest: "a".repeat(64) });
+    const bound = bindExecution(scope, binding, tool.slug, args, context);
+    expect(bound.argumentDigest).toBe(canonicalHash(args));
+    expect(bound.request.action.parameters.capabilityAdmissionDigest).toBe("a".repeat(64));
+    const result = await adapter.executeRead(scope, binding, tool.slug, args, context);
+    expect(result.state).toBe("SUCCEEDED");
+    expect(result.evidence.argumentDigest).toBe(canonicalHash(args));
+    expect(result.evidence.actionHash).toBe(context.lease.actionHash);
+    expect(sdk.getClient().tools.execute).toHaveBeenCalledTimes(1);
+    expect(sdk.getClient().tools.execute).toHaveBeenCalledWith(tool.slug,
+      expect.objectContaining({ arguments: args }), expect.objectContaining({ maxRetries: 0 }));
+  });
+  it.each([null, 1, "", "A".repeat(64), "sha256:" + "a".repeat(64), "a".repeat(63)])("rejects malformed reserved metadata %s", value => {
+    expect(() => bindExecution(scope, binding, tool.slug, { per_page: 10 },
+      executionContext({ per_page: 10, capabilityAdmissionDigest: value }))).toThrow("EXECUTION_BINDING_MISMATCH");
+  });
+  it("does not strip unknown parameters or accept reserved metadata in provider arguments", async () => {
+    const { adapter, sdk } = fixture();
+    const context = executionContext({ per_page: 10, capabilityAdmissionDigest: "a".repeat(64) });
+    expect(() => bindExecution(scope, binding, tool.slug, context.request.action.parameters, context)).toThrow("EXECUTION_BINDING_MISMATCH");
+    await expect(adapter.executeRead(scope, binding, tool.slug, context.request.action.parameters, context)).rejects.toThrow();
+    expect(() => bindExecution(scope, binding, tool.slug, { per_page: 10 },
+      executionContext({ per_page: 10, unrecognizedMetadata: "must-not-disappear", capabilityAdmissionDigest: "a".repeat(64) }))).toThrow("EXECUTION_BINDING_MISMATCH");
+    expect(sdk.getClient().tools.execute).not.toHaveBeenCalled();
+  });
+  it("changing metadata cannot reuse the old action hash or lease binding", () => {
+    const context = executionContext({ per_page: 10, capabilityAdmissionDigest: "a".repeat(64) });
+    context.request.action.parameters.capabilityAdmissionDigest = "b".repeat(64);
+    expect(() => bindExecution(scope, binding, tool.slug, { per_page: 10 }, context)).toThrow("ACTION_BINDING_MISMATCH");
+    const { capability, resource, parameters } = context.request.action;
+    context.request.action.canonicalHash = canonicalHash({ capability, resource, parameters });
+    expect(() => bindExecution(scope, binding, tool.slug, { per_page: 10 }, context)).toThrow("EXECUTION_BINDING_MISMATCH");
+    const replacement = executionContext({ per_page: 10, capabilityAdmissionDigest: "b".repeat(64) });
+    expect(bindExecution(scope, binding, tool.slug, { per_page: 10 }, replacement).digest)
+      .not.toBe(bindExecution(scope, binding, tool.slug, { per_page: 10 }, executionContext({ per_page: 10, capabilityAdmissionDigest: "a".repeat(64) })).digest);
+  });
+  it("rejects metadata replacement during descriptor retrieval even with recomputed action and lease hashes", async () => {
+    const { adapter, sdk } = fixture();
+    const context = executionContext({ per_page: 10, capabilityAdmissionDigest: "a".repeat(64) });
+    sdk.tools.getRawComposioToolBySlug.mockImplementationOnce(async () => {
+      context.request.action.parameters.capabilityAdmissionDigest = "b".repeat(64);
+      const { capability, resource, parameters } = context.request.action;
+      context.request.action.canonicalHash = canonicalHash({ capability, resource, parameters });
+      context.lease.actionHash = context.request.action.canonicalHash;
+      return structuredClone(tool);
+    });
+    await expect(adapter.executeRead(scope, binding, tool.slug, { per_page: 10 }, context)).rejects.toThrow("EXECUTION_BINDING_MISMATCH");
+    expect(sdk.getClient().tools.execute).not.toHaveBeenCalled();
+  });
   it("binds provider, owner, agent, connection, descriptor, action, approval and canonical lease decision", () => {
     const context = executionContext();
     context.lease.approvalDecisionId = "apd_synthetic1";

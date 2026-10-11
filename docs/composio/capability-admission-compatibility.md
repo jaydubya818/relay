@@ -1,0 +1,13 @@
+# Canonical admission metadata compatibility
+
+Isolated successor of Relay `fe7d7ef6941b77bc615be899fce812e12bc56cf0`, prepared for the canonical native admission component at `ee975854da96c38ef04c96bc538b9d69cdcbc4d6`. No positive receiving transaction or live provider path is activated by this change.
+
+Canonical `nativeAdmissionActionMaterial` excludes only `action.parameters.capabilityAdmissionDigest` from the source action commitment to avoid a self-reference. The full Relay action hash and lease continue to cover that field. Its value is the bare lowercase 64-character SHA-256 of the source permit; validating its syntax is not verification of the permit or current policy.
+
+The consumer now compares provider arguments against the action parameters with precisely that reserved field removed. If present, the field must have the canonical digest syntax. Provider arguments themselves must never contain it. Every other parameter remains part of the exact argument comparison; no arbitrary field stripping is allowed. Requests without the reserved field preserve their existing integrity behavior.
+
+`bindExecution` retains the complete request and lease in its execution-binding digest and additionally returns the provider argument digest. The adapter rechecks the complete binding after connection/descriptor reads and compares the final cloned dispatch arguments with the recorded provider argument digest. A metadata replacement during those reads still fails even if a caller recomputes the action and lease hashes. Result evidence retains both the exact argument digest and complete action/execution-binding digests.
+
+Only the internal integrity helper and adapter comparison change. The 27 frozen groups, consumer schema, native policy wire, canonical leases, routes, gateway denial, connection authority, Result/Proof schemas and retry behavior remain unchanged. The helper does not verify signatures, consume leases, establish admission, enforce command idempotency or settle UNKNOWN. Those remain the canonical receiving transaction and native worker's responsibility.
+
+Qualification uses synthetic SDK transports and unsigned non-executable claims. It covers successful integrity binding with metadata, unchanged legacy binding, malformed/colliding metadata, unknown parameter preservation, action/lease substitution, descriptor-read races, owner and connection isolation, and UNKNOWN/recovery behavior. The actual receiver, durable command/receipt/worker composition and public positive admission remain unqualified. Existing deployment exclusions and all release holds remain in force.

@@ -158,7 +158,7 @@ export class ComposioProviderAdapter implements IntegrationProviderAdapter {
     const descriptor = await this.getAction(slug);
     if (bindExecution(scope, input, slug, args, context).digest !== execution.digest) throw new IntegrationError("EXECUTION_BINDING_MISMATCH");
     const dispatchArguments = structuredClone(parameters);
-    if (canonicalHash(dispatchArguments) !== canonicalHash(execution.request.action.parameters)) throw new IntegrationError("EXECUTION_BINDING_MISMATCH");
+    if (canonicalHash(dispatchArguments) !== execution.argumentDigest) throw new IntegrationError("EXECUTION_BINDING_MISMATCH");
     const evidence = { provider: "composio" as const, adapterVersion: this.version, scopeDigest: canonicalHash(scope), connectionId: binding.connectionId, authorityVersion: binding.authorityVersion, tool: slug, version: qualified.version,
       schemaHash: qualified.schemaHash, argumentDigest: canonicalHash(dispatchArguments), executionBindingDigest: execution.digest,
       actionHash: execution.request.action.canonicalHash, policyDecisionId: execution.lease.policyDecisionId, leaseId: execution.lease.jti,

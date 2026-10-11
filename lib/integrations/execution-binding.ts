@@ -13,10 +13,17 @@ export function bindExecution(scope: IntegrationScope, connection: IntegrationBi
   const request = parseConsumerReadRequest(context.request);
   const lease = capabilityLeaseClaimsSchema.parse(context.lease);
   const action = request.action;
+  // The canonical receiving adapter reserves this field for the source-permit
+  // hash. It stays in the full action/lease commitment, never provider arguments.
+  const { capabilityAdmissionDigest, ...providerArguments } = action.parameters;
+  if ((Object.hasOwn(action.parameters, "capabilityAdmissionDigest")
+    && (typeof capabilityAdmissionDigest !== "string" || !/^[a-f0-9]{64}$/.test(capabilityAdmissionDigest)))
+    || Object.hasOwn(args, "capabilityAdmissionDigest")) throw new IntegrationError("EXECUTION_BINDING_MISMATCH");
+  const argumentDigest = canonicalHash(providerArguments);
   const now = Math.floor(Date.now() / 1000);
   if (canonicalHash(request.scope) !== canonicalHash(scope) || request.connectionId !== binding.connectionId
     || request.toolkit !== binding.toolkit || request.authorityVersion !== binding.authorityVersion || request.tool !== slug
-    || canonicalHash(action.parameters) !== canonicalHash(args) || lease.accountId !== scope.accountId || lease.sub !== scope.agentId
+    || argumentDigest !== canonicalHash(args) || lease.accountId !== scope.accountId || lease.sub !== scope.agentId
     || lease.runtimeClientId !== action.runtimeClientId || lease.taskId !== action.taskId || lease.workloadId !== action.workloadId
     || lease.actionHash !== action.canonicalHash || canonicalHash(lease.resource) !== canonicalHash(action.resource)
     || canonicalHash(lease.capability) !== canonicalHash(action.capability) || lease.policyRevision !== request.relayPolicyRevision
@@ -24,5 +31,5 @@ export function bindExecution(scope: IntegrationScope, connection: IntegrationBi
     || Date.parse(request.expiresAt) > lease.exp * 1000) throw new IntegrationError("EXECUTION_BINDING_MISMATCH");
   // Binds every canonical authorization/approval/lease field, including delegation.
   // Provider identities stay server-side; evidence exposes only their digest.
-  return { request, lease, digest: canonicalHash({ provider: "composio", binding, request, lease }) };
+  return { request, lease, argumentDigest, digest: canonicalHash({ provider: "composio", binding, request, lease }) };
 }
