@@ -57,9 +57,7 @@ export async function advanceRelayPolicyFence(transaction: RelayDatabase, accoun
     aggregateId: accountId, type: 'capability.epoch', payload: epoch, idempotencyKey: epochKey, publishedAt: now() });
 }
 
-export async function relayAdmissionPermit(transaction: RelayDatabase, input: {
-  accountId: string; action: ActionIntent; source: SignedPolicyMessage; leaseId: string; agentRevision: number; expiresAt: number;
-}) {
+export async function requireRemoteAdmissionPolicy(transaction: RelayDatabase, input: {accountId:string;action:ActionIntent;source:SignedPolicyMessage}) {
   const config = orderingConfiguration();
   const untrusted = JSON.parse(input.source.message) as AdmissionPermit;
   const destination = config?.destinations.find(item => item.accountId === input.accountId && item.ownerId === untrusted.ownerId
@@ -74,6 +72,30 @@ export async function relayAdmissionPermit(transaction: RelayDatabase, input: {
   const current = await epochRow(transaction, input.accountId), epoch = current?.payload as Epoch | undefined;
   if (!epoch || epoch.pending.length || canonicalHash(epoch.destinations) !== canonicalHash(config.destinations.filter(item => item.accountId === input.accountId)))
     throw Error('CAPABILITY_PROPAGATION_PENDING');
+  // Reuse the authenticated forwarding outbox: an observed newer owner fence
+  // must not be bypassed while its receiving acknowledgment is lost or pending.
+  const [ownerFence] = await transaction.select().from(controlOutbox).where(and(
+    eq(controlOutbox.accountId, input.accountId), eq(controlOutbox.aggregateType, 'capability_owner_fence'),
+    like(controlOutbox.idempotencyKey, `owner-fence:${destinationId(destination)}:%`)))
+    .orderBy(sql`((${controlOutbox.payload}->'envelope'->>'message')::jsonb->>'version')::bigint desc`).limit(1);
+  if (ownerFence) {
+    const saved = ownerFence.payload as { envelope: SignedPolicyMessage; destination: OrderedDestination; acknowledgment?: SignedPolicyMessage };
+    if (canonicalHash(saved.destination) !== canonicalHash(destination)) throw Error('CAPABILITY_ENROLLMENT_CHANGED');
+    const fence = await verifyPolicyMessage(saved.envelope, destination.sourceKey);
+    if (fence.kind !== 'FENCE' || fence.authority !== 'myeve' || permit.version < fence.version
+      || (permit.version === fence.version && permit.policyId !== fence.policyId)) throw Error('CAPABILITY_OWNER_POLICY_STALE');
+    if (!ownerFence.publishedAt || !saved.acknowledgment) throw Error('CAPABILITY_PROPAGATION_PENDING');
+    const ack = await verifyPolicyMessage(saved.acknowledgment, destination.backendKey);
+    assertPolicyIdentity(ack, fence);
+    if (ack.kind !== 'FENCE_ACK' || ack.fenceHash !== await policyMessageHash(fence)) throw Error('CAPABILITY_ACK_MISMATCH');
+  }
+  return {permit,epoch,config};
+}
+
+export async function relayAdmissionPermit(transaction: RelayDatabase, input: {
+  accountId: string; action: ActionIntent; source: SignedPolicyMessage; leaseId: string; agentRevision: number; expiresAt: number;
+}) {
+  const {permit,epoch,config}=await requireRemoteAdmissionPolicy(transaction,input);
   const expiresAt = Math.min(permit.expiresAt, input.expiresAt);
   if (expiresAt <= Date.now()) throw Error('CAPABILITY_REFERENCE_EXPIRED');
   const result = await signPolicyMessage({ ...permit, authority: 'relay', referenceId: input.leaseId,

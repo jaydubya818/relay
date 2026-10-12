@@ -269,7 +269,24 @@ async function validateStoredLeaseAuthority(transaction: RelayDatabase,
       const [parent] = await transaction.select({ id: capabilityLeases.id }).from(capabilityLeases).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, claims.parentLeaseId), eq(capabilityLeases.status, "ACTIVE"), gt(capabilityLeases.expiresAt, timestamp), isNull(capabilityLeases.revokedAt))).limit(1);
       if (!parent) throw new RelayError("CAPABILITY_DENIED", "Parent lease is revoked or expired.", undefined, 403);
     }
+  if (claims.approvalDecisionId) {
+    const [approval] = await transaction.select({ id: approvalRequests.id }).from(approvalDecisions)
+      .innerJoin(approvalRequests, and(eq(approvalRequests.id, approvalDecisions.approvalRequestId),
+        eq(approvalRequests.accountId, approvalDecisions.accountId)))
+      .where(and(eq(approvalDecisions.accountId, input.expectedAccountId), eq(approvalDecisions.id, claims.approvalDecisionId),
+        eq(approvalDecisions.decision, "APPROVE"), eq(approvalRequests.status, "APPROVED"),
+        isNull(approvalRequests.revokedAt), eq(approvalRequests.actionHash, input.action.canonicalHash),
+        gt(approvalRequests.expiresAt, now()))).limit(1);
+    if (!approval) throw Error("ADMITTED_APPROVAL_REVOKED_OR_EXPIRED");
+  }
   return lease;
+}
+
+/** Read-only validation of an issued remote lease; retries never consume a call. */
+export async function validateUnconsumedLeaseInTransaction(transaction:RelayDatabase,input:{token:string;expectedAccountId:string;expectedAudience:string;expectedWorkloadId:string;action:ActionIntent},resolver:LeaseKeyResolver){
+ const claims=await validateLeaseToken(input,resolver);
+ await validateStoredLeaseAuthority(transaction,{...input,callId:'remote-lease-readback'},claims);
+ return claims;
 }
 
 /** Online consumption can be atomic with the durable native command receipt. */
@@ -307,16 +324,6 @@ export async function revalidateAdmittedLease(transaction: RelayDatabase, input:
     eq(runtimeClients.accountId, input.accountId), eq(runtimeClients.id, claims.runtimeClientId),
     isNull(runtimeClients.revokedAt), sql`${runtimeClients.verificationStatus} <> 'REVOKED'`)).limit(1);
   if (!runtime) throw Error("ADMITTED_RUNTIME_REVOKED");
-  if (claims.approvalDecisionId) {
-    const [approval] = await transaction.select({ id: approvalRequests.id }).from(approvalDecisions)
-      .innerJoin(approvalRequests, and(eq(approvalRequests.id, approvalDecisions.approvalRequestId),
-        eq(approvalRequests.accountId, approvalDecisions.accountId)))
-      .where(and(eq(approvalDecisions.accountId, input.accountId), eq(approvalDecisions.id, claims.approvalDecisionId),
-        eq(approvalDecisions.decision, "APPROVE"), eq(approvalRequests.status, "APPROVED"),
-        isNull(approvalRequests.revokedAt), eq(approvalRequests.actionHash, input.action.canonicalHash),
-        gt(approvalRequests.expiresAt, now()))).limit(1);
-    if (!approval) throw Error("ADMITTED_APPROVAL_REVOKED_OR_EXPIRED");
-  }
   return claims;
 }
 
