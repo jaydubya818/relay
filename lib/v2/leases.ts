@@ -1,7 +1,7 @@
 import { requireCurrentAgentPassport } from "@/lib/v2/passports";
 import { lockActiveAccount } from "@/lib/account-fence";
 import { advanceRelayPolicyFence, relayAdmissionPermit } from './policy/ordering';
-import type { SignedPolicyMessage } from './policy/ordering-wire';
+import { parsePolicyMessage, type SignedPolicyMessage } from './policy/ordering-wire';
 import { purposeSigner } from "@/lib/v2/evidence/signing-provider";
 import { createHash, createPublicKey, randomBytes, verify as verifySignature } from "node:crypto";
 import { and, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
@@ -112,6 +112,18 @@ export async function authenticateWorkloadToken(token: string, resolver: LeaseKe
   return claims;
 }
 
+/** Canonical workload proof and active row validation for preparation without issuance. */
+export async function validateWorkloadForPreparation(transaction: RelayDatabase, input: { accountId: string; action: ActionIntent; workloadId: string; workloadIdentityToken: string; audience: string }, resolver: LeaseKeyResolver) {
+  const claims = await authenticateWorkloadToken(input.workloadIdentityToken, resolver, { accountId: input.accountId, workloadId: input.workloadId, audience: input.audience });
+  if (claims.agentId !== input.action.agentId || claims.runtimeClientId !== input.action.runtimeClientId || claims.taskId !== input.action.taskId)
+    throw new RelayError('CAPABILITY_DENIED', 'Workload identity does not match the action.', undefined, 403);
+  const [workload] = await transaction.select({ id: workloads.id }).from(workloads).where(and(
+    eq(workloads.accountId, input.accountId), eq(workloads.id, input.workloadId), eq(workloads.agentId, input.action.agentId),
+    eq(workloads.runtimeClientId, input.action.runtimeClientId), eq(workloads.taskId, input.action.taskId),
+    eq(workloads.audience, input.audience), eq(workloads.status, 'ACTIVE'), gt(workloads.expiresAt, now()))).limit(1);
+  if (!workload) throw new RelayError('CAPABILITY_DENIED', 'Active workload is unavailable.', undefined, 403);
+}
+
 export async function issueCapabilityLease(input: { accountId: string; action: ActionIntent; workloadId: string; workloadIdentityToken: string; audience: string; ttlSeconds?: number; maxCalls: number; approvalRequestId?: string; parentLeaseId?: string; budgetReservationId?: string; allowOffline?: boolean; delegationChain?: string[]; remoteAdmission?: SignedPolicyMessage }, signer: AuditSigner, keyResolver: LeaseKeyResolver) {
   return withTransaction(transaction => issueCapabilityLeaseInTransaction(transaction, input, signer, keyResolver));
 }
@@ -186,7 +198,14 @@ export async function issueCapabilityLeaseInTransaction(transaction: RelayDataba
     }
     const policyLimits = (decision.obligations as { limits?: Record<string, number> }).limits ?? {};
     let maxCalls = Math.min(input.maxCalls, policyLimits.calls ?? input.maxCalls);
-    let latestExpiry = Math.min(Date.now() + Math.min(Math.max(input.ttlSeconds ?? 900, 1), 900) * 1_000, Date.parse(decision.expiresAt), Date.parse(passport.expiresAt), Date.parse(workload.expiresAt));
+    let latestExpiry = Math.min(Date.parse(issuedAt) + Math.min(Math.max(input.ttlSeconds ?? 900, 1), 900) * 1_000, Date.parse(decision.expiresAt), Date.parse(passport.expiresAt), Date.parse(workload.expiresAt));
+    if (input.remoteAdmission) {
+      // Signature and exact policy scope are verified by relayAdmissionPermit before commit.
+      // The underlying lease must not outlive its source proof, even when preparation took time.
+      const source = parsePolicyMessage(JSON.parse(input.remoteAdmission.message));
+      if (source.kind !== 'PERMIT') throw new RelayError('CAPABILITY_DENIED', 'Remote source permit required.', undefined, 403);
+      latestExpiry = Math.min(latestExpiry, source.expiresAt);
+    }
     let parentLease: typeof capabilityLeases.$inferSelect | undefined;
     if (input.parentLeaseId) {
       const [parent] = await transaction.select().from(capabilityLeases).where(and(eq(capabilityLeases.accountId, input.accountId), eq(capabilityLeases.id, input.parentLeaseId), eq(capabilityLeases.status, "ACTIVE"), gt(capabilityLeases.expiresAt, issuedAt))).limit(1);

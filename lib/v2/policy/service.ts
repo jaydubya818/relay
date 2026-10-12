@@ -2,7 +2,7 @@ import { enqueuePolicyPropagation } from "./propagation";
 import { advanceRelayPolicyFence } from './ordering';
 import { lockActiveAccount } from "@/lib/account-fence";
 import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
-import { db, withTransaction } from "@/lib/db";
+import { db, withTransaction, type RelayDatabase } from "@/lib/db";
 import { capabilityDefinitions, policyBundles, policyDecisions, stepUpChallenges, controlOutbox } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
@@ -121,11 +121,11 @@ export async function retireAccountPolicy(input: { accountId: string; actorPrinc
   });
 }
 
-async function loadEvaluationInputs(accountId: string, action: ActionIntent, signer: AuditSigner) {
-  const [capability] = await db().select().from(capabilityDefinitions).where(and(eq(capabilityDefinitions.name, action.capability.name), eq(capabilityDefinitions.version, action.capability.version), eq(capabilityDefinitions.enabled, true))).limit(1);
+async function loadEvaluationInputs(accountId: string, action: ActionIntent, signer: AuditSigner, connection: RelayDatabase = db()) {
+  const [capability] = await connection.select().from(capabilityDefinitions).where(and(eq(capabilityDefinitions.name, action.capability.name), eq(capabilityDefinitions.version, action.capability.version), eq(capabilityDefinitions.enabled, true))).limit(1);
   if (!capability) throw new RelayError("CAPABILITY_DENIED", "Capability definition is unavailable.", action.capability.name, 403);
-  const { passport } = await requireCurrentAgentPassport(accountId, action.agentId, signer);
-  const rows = await db().select().from(policyBundles).where(and(or(isNull(policyBundles.accountId), eq(policyBundles.accountId, accountId)), eq(policyBundles.status, "ACTIVE")));
+  const { passport } = await requireCurrentAgentPassport(accountId, action.agentId, signer, connection);
+  const rows = await connection.select().from(policyBundles).where(and(or(isNull(policyBundles.accountId), eq(policyBundles.accountId, accountId)), eq(policyBundles.status, "ACTIVE")));
   const bundles = rows.map((row) => policyBundleDocumentSchema.parse({ schemaVersion: "relay.policy-bundle.v1", name: row.name, layer: row.layer, version: row.version, accountId: row.accountId, rules: row.rules }));
   return {
     capability: capabilityDefinitionSchema.parse({ name: capability.name, version: capability.version, domain: capability.domain, description: capability.description, effectClass: capability.effectClass, riskClass: capability.riskClass, resourceType: capability.resourceType, inputSchema: capability.inputSchema, outputSchema: capability.outputSchema, meteringDimensions: capability.meteringDimensions }),
@@ -149,22 +149,23 @@ async function resolveFacts(names: string[], resolvers: PolicyFactResolver[], in
   return { facts };
 }
 
-async function persistDecision(input: { accountId: string; action: ActionIntent; capabilityHash: string; bundleHashes: string[]; snapshot: PolicyEvaluationSnapshot; result: PolicyEvaluationResult; signer: AuditSigner }) {
+async function persistDecision(input: { accountId: string; action: ActionIntent; capabilityHash: string; bundleHashes: string[]; snapshot: PolicyEvaluationSnapshot; result: PolicyEvaluationResult; signer: AuditSigner }, connection?: RelayDatabase) {
   const decisionId = id("dec");
   const factExpiry = input.snapshot.facts.map((fact) => Date.parse(fact.expiresAt));
   const expiresAt = new Date(Math.min(Date.now() + 60_000, ...(factExpiry.length ? factExpiry : [Date.now() + 60_000]))).toISOString();
   const persistableSnapshot = redactForEvidence(input.snapshot) as unknown as PolicyEvaluationSnapshot;
-  await withTransaction(async (transaction) => {
+  const persist = async (transaction: RelayDatabase) => {
     await transaction.insert(policyDecisions).values({ id: decisionId, accountId: input.accountId, actionIntentId: input.action.id, agentId: input.action.agentId, outcome: input.result.outcome, reasonCodes: input.result.reasonCodes, obligations: input.result.obligations, capabilityDefinitionHash: input.capabilityHash, policyBundleHashes: input.bundleHashes, materialFacts: persistableSnapshot.facts, evaluationSnapshot: { snapshot: persistableSnapshot, result: input.result, actionDigest: canonicalHash(input.snapshot.action), passportDigest: canonicalHash(input.snapshot.passport) }, expiresAt });
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, agentId: input.action.agentId, runtimeClientId: input.action.runtimeClientId, taskId: input.action.taskId, actionIntentId: input.action.id, policyDecisionId: decisionId, eventType: "policy.evaluated", outcome: input.result.outcome, details: { reasonCodes: input.result.reasonCodes, matchedRuleIds: input.result.matchedRuleIds, capabilityDefinitionHash: input.capabilityHash, policyBundleHashes: input.bundleHashes } }, input.signer);
-  });
+  };
+  if (connection) await persist(connection); else await withTransaction(persist);
   return { decisionId, expiresAt, ...input.result };
 }
 
-async function evaluateCurrentPolicy(input: { accountId: string; action: ActionIntent; resourceResolver: PolicyResourceResolver; factResolvers?: PolicyFactResolver[]; requiredApprovalClass?: string }, signer: AuditSigner) {
+async function evaluateCurrentPolicy(input: { accountId: string; action: ActionIntent; resourceResolver: PolicyResourceResolver; factResolvers?: PolicyFactResolver[]; requiredApprovalClass?: string }, signer: AuditSigner, connection?: RelayDatabase) {
   const action = actionIntentSchema.parse(input.action);
   if (action.accountId !== input.accountId || canonicalHash(actionMaterial(action)) !== action.canonicalHash) throw new RelayError("INVALID_INPUT", "Action intent account or canonical hash is invalid.");
-  const loaded = await loadEvaluationInputs(input.accountId, action, signer);
+  const loaded = await loadEvaluationInputs(input.accountId, action, signer, connection);
   const factResolutionStartedAt = now();
   const resolved = await resolveFacts(requiredFactNames(loaded.bundles, { action, capability: loaded.capability }), input.factResolvers ?? [], { accountId: input.accountId, action, evaluatedAt: factResolutionStartedAt });
   const ownership = await input.resourceResolver.resolveOwnership({ accountId: input.accountId, resource: action.resource });
@@ -193,6 +194,11 @@ export async function inspectPolicy(input: Parameters<typeof evaluateCurrentPoli
 
 export async function evaluatePolicy(input: Parameters<typeof evaluateCurrentPolicy>[0], signer: AuditSigner) {
   return persistDecision({ ...await evaluateCurrentPolicy(input, signer), signer });
+}
+
+/** Canonical evaluation and audit composed with a receiving preparation receipt. */
+export async function evaluatePolicyInTransaction(transaction: RelayDatabase, input: Parameters<typeof evaluateCurrentPolicy>[0], signer: AuditSigner) {
+  return persistDecision({ ...await evaluateCurrentPolicy(input, signer, transaction), signer }, transaction);
 }
 
 export async function reproducePolicyDecision(accountId: string, decisionId: string) {

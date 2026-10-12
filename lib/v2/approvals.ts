@@ -37,17 +37,21 @@ function policyApprovalObligation(value: unknown) {
 }
 
 export async function createApprovalRequest(input: { accountId: string; action: ActionIntent; policyDecisionId: string; approvalClass: string; summary: string; consequence: string; displayEvidence: Record<string, unknown>; assignedPrincipalIds: string[]; sessionId?: string; expiresAt: string }, signer: AuditSigner) {
+  return withTransaction(transaction => createApprovalRequestInTransaction(transaction, input, signer));
+}
+
+export async function createApprovalRequestInTransaction(transaction: RelayDatabase, input: { accountId: string; action: ActionIntent; policyDecisionId: string; approvalClass: string; summary: string; consequence: string; displayEvidence: Record<string, unknown>; assignedPrincipalIds: string[]; sessionId?: string; expiresAt: string }, signer: AuditSigner) {
   const action = actionIntentSchema.parse(input.action);
   if (action.accountId !== input.accountId || canonicalHash(actionMaterial(action)) !== action.canonicalHash) throw new RelayError("INVALID_INPUT", "Action intent account or hash is invalid.");
   if (!input.assignedPrincipalIds.length) throw new RelayError("INVALID_INPUT", "At least one approver must be assigned.");
   const timestamp = now();
-  const [decision] = await db().select().from(policyDecisions).where(and(eq(policyDecisions.id, input.policyDecisionId), eq(policyDecisions.accountId, input.accountId), eq(policyDecisions.actionIntentId, action.id), eq(policyDecisions.agentId, action.agentId), eq(policyDecisions.outcome, "REQUIRE_APPROVAL"), gt(policyDecisions.expiresAt, timestamp))).limit(1);
+  const [decision] = await transaction.select().from(policyDecisions).where(and(eq(policyDecisions.id, input.policyDecisionId), eq(policyDecisions.accountId, input.accountId), eq(policyDecisions.actionIntentId, action.id), eq(policyDecisions.agentId, action.agentId), eq(policyDecisions.outcome, "REQUIRE_APPROVAL"), gt(policyDecisions.expiresAt, timestamp))).limit(1);
   if (!decision) throw new RelayError("CAPABILITY_DENIED", "A current matching approval policy decision is required.", undefined, 403);
   const obligation = policyApprovalObligation(decision.obligations);
   if (!obligation.classes.includes(input.approvalClass)) throw new RelayError("CAPABILITY_DENIED", "Approval class is not allowed by policy.", undefined, 403);
-  const [capability] = await db().select({ effectClass: capabilityDefinitions.effectClass, riskClass: capabilityDefinitions.riskClass }).from(capabilityDefinitions).where(eq(capabilityDefinitions.definitionHash, decision.capabilityDefinitionHash)).limit(1);
+  const [capability] = await transaction.select({ effectClass: capabilityDefinitions.effectClass, riskClass: capabilityDefinitions.riskClass }).from(capabilityDefinitions).where(eq(capabilityDefinitions.definitionHash, decision.capabilityDefinitionHash)).limit(1);
   if (!capability) throw new RelayError("CAPABILITY_DENIED", "Capability definition is unavailable.", undefined, 403);
-  const assigned = await db().select({ principalId: accountMemberships.principalId }).from(accountMemberships).innerJoin(principals, eq(principals.id, accountMemberships.principalId)).where(and(eq(accountMemberships.accountId, input.accountId), inArray(accountMemberships.principalId, input.assignedPrincipalIds), inArray(accountMemberships.role, ["OWNER", "ADMIN", "APPROVER"]), eq(accountMemberships.status, "ACTIVE"), eq(principals.status, "ACTIVE")));
+  const assigned = await transaction.select({ principalId: accountMemberships.principalId }).from(accountMemberships).innerJoin(principals, eq(principals.id, accountMemberships.principalId)).where(and(eq(accountMemberships.accountId, input.accountId), inArray(accountMemberships.principalId, input.assignedPrincipalIds), inArray(accountMemberships.role, ["OWNER", "ADMIN", "APPROVER"]), eq(accountMemberships.status, "ACTIVE"), eq(principals.status, "ACTIVE")));
   if (new Set(assigned.map((entry) => entry.principalId)).size !== new Set(input.assignedPrincipalIds).size) throw new RelayError("CAPABILITY_DENIED", "Every assigned approver must be active in the account.", undefined, 403);
   const facts = decision.materialFacts as Array<{ name: string; value: unknown }>;
   const recipientRelationship = facts.find((fact) => fact.name === "recipient.relationship")?.value;
@@ -59,11 +63,11 @@ export async function createApprovalRequest(input: { accountId: string; action: 
   const expiresAt = new Date(Math.min(Date.parse(input.expiresAt), Date.parse(decision.expiresAt))).toISOString();
   if (Date.parse(expiresAt) <= Date.parse(timestamp)) throw new RelayError("INVALID_INPUT", "Approval expiry must be in the future.");
   const displayEvidence = redactForEvidence(input.displayEvidence);
-  await withTransaction(async (transaction) => {
+  {
     await transaction.insert(approvalRequests).values({ id: requestId, accountId: input.accountId, actionIntentId: action.id, actionHash: action.canonicalHash, actionSnapshot: redactForEvidence(action), agentId: action.agentId, runtimeClientId: action.runtimeClientId, taskId: action.taskId, sessionId: input.sessionId, policyDecisionId: decision.id, approvalClass: input.approvalClass, riskClass: capability.riskClass, effectClass: capability.effectClass, summary: input.summary, consequence: input.consequence, displayEvidence, allowedScopes, assignedPrincipalIds: [...new Set(input.assignedPrincipalIds)], expiresAt });
     for (const principalId of new Set(input.assignedPrincipalIds)) await transaction.insert(approvalNotifications).values({ id: id("ntf"), accountId: input.accountId, approvalRequestId: requestId, principalId, eventType: "approval.requested", payload: redactForEvidence({ requestId, summary: input.summary, consequence: input.consequence, expiresAt }) });
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, agentId: action.agentId, runtimeClientId: action.runtimeClientId, taskId: action.taskId, actionIntentId: action.id, policyDecisionId: decision.id, eventType: "approval.requested", outcome: "PENDING", details: { requestId, approvalClass: input.approvalClass, allowedScopes, assignedPrincipalIds: input.assignedPrincipalIds } }, signer);
-  });
+  }
   return { requestId, allowedScopes, expiresAt };
 }
 

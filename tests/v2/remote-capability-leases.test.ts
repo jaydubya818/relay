@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { afterEach, expect, it, vi } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import { db, withTransaction, closeDatabasesForTests } from '@/lib/db';
-import { capabilityLeases, controlOutbox, approvalRequests, budgetReservations } from '@/lib/db/schema';
+import { capabilityLeases, controlOutbox, approvalRequests, budgetReservations, policyDecisions } from '@/lib/db/schema';
 import { lockActiveAccount } from '@/lib/account-fence';
 import { canonicalHash, type ActionIntent } from '@/lib/v2/contracts';
 import { createLocalEd25519Signer } from '@/lib/v2/evidence';
@@ -17,6 +17,7 @@ import { configureV2PlatformBindings } from '@/lib/v2/platform-bindings';
 import { advanceRelayPolicyFence, flushRelayPolicyFences, forwardOwnerPolicyFence, flushOwnerPolicyFences } from '@/lib/v2/policy/ordering';
 import { signPolicyMessage, verifyPolicyMessage, policyMessageHash, type PolicyKey } from '@/lib/v2/policy/ordering-wire';
 import { POST } from '@/app/api/v2/runtime/capability-leases/route';
+import { POST as PREPARE } from '@/app/api/v2/runtime/capability-leases/prepare/route';
 import { cleanupDatabase, freshDatabase, secondAccount } from '../helpers';
 
 function proposedAction(accountId: string, agentId: string, runtimeClientId: string, capabilityName: string, target = "target-1"): ActionIntent {
@@ -53,7 +54,7 @@ afterEach(async () => {
   vi.unstubAllEnvs();
   await cleanupDatabase();
 });
-async function remoteFixture(options: { approval?: boolean; metered?: boolean } = {}) {
+async function remoteFixture(options: { approval?: boolean; metered?: boolean; skipRemoteEvaluation?: boolean } = {}) {
   const f = await setup('read', options.approval ? 'REQUIRE_APPROVAL' : 'ALLOW', options.metered ? ['TOKENS'] : []);
   const key = async (keyId: string): Promise<PolicyKey> => {
     const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
@@ -90,15 +91,17 @@ async function remoteFixture(options: { approval?: boolean; metered?: boolean } 
   const remoteAdmission = await signPolicyMessage(permit, source);
   f.action.parameters = { capabilityAdmissionDigest: await policyMessageHash(permit) };
   f.action.canonicalHash = canonicalHash({ capability: f.action.capability, resource: f.action.resource, parameters: f.action.parameters });
-  const policy = await evaluatePolicy({ accountId: f.accountId, action: f.action, resourceResolver: { resolveOwnership: async () => ({ name: 'resource.account_id', value: f.accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'fixture:1' }) } }, f.signer);
+  const policy = options.skipRemoteEvaluation ? f.policy : await evaluatePolicy({ accountId: f.accountId, action: f.action, resourceResolver: { resolveOwnership: async () => ({ name: 'resource.account_id', value: f.accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'fixture:1' }) } }, f.signer);
   const request = { action: f.action, workloadId: f.workload.workloadId, workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 1 as const, remoteAdmission, approvalRequestId: undefined as string | undefined, budgetReservationId: undefined as string | undefined };
   configureV2PlatformBindings({ signer: f.signer, keyResolver: f.resolver });
   const send = (body: unknown = request, accountId = f.accountId, credential = f.runtimeSecret) => POST(new Request('http://127.0.0.1/api/v2/runtime/capability-leases', { method: 'POST', headers: { authorization: `Bearer ${credential}`, 'x-relay-account-id': accountId, 'content-type': 'application/json' }, body: JSON.stringify(body) }));
-  return { ...f, policy, identity, permit, source, relay, transport, request, send };
+  const prepare = (body: unknown = request) => PREPARE(new Request('http://127.0.0.1/api/v2/runtime/capability-leases/prepare', { method: 'POST', headers: { authorization: `Bearer ${f.runtimeSecret}`, 'x-relay-account-id': f.accountId, 'content-type': 'application/json' }, body: JSON.stringify(body) }));
+  return { ...f, policy, identity, permit, source, relay, transport, request, send, prepare };
 }
 
 it('authenticates one canonical positive lease and recovers identical concurrent/lost-response retries without spending a call', async () => {
   const f = await remoteFixture();
+  const beforeIssuance = Date.now();
   const responses = await Promise.all([f.send(), f.send(), f.send()]);
   expect(responses.map(r => r.status)).toEqual([200, 200, 200]);
   const results = await Promise.all(responses.map(r => r.json()));
@@ -109,6 +112,12 @@ it('authenticates one canonical positive lease and recovers identical concurrent
   expect(await (await f.send()).json()).toEqual(results[0]);
   const leases = await db().select().from(capabilityLeases);
   expect(leases).toHaveLength(1); expect(leases[0]).toMatchObject({ callCount: 0, maxCalls: 1, status: 'ACTIVE' });
+  expect(Date.parse(leases[0].expiresAt) - Date.parse(leases[0].issuedAt)).toBeLessThanOrEqual(30000);
+  expect(Date.parse(results[0].expiresAt) - beforeIssuance).toBeLessThanOrEqual(31000);
+  const claims = JSON.parse(Buffer.from(results[0].token.split('.')[1], 'base64url').toString('utf8'));
+  expect(claims.exp - claims.iat).toBeLessThanOrEqual(30);
+  expect(Date.parse(leases[0].expiresAt)).toBeLessThanOrEqual(f.permit.expiresAt);
+  expect(await (await f.send({ ...f.request, ttlSeconds: 30 })).json()).toEqual(results[0]);
   expect(await db().select().from(controlOutbox).where(eq(controlOutbox.aggregateType, 'capability_reference'))).toHaveLength(1);
   expect((await f.send({ ...f.request, ttlSeconds: 29 })).status).toBe(409);
   await authorizeLeaseCall({ token: results[0].token, expectedAccountId: f.accountId, expectedAudience: f.request.audience, expectedWorkloadId: f.workload.workloadId, action: f.action, callId: 'actual-relay-call', online: true }, f.resolver, f.signer);
@@ -204,3 +213,77 @@ it('cannot replay a lease after its exact approval expires', async () => {
   await expect(authorizeLeaseCall({ token: result.token, expectedAccountId: f.accountId, expectedAudience: f.request.audience, expectedWorkloadId: f.workload.workloadId, action: f.action, callId: 'expired-approval', online: true }, f.resolver, f.signer)).rejects.toThrow('APPROVAL_REVOKED_OR_EXPIRED');
   expect((await db().select().from(capabilityLeases))[0].callCount).toBe(0);
 });
+
+it('prepares a fresh signed action through canonical trusted policy without pre-seeding decisions or issuing authority', async () => {
+  const f = await remoteFixture({ skipRemoteEvaluation: true });
+  expect((await f.send()).status).toBe(403);
+  expect((await f.prepare()).status).toBe(503);
+  configureV2PlatformBindings({ signer: f.signer, keyResolver: f.resolver, remoteCapabilityPreparation: {
+    resourceResolver: { resolveOwnership: async () => ({ name: 'resource.account_id', value: f.accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'server-enrollment:1' }) },
+  } });
+  const responses = await Promise.all([f.prepare(), f.prepare(), f.prepare()]);
+  expect(responses.map(r => r.status)).toEqual([200, 200, 200]);
+  const results = await Promise.all(responses.map(r => r.json()));
+  expect(results[1]).toEqual(results[0]); expect(results[2]).toEqual(results[0]);
+  expect(results[0]).toMatchObject({ decision: { outcome: 'ALLOW' }, approvalRequest: null });
+  expect(await db().select().from(capabilityLeases)).toHaveLength(0);
+  expect(await db().select().from(policyDecisions)).toHaveLength(2); // initial unrelated fixture action + one exact prepared action
+  expect((await f.send()).status).toBe(200);
+});
+
+it('creates one canonical pending approval and keeps its exact decision stable through owner authorization', async () => {
+  const f = await remoteFixture({ approval: true, skipRemoteEvaluation: true });
+  configureV2PlatformBindings({ signer: f.signer, keyResolver: f.resolver, remoteCapabilityPreparation: {
+    resourceResolver: { resolveOwnership: async () => ({ name: 'resource.account_id', value: f.accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'server-enrollment:1' }) },
+    approvalRequest: async () => ({ approvalClass: 'test', summary: 'Fixture Work', consequence: 'One bounded qualification lease', displayEvidence: { missionId: f.permit.missionId }, assignedPrincipalIds: [f.principalId] }),
+  } });
+  const first = await f.prepare(); expect(first.status).toBe(200);
+  const prepared = await first.json();
+  expect(await (await f.prepare()).json()).toEqual(prepared);
+  expect(await db().select().from(approvalRequests)).toHaveLength(1);
+  expect((await db().select().from(approvalRequests))[0]).toMatchObject({ status: 'PENDING', policyDecisionId: prepared.decision.decisionId, useCount: 0 });
+  f.request.approvalRequestId = prepared.approvalRequest.requestId;
+  expect((await f.send()).status).toBe(403);
+  await decideApproval({ accountId: f.accountId, requestId: prepared.approvalRequest.requestId, principalId: f.principalId, decision: 'APPROVE', scope: { kind: 'once', actionHash: f.action.canonicalHash }, authenticationEvidence: { sessionId: 'ses_approved1', method: 'password', authenticatedAt: new Date().toISOString() } }, f.signer);
+  expect(await (await f.prepare()).json()).toEqual(prepared);
+  expect((await f.send()).status).toBe(200);
+  expect((await f.send()).status).toBe(200);
+  expect((await db().select().from(approvalRequests))[0].useCount).toBe(1);
+});
+
+it('never turns caller ownership hints into authoritative resource facts', async () => {
+  const f = await remoteFixture({ skipRemoteEvaluation: true });
+  configureV2PlatformBindings({ signer: f.signer, keyResolver: f.resolver, remoteCapabilityPreparation: { resourceResolver: { resolveOwnership: async () => undefined } } });
+  const response = await f.prepare(); expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ decision: { outcome: 'DENY' }, approvalRequest: null });
+  expect((await f.send()).status).toBe(403);
+  expect(await db().select().from(capabilityLeases)).toHaveLength(0);
+});
+
+it('bounds stalled signing while releasing the account fence for revocation', async () => {
+  const f = await remoteFixture();
+  configureV2PlatformBindings({ signer: { ...f.signer, sign: async () => new Promise<string>(() => {}) }, keyResolver: f.resolver });
+  expect((await f.send()).status).toBe(503);
+  await revokeRuntimeClient({ accountId: f.accountId, actorPrincipalId: f.principalId, runtimeClientId: f.runtimeClientId }, f.signer);
+  expect(await db().select().from(capabilityLeases)).toHaveLength(0);
+}, 15000);
+
+it('bounds key resolution and a never-ending HTTP body', async () => {
+  const f = await remoteFixture();
+  configureV2PlatformBindings({ signer: f.signer, keyResolver: { publicKeyForKeyId: async () => new Promise<string>(() => {}) } });
+  expect((await f.send()).status).toBe(503);
+  const request = new Request('http://127.0.0.1/api/v2/runtime/capability-leases', { method: 'POST', headers: { authorization: `Bearer ${f.runtimeSecret}`, 'x-relay-account-id': f.accountId }, body: new ReadableStream({ cancel: () => new Promise(() => {}) }), duplex: 'half' } as RequestInit);
+  expect((await POST(request)).status).toBe(503);
+  expect(await db().select().from(capabilityLeases)).toHaveLength(0);
+}, 20000);
+
+it('bounds an unavailable account lock without admitting Work', async () => {
+  const f = await remoteFixture();
+  let release!: () => void, locked!: () => void;
+  const ready = new Promise<void>(resolve => { locked = resolve; });
+  const held = withTransaction(async transaction => { await lockActiveAccount(transaction, f.accountId); locked(); await new Promise<void>(resolve => { release = resolve; }); });
+  await ready;
+  try { expect((await f.send()).status).not.toBe(200); } finally { release(); await held; }
+  expect(await db().select().from(capabilityLeases)).toHaveLength(0);
+  expect((await f.send()).status).toBe(200);
+}, 15000);
