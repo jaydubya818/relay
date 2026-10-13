@@ -8,7 +8,8 @@
       "codex/grant-never-expire": false,
       "codex/authority-expiry-diagnostics": false,
       "codex/relay-final-integration": false,
-      "codex/telegram-current-integration": false
+      "codex/telegram-current-integration": false,
+      "codex/unified-capability-control-plane": false
     }
   },
   "installCommand": "pnpm install --frozen-lockfile",
@@ -17,7 +18,10 @@
     "iad1"
   ],
   "crons": [
-    { "path": "/api/internal/federation-maintenance", "schedule": "*/5 * * * *" }
+    {
+      "path": "/api/internal/federation-maintenance",
+      "schedule": "*/5 * * * *"
+    }
   ],
   "headers": [
     {
