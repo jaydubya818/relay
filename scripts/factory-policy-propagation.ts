@@ -1,4 +1,4 @@
-import {and,eq} from 'drizzle-orm';
+import {and,eq,gt,or,sql} from 'drizzle-orm';
 import {db} from '../lib/db';
 import {controlOutbox} from '../lib/db/schema';
 import {flushRelayPolicyFences} from '../lib/v2/policy/ordering';
@@ -19,16 +19,34 @@ async function boundedResponse(response:Response){
  finally{await reader.cancel();}
  return JSON.parse(Buffer.concat(chunks).toString('utf8')) as {receipt:unknown;signature:string};
 }
+type Cursor={createdAt:string;id:string};
+const cursors=new Map<string,Cursor>();
+const pendingScans=new Set<string>();
+const destinationKey=(d:FactoryPropagationDestination)=>JSON.stringify([d.accountId,d.ownerId,d.organizationId,d.installationId,d.backendId,d.agentId,d.keyId]);
+async function policyPage(destination:FactoryPropagationDestination,cursor:Cursor|undefined,limit:number){
+ return db().select().from(controlOutbox).where(and(eq(controlOutbox.accountId,destination.accountId),
+  eq(controlOutbox.aggregateType,'capability_policy'),eq(controlOutbox.aggregateId,destination.agentId),
+  sql`${controlOutbox.payload}->'payload'->>'kind'='AGENT_REVOKED'`,
+  cursor?or(gt(controlOutbox.createdAt,cursor.createdAt),and(eq(controlOutbox.createdAt,cursor.createdAt),gt(controlOutbox.id,cursor.id))):undefined))
+  .orderBy(controlOutbox.createdAt,controlOutbox.id).limit(limit);
+}
 export async function runFactoryPolicyPropagation(records:FactoryPropagationRecords|undefined=originalRecords,send:typeof fetch=fetch){
  if(!records)return {status:'NOT_ENROLLED' as const,deliveries:[]};
  const destinations=await records();if(destinations.length>128)throw Error('FACTORY_POLICY_DESTINATION_BOUND');
+ const currentKeys=new Set(destinations.map(destinationKey));for(const key of cursors.keys())if(!currentKeys.has(key))cursors.delete(key);
+ for(const key of pendingScans)if(!currentKeys.has(key))pendingScans.delete(key);
+ let scanningPending=false,scanned=0;
  const deliveries:Array<{eventId:string;backendId:string;status:string}>=[];
  for(const destination of destinations){
+  if(scanned>=128){scanningPending=true;break;}
+  try{
   const endpoint=new URL(destination.endpoint);
   if(endpoint.protocol!=='https:'||endpoint.username||endpoint.password||endpoint.hash||endpoint.search||endpoint.pathname!=='/api/relay-policy'
    ||!destination.ownerId||!destination.organizationId||!destination.agentId||typeof destination.headers!=='function')throw Error('FACTORY_POLICY_ENROLLMENT');
-  const events=await db().select().from(controlOutbox).where(and(eq(controlOutbox.accountId,destination.accountId),eq(controlOutbox.aggregateType,'capability_policy'))).limit(129);
-  if(events.length>128)throw Error('FACTORY_POLICY_OUTBOX_BOUND');
+  const key=destinationKey(destination),limit=Math.min(128-scanned,Math.max(1,Math.floor(128/destinations.length))),events=await policyPage(destination,cursors.get(key),limit);
+  if(events.length>limit)throw Error('FACTORY_POLICY_BATCH_BOUND');
+  scanned+=events.length;
+  if(events.length===limit){const last=events.at(-1)!;cursors.set(key,{createdAt:last.createdAt,id:last.id});scanningPending=true;}else cursors.delete(key);
   for(const event of events){
    if(event.cancelledAt)continue;
    const envelope=event.payload as {payload:{kind?:string;aggregateId?:string}};
@@ -45,10 +63,15 @@ export async function runFactoryPolicyPropagation(records:FactoryPropagationReco
     await acknowledgePolicyPropagation(value.receipt,value.signature,destination,requireV2PlatformBindings().signer);
     const status=(await inspectPolicyPropagation(destination.accountId,event.id,[destination])).status;
     deliveries.push({eventId:event.id,backendId:destination.backendId,status});
-   }catch{deliveries.push({eventId:event.id,backendId:destination.backendId,status:'PENDING_BACKEND'});}
+    if(status!=='ACKNOWLEDGED')pendingScans.add(key);
+   }catch{pendingScans.add(key);deliveries.push({eventId:event.id,backendId:destination.backendId,status:'PENDING_BACKEND'});}
   }
+  // A short last page cannot certify earlier pages whose ACK is still pending.
+  // Reset only the scan hint at wrap; durable native ACKs remain authoritative.
+  if(events.length<limit){if(pendingScans.has(key))scanningPending=true;pendingScans.delete(key);}
+  }catch{scanningPending=true;deliveries.push({eventId:'UNAVAILABLE',backendId:destination.backendId,status:'PENDING_BACKEND'});}
  }
- return {status:deliveries.some(x=>x.status!=='ACKNOWLEDGED')?'PENDING_BACKEND' as const:'DRAINED' as const,deliveries};
+ return {status:scanningPending||deliveries.some(x=>x.status!=='ACKNOWLEDGED')?'PENDING_BACKEND' as const:'DRAINED' as const,deliveries};
 }
 export function startFactoryPolicyPropagation(intervalMs=30000){
  let stopped=false,running=false;
