@@ -6,7 +6,7 @@ async function signIn(page: import("@playwright/test").Page) {
   await page.getByLabel("Email").fill("admin@relay.local");
   await page.getByLabel("Password").fill("relay-e2e");
   await page.getByRole("button", { name: "Sign in to Relay" }).click();
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
 }
 
 test("operator can sign in, inspect core pages, and create an agent credential", async ({ page }) => {
@@ -14,8 +14,10 @@ test("operator can sign in, inspect core pages, and create an agent credential",
   mkdirSync("output/playwright", { recursive: true });
   await page.screenshot({ path: "output/playwright/relay-overview.png", fullPage: true });
 
-  await page.getByRole("link", { name: "Agents" }).click();
+  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Agents", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Agents" })).toBeVisible();
+  await page.goto("/advanced/agents");
+  await page.getByText("Manual Agent creation", { exact: true }).click();
   const name = `Browser Agent ${Date.now()}`;
   await page.getByLabel("Name").fill(name);
   await page.getByLabel("Description").fill("Created through the Relay dashboard golden path");
@@ -27,7 +29,7 @@ test("operator can sign in, inspect core pages, and create an agent credential",
     await page.goto(route);
     await expect(page.locator("main")).toBeVisible();
   }
-  await page.goto("/connections");
+  await page.goto("/advanced/connections");
   await expect(page.getByText("Google Workspace", { exact: true }).first()).toBeVisible();
   await page.goto("/sandboxes");
   await expect(page.getByText("docker")).toBeVisible();
@@ -48,8 +50,8 @@ test("a new account owner can register and revoke the browser session on logout"
   await page.getByLabel("Email").fill("owner-e2e@example.com");
   await page.getByLabel("Password").fill("e2e-password-long-enough");
   await page.getByRole("button", { name: "Create Relay account" }).click();
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
-  await expect(page.getByText("No agents yet. Create the first durable identity.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+  await expect(page.getByText("No Agents are connected yet")).toBeVisible();
   for (const [route, empty] of [["/sandboxes", "No sandboxes"], ["/browsers", "No active or historical browser sessions"], ["/events", "No events have been ingested"]] as const) {
     await page.goto(route);
     await expect(page.getByText(empty, { exact: false })).toBeVisible();

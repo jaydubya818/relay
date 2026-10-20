@@ -12,7 +12,7 @@ test.beforeAll(async()=>{
 import { expect,test } from "@playwright/test";
 test("Telegram management states remain usable on mobile and by keyboard",async({page})=>{
  await page.setViewportSize({width:390,height:844});
- await page.goto("/login");await page.getByLabel("Email").fill("admin@relay.local");await page.getByLabel("Password").fill("relay-e2e");await page.getByRole("button",{name:"Sign in to Relay"}).click();await expect(page.getByRole("heading",{name:"Overview"})).toBeVisible();
+ await page.goto("/login");await page.getByLabel("Email").fill("admin@relay.local");await page.getByLabel("Password").fill("relay-e2e");await page.getByRole("button",{name:"Sign in to Relay"}).click();await expect(page.getByRole("heading",{name:"Home"})).toBeVisible();
  let state="NOT_CONFIGURED",bindingId:string|null=null;
  await page.route("**/api/v2/operator/telegram",async route=>{
   if(route.request().method()==="POST"){

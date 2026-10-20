@@ -18,15 +18,15 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
     <>
       <PageHeader eyebrow="Capabilities" title="Memory" description="Search the durable account memory available across authorized agent runtimes." />
       <form className="filters card">
-        <div className="field grow"><label>Search</label><input name="query" defaultValue={params.query} placeholder="Search memory content" /></div>
-        <div className="field"><label>Type</label><select name="type" defaultValue={params.type ?? ""}><option value="">All types</option>{["FACT","PREFERENCE","PROJECT","DECISION","OTHER"].map((value) => <option key={value}>{value}</option>)}</select></div>
-        <div className="field"><label>Scope</label><select name="scope" defaultValue={params.scope ?? ""}><option value="">All scopes</option><option>SHARED</option><option>AGENT_PRIVATE</option></select></div>
-        <div className="field"><label>Created by</label><select name="agent" defaultValue={params.agent ?? ""}><option value="">All agents</option>{agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.name}</option>)}</select></div>
+        <div className="field grow"><label htmlFor="memory-query">Search</label><input id="memory-query" name="query" defaultValue={params.query} placeholder="Search memory content" /></div>
+        <div className="field"><label htmlFor="memory-type">Type</label><select id="memory-type" name="type" defaultValue={params.type ?? ""}><option value="">All types</option>{["FACT","PREFERENCE","PROJECT","DECISION","OTHER"].map((value) => <option key={value}>{value}</option>)}</select></div>
+        <div className="field"><label htmlFor="memory-scope">Scope</label><select id="memory-scope" name="scope" defaultValue={params.scope ?? ""}><option value="">All scopes</option><option>SHARED</option><option>AGENT_PRIVATE</option></select></div>
+        <div className="field"><label htmlFor="memory-agent">Created by</label><select id="memory-agent" name="agent" defaultValue={params.agent ?? ""}><option value="">All agents</option>{agents.map((agent) => <option value={agent.id} key={agent.id}>{agent.name}</option>)}</select></div>
         <button className="button">Filter</button>
       </form>
       <div className="card flush table-wrap">
         <table><thead><tr><th>Memory</th><th>Type</th><th>Scope</th><th>Created by</th><th>Created</th><th /></tr></thead><tbody>{memories.map((memory: any) => <tr key={memory.id}><td className="memory-content">{memory.content}</td><td>{memory.type}</td><td><Status value={memory.scope} /></td><td>{memory.createdByAgent}</td><td className="subtle">{new Date(memory.createdAt).toLocaleString()}</td><td><ForgetMemoryButton id={memory.id} /></td></tr>)}</tbody></table>
-        {!memories.length && <div className="empty">No memory matches these filters.</div>}
+        {!memories.length && <div className="empty">No memory matches these filters. Stored memories appear here only when Memory is enabled and an authorized Agent has saved them.</div>}
       </div>
     </>
   );

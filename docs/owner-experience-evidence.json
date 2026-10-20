@@ -1,0 +1,49 @@
+{
+  "baseline": "a90625776193031ca2303ba2e2162249d1245479",
+  "implementation_commit": "1167dc34620b23d756a08293dceaafa61f2dfb2a",
+  "branch": "codex/relay-owner-experience",
+  "architecture_decision": "Option A: preserve canonical OWNER authority",
+  "full_regression": {
+    "passed": 477,
+    "skipped_live_provider_tests": 6
+  },
+  "performance_tests_passed": 2,
+  "legacy_browser_tests_passed": 3,
+  "fresh_clone": {
+    "locked_install": "PASS",
+    "typecheck": "PASS",
+    "lint": "PASS",
+    "build": "PASS",
+    "focused_tests_passed": 7,
+    "affected_security_tests_passed": 24,
+    "owner_browser_tests_passed": 11,
+    "visual_comparisons_passed": 9
+  },
+  "viewports": [
+    1440,
+    768,
+    390
+  ],
+  "accessibility": {
+    "owner_and_advanced_critical_or_serious_findings": 0,
+    "keyboard_journey": "PASS",
+    "scope": "Synthetic fixtures; not a claim of exhaustive WCAG conformance"
+  },
+  "visual_baselines": "tests/e2e/owner-experience.spec.ts-snapshots",
+  "unchanged_paths": [
+    "app/api",
+    "lib/auth.ts",
+    "lib/authorization.ts",
+    "lib/agents.ts",
+    "lib/connections.ts",
+    "lib/v2",
+    "drizzle",
+    "middleware.ts"
+  ],
+  "independent_review": "PENDING; author review is not independent sign-off",
+  "production_deployments": 0,
+  "external_alpha_changes": 0,
+  "real_tester_mutations": 0,
+  "real_credential_mutations": 0,
+  "paid_model_operations": 0
+}

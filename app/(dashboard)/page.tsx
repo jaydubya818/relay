@@ -1,60 +1,33 @@
+export const metadata = { title: "Home" };
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { getOverview } from "@/lib/overview";
+import { listAgents } from "@/lib/agents";
+import { listConnections } from "@/lib/connections";
 import { listActivity } from "@/lib/activity";
 import { PageHeader, Status } from "@/components/page";
-import { browserProvider, sandboxProvider } from "@/lib/providers";
+import { ActivityTimeline, EmptyState } from "@/components/owner-ui";
+import { providerLabel } from "@/lib/owner-presentation";
 
-export default async function OverviewPage() {
+export default async function HomePage() {
   const user = await requireUser();
-  const [overview, activity, sandboxHealth, browserHealth] = await Promise.all([getOverview(user.accountId), listActivity(user.accountId, { limit: 6 }), sandboxProvider().health(), browserProvider().health()]);
-  const metrics = [
-    ["Agents", overview.counts.agents, "Durable identities"],
-    ["Successes / 24h", overview.counts.operations, "Completed operations"],
-    ["Connections", overview.counts.connections, "Account-owned"],
-    ["Denials / 24h", overview.counts.denials, "Authority enforced"],
-    ["Failures / 24h", overview.counts.failures, "Needs attention"],
-  ];
-  return (
-    <>
-      <PageHeader eyebrow="Capability plane" title="Overview" description="One durable layer for agent memory, permissions, connections, and operational truth." />
-      <section className="grid metrics">
-        {metrics.map(([label, value, note]) => <div className="card" key={label}><div className="metric-label">{label}</div><div className="metric-value">{value}</div><div className="metric-note">{note}</div></div>)}
-      </section>
-      <section className="grid two-col">
-        <div className="stack">
-          <div className="card flush">
-            <div style={{ padding: "18px 20px 5px" }}><h2>Agents</h2></div>
-            <table><tbody>{overview.agents.map((agent: any) => <tr key={agent.id}><td><Link href={`/agents/${agent.id}`}><strong>{agent.name}</strong></Link></td><td><Status value={agent.status} /></td><td style={{ textAlign: "right" }}><Link className="subtle" href={`/agents/${agent.id}`}>Manage →</Link></td></tr>)}</tbody></table>
-            {!overview.agents.length && <div className="empty">No agents yet. Create the first durable identity.</div>}
-          </div>
-          <div className="card flush">
-            <div style={{ padding: "18px 20px 5px" }}><h2>Recent activity</h2></div>
-            <table><thead><tr><th>Agent</th><th>Capability</th><th>Status</th><th>Latency</th></tr></thead><tbody>
-              {activity.map((item) => <tr key={item.id}><td>{item.agentName ?? "System"}</td><td className="mono">{item.capability}</td><td><Status value={item.status} /></td><td>{item.durationMs} ms</td></tr>)}
-            </tbody></table>
-            {!activity.length && <div className="empty">Capability operations will appear here.</div>}
-          </div>
-        </div>
-        <div className="stack">
-          <div className="card">
-            <h2>Capability plane</h2>
-            <div className="kv"><div className="key">Postgres</div><div><Status value="HEALTHY" /></div><div className="key">MCP</div><div><Status value="HEALTHY" /></div><div className="key">Event system</div><div><Status value="HEALTHY" /></div><div className="key">Sandbox</div><div><Status value={sandboxHealth.ok ? "HEALTHY" : "FAILED"} /></div><div className="key">Browser</div><div><Status value={browserHealth.ok ? "HEALTHY" : "FAILED"} /></div><div className="key">GitHub</div><div><Status value={overview.githubStatus} /></div><div className="key">Google</div><div><Status value={overview.googleStatus} /></div></div>
-          </div>
-          <div className="card"><h2>Active resources</h2><div className="kv"><div className="key">Sandboxes</div><div>{overview.counts.sandboxes}</div><div className="key">Browser sessions</div><div>{overview.counts.browsers}</div><div className="key">Events</div><div>{overview.counts.events}</div><div className="key">Unread inbox</div><div>{overview.counts.inbox}</div><div className="key">Queued wakes</div><div>{overview.counts.wakes}</div></div></div>
-          <div className="card">
-            <h2>Get started</h2>
-            <div className="stack subtle">
-              <div>✓ Create account</div>
-              <div>{overview.counts.agents >= 1 ? "✓" : "○"} Create first agent</div>
-              <div>{overview.counts.agents >= 2 ? "✓" : "○"} Add second agent</div>
-              <div>{overview.githubStatus === "CONNECTED" ? "✓" : "○"} Connect GitHub</div>
-              <div>{overview.googleStatus === "CONNECTED" ? "✓" : "○"} Connect Google Workspace</div>
-              <div>{overview.counts.operations >= 1 ? "✓" : "○"} Run first capability</div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </>
-  );
+  const [agents, connections, activity] = await Promise.all([
+    listAgents(user.accountId), listConnections(user.accountId), listActivity(user.accountId, { limit: 6 }),
+  ]);
+  const attention = connections.filter((connection) => connection.status === "ERROR");
+  return <>
+    <PageHeader eyebrow="Relay" title="Home" description="Your agents and connections. See what they can access and what they have been doing." />
+    {attention.length > 0 && <section className="card section-gap" aria-labelledby="attention-title"><h2 id="attention-title">Needs attention</h2>
+      {attention.map((connection) => <p key={connection.id}>{providerLabel(connection.provider)} needs attention. <Link className="text-link" href="/connections">Review connection</Link></p>)}
+    </section>}
+    <section className="grid two-col owner-home">
+      <div className="stack"><section className="card"><div className="owner-section-head"><h2>Agents</h2><Link className="text-link" href="/agents">View all agents</Link></div>
+        {agents.length ? <ul className="owner-list">{agents.slice(0, 6).map((agent) => <li key={agent.id}><Link className="owner-row" href={`/agents/${agent.id}`}><div><strong>{agent.name}</strong><p className="subtle">{agent.description || "Agent registered with your account"}</p></div><Status value={agent.status} /></Link></li>)}</ul>
+          : <EmptyState title="No Agents are connected yet">Sofie will appear here after your MyEve setup is complete. Return here to review permissions and activity.</EmptyState>}
+      </section><section className="card"><div className="owner-section-head"><h2>Recent activity</h2><Link className="text-link" href="/activity">View all activity</Link></div><ActivityTimeline activity={activity} /></section></div>
+      <div className="stack"><section className="card"><div className="owner-section-head"><h2>Connections</h2><Link className="text-link" href="/connections">View connections</Link></div>
+        {connections.length ? <ul className="owner-list">{connections.map((connection) => <li className="owner-row" key={connection.id}><strong>{providerLabel(connection.provider)}</strong><Status value={connection.status} /></li>)}</ul>
+          : <EmptyState title="No service connections yet">Services connected to this account will appear here. Your MyEve setup manages Sofie’s access to Relay.</EmptyState>}
+      </section><section className="card owner-trust"><h2>You stay in control</h2><p>Each Agent has its own permissions. A connection does not automatically give every Agent access.</p><Link className="text-link" href="/agents">Review your Agents →</Link></section></div>
+    </section>
+  </>;
 }

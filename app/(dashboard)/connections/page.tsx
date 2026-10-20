@@ -1,41 +1,28 @@
-import { GitHubConnectionManager, GoogleConnectionManager } from "@/components/actions";
+export const metadata = { title: "Connections" };
+import Link from "next/link";
 import { PageHeader, Status } from "@/components/page";
+import { EmptyState } from "@/components/owner-ui";
 import { requireUser } from "@/lib/auth";
 import { listConnections } from "@/lib/connections";
-import { listActivity } from "@/lib/activity";
+import { providerLabel } from "@/lib/owner-presentation";
 
 export default async function ConnectionsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
+  const connections = await listConnections(user.accountId);
   const params = await searchParams;
-  const [connections, githubActivity, googleActivity] = await Promise.all([listConnections(user.accountId), listActivity(user.accountId, { provider: "GITHUB", limit: 5 }), listActivity(user.accountId, { provider: "GOOGLE", limit: 5 })]);
-  const github = connections.find((connection) => connection.provider === "GITHUB");
-  const google = connections.find((connection) => connection.provider === "GOOGLE");
-  return (
-    <>
-      <PageHeader eyebrow="Capabilities" title="Connections" description="Connect an external system once, then grant individual agents scoped capability access." />
-      <section className="grid two-col">
-        <div className="card">
-          <div className="agent-top"><div><div className="agent-name">GitHub</div><div className="subtle">Repository read access through one account-owned connection.</div></div><Status value={github?.status ?? "NOT_CONNECTED"} /></div>
-          <div className="kv" style={{ marginTop: 18 }}><div className="key">Account</div><div>{github?.displayName ?? "Not connected"}</div><div className="key">External ID</div><div className="mono subtle">{github?.externalAccountId ?? "—"}</div><div className="key">Scopes</div><div>{github?.scopes?.join(", ") || "—"}</div><div className="key">Capabilities</div><div>Repository read</div><div className="key">Agents with access</div><div>{github?.agentsWithAccess ?? 0}</div></div>
-        </div>
-        <div className="card">
-          <h2>{github?.status === "CONNECTED" ? "Manage connection" : "Connect GitHub"}</h2>
-          <p className="subtle">Connect GitHub once at the account level, then grant repository access to individual Agents.</p>
-          {params.github === "connected" && <div className="notice">GitHub connected successfully.</div>}
-          {params.github === "failed" && <div className="notice error">GitHub authorization could not be completed. Try connecting again.</div>}
-          {params.github === "cancelled" && <div className="notice">GitHub authorization was cancelled.</div>}
-          <div className="divider" />
-          <GitHubConnectionManager connected={github?.status === "CONNECTED"} oauthConfigured={Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET)} />
-        </div>
-      </section>
-      <section className="grid two-col section-gap">
-        <div className="card">
-          <div className="agent-top"><div><div className="agent-name">Google Workspace</div><div className="subtle">Read-only Gmail and Calendar access through one account-owned connection.</div></div><Status value={google?.status ?? "NOT_CONNECTED"} /></div>
-          <div className="kv" style={{ marginTop: 18 }}><div className="key">Account</div><div>{google?.displayName ?? "Not connected"}</div><div className="key">External ID</div><div className="mono subtle">{google?.externalAccountId ?? "—"}</div><div className="key">Scopes</div><div className="scope-list">{google?.scopes?.join(", ") || "—"}</div><div className="key">Capabilities</div><div>Email search/read · Calendar events/availability</div><div className="key">Agents with access</div><div>{google?.agentsWithAccess ?? 0}</div></div>
-        </div>
-        <div className="card"><h2>{google?.status === "CONNECTED" ? "Manage connection" : "Connect Google Workspace"}</h2><p className="subtle">OAuth credentials remain owned by the Account. Agents receive only explicit Relay grants.</p>{params.google === "connected" && <div className="notice">Google Workspace connected successfully.</div>}{params.google === "failed" && <div className="notice error">Google authorization could not be completed.</div>}{params.google === "cancelled" && <div className="notice">Google authorization was cancelled.</div>}<div className="divider" /><GoogleConnectionManager connected={google?.status === "CONNECTED"} oauthConfigured={Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)} /></div>
-      </section>
-      <section className="card flush section-gap"><div style={{ padding: "18px 20px 5px" }}><h2>Recent connection activity</h2></div><table><thead><tr><th>Provider</th><th>Agent</th><th>Capability</th><th>Status</th><th>Time</th></tr></thead><tbody>{[...githubActivity, ...googleActivity].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8).map((item) => <tr key={item.id}><td>{item.provider}</td><td>{item.agentName ?? "System"}</td><td className="mono">{item.capability}</td><td><Status value={item.status} /></td><td className="subtle">{new Date(item.createdAt).toLocaleString()}</td></tr>)}</tbody></table>{!githubActivity.length && !googleActivity.length && <div className="empty">Connection-backed capability calls will appear here.</div>}</section>
-    </>
-  );
+  const factoryConfigured = user.role === "OWNER" && user.accountId === process.env.MYFACTORY_RELAY_ACCOUNT_ID && Boolean(process.env.MYFACTORY_CLIENT_TOKEN);
+  return <>
+    <PageHeader eyebrow="Your Relay" title="Connections" description="Services connected to your account. Each Agent still needs its own permission to use them." />
+    {["github", "google"].map((provider) => {
+      const result = params[provider];
+      if (!["connected", "failed", "cancelled"].includes(result ?? "")) return null;
+      return <p className={`notice ${result === "failed" ? "error" : ""}`} role="status" key={provider}>{providerLabel(provider.toUpperCase())}: {result === "connected" ? "Connected successfully." : result === "cancelled" ? "Connection cancelled. Your existing settings have not been replaced." : "Authorization could not be completed. Review connection setup in Advanced."}</p>;
+    })}
+    <section className="grid cards">
+      {connections.map((connection) => <article className="card" key={connection.id}><div className="owner-row"><h2 className="agent-name">{providerLabel(connection.provider)}</h2><Status value={connection.status} /></div><p>{connection.displayName}</p><p className="subtle">{connection.provider === "GITHUB" ? "Repository access for Agents with permission." : "Email and calendar access for Agents with permission."}</p><Link className="text-link" href="/advanced/connections">Manage connection<span className="sr-only"> for {providerLabel(connection.provider)}</span> →</Link></article>)}
+      {factoryConfigured && <article className="card"><div className="owner-row"><h2>MyFactory</h2><Status value="CONFIGURED" /></div><p>Software engineering through your Sofie / MyEve Work flow.</p><p className="subtle">Routing is configured. Availability is confirmed when a Work request is admitted.</p><Link className="text-link" href="/activity?provider=MYFACTORY">View Work activity →</Link></article>}
+    </section>
+    {!connections.length && !factoryConfigured && <section className="card"><EmptyState title="No service connections yet">Connected services will appear here when setup is complete. You do not need to configure infrastructure to review your Agents or their activity.</EmptyState></section>}
+    <section className="card section-gap"><h2>Connections and permissions work together</h2><p className="subtle">Only recorded account connections are shown here. A service that is not configured is not a failed connection. Additional setup depends on your release and is available in Advanced tools.</p><div className="owner-actions"><Link className="text-link" href="/agents">Review Agent permissions</Link><Link className="text-link" href="/advanced/connections">Advanced connection setup</Link></div></section>
+  </>;
 }

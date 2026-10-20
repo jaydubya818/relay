@@ -1,31 +1,21 @@
+export const metadata = { title: "Agents" };
 import Link from "next/link";
-import { AgentCreateForm } from "@/components/actions";
 import { PageHeader, Status } from "@/components/page";
-import { getAgent, listAgents } from "@/lib/agents";
+import { EmptyState } from "@/components/owner-ui";
+import { listAgents } from "@/lib/agents";
 import { requireUser } from "@/lib/auth";
 
 export default async function AgentsPage() {
   const user = await requireUser();
   const agents = await listAgents(user.accountId);
-  const details = new Map((await Promise.all(agents.map((agent) => getAgent(user.accountId, agent.id)))).map((agent) => [agent.id, agent]));
-  return (
-    <>
-      <PageHeader eyebrow="Plane" title="Agents" description="Durable identities with independent credentials and explicitly scoped access." />
-      <section className="grid two-col">
-        <div className="grid cards">
-          {agents.map((agent) => {
-            const detail = details.get(agent.id)!;
-            const allowed = detail.grants.filter((grant: any) => grant.effect === "ALLOW");
-            return <Link className="card agent-card" href={`/agents/${agent.id}`} key={agent.id}>
-              <div className="agent-top"><div><div className="agent-name">{agent.name}</div><div className="subtle">{agent.description || "No description"}</div></div><Status value={agent.status} /></div>
-              <div className="cap-list">{allowed.map((grant: any) => <span className="cap" key={grant.capability}>{grant.capability}</span>)}</div>
-              <div className="subtle" style={{ marginTop: 17 }}>Last active: {agent.lastActiveAt ? new Date(agent.lastActiveAt).toLocaleString() : "Never"}</div>
-            </Link>;
-          })}
-          {!agents.length && <div className="card empty">No agents yet. Create one to issue a scoped Relay credential.</div>}
-        </div>
-        <AgentCreateForm />
-      </section>
-    </>
-  );
+  return <>
+    <PageHeader eyebrow="Your Relay" title="Agents" description="Know your Agents, review their permissions, and follow their activity." />
+    {agents.length ? <section className="grid cards">{agents.map((agent) => <article className="card" key={agent.id}>
+      <div className="owner-row"><h2 className="agent-name">{agent.name}</h2><Status value={agent.status} /></div>
+      <p>{agent.description || "Agent registered with your account"}</p>
+      <p className="subtle">Last active: {agent.lastActiveAt ? `${new Date(agent.lastActiveAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC` : "No activity recorded"}</p>
+      <div className="owner-actions"><Link className="button secondary" href={`/agents/${agent.id}`}>Permissions<span className="sr-only"> for {agent.name}</span></Link><Link className="text-link" href={`/activity?agent=${encodeURIComponent(agent.id)}`}>View activity<span className="sr-only"> for {agent.name}</span></Link></div>
+    </article>)}</section> : <section className="card"><EmptyState title="No Agents are connected yet">Sofie will appear here after your MyEve setup is complete. You can then review what she can access and follow her activity.</EmptyState></section>}
+    <p className="subtle section-gap">Agent setup is managed through your connected application. Existing administration tools are available in <Link className="text-link" href="/advanced/agents">Advanced</Link>.</p>
+  </>;
 }
