@@ -1,6 +1,36 @@
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+// QA-01 regression: the public login page must never pre-fill any account identifier.
+test("anonymous login page does not pre-fill the email field", async ({ page }) => {
+  await page.goto("/login");
+  const emailInput = page.getByLabel("Email");
+  await expect(emailInput).toBeVisible();
+  // Field must be empty — no owner email pre-filled for anonymous visitors.
+  await expect(emailInput).toHaveValue("");
+  // Raw HTML must contain no @ character inside input value attributes.
+  const html = await page.content();
+  const emailInputHtml = html.match(/<input[^>]+id="email"[^>]*>/)?.[0] ?? "";
+  expect(emailInputHtml).not.toContain("@");
+  expect(emailInputHtml).not.toContain("value=");
+});
+
+// QA-36 regression: after a sign-in redirect, the user returns to the deep link.
+test("login honours the returnTo deep link for same-origin paths", async ({ page }) => {
+  // Navigate to a protected page while unauthenticated.
+  const response = await page.goto("/agents");
+  // Should be redirected to /login with returnTo set.
+  expect(page.url()).toContain("/login");
+  expect(page.url()).toContain("returnTo=");
+  // Sign in.
+  await page.getByLabel("Email").fill("owner@owner-fixture.example");
+  await page.getByLabel("Password", { exact: true }).fill("synthetic-owner-password");
+  await page.getByRole("button", { name: "Sign in to Relay" }).click();
+  // Should land on /agents, not on /.
+  await expect(page).toHaveURL(/\/agents/);
+  void response;
+});
+
 async function signIn(page: Page, persona = "owner") {
   await page.goto("/login");
   await page.getByLabel("Email").fill(`${persona}@owner-fixture.example`);

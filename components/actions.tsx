@@ -13,10 +13,38 @@ async function requestJson(url: string, init: RequestInit = {}) {
 
 export function LogoutButton() {
   const router = useRouter();
-  return <button className="button secondary small" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); router.push("/login"); router.refresh(); }}>Sign out</button>;
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="inline">
+      <button
+        className="button secondary small"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            const response = await fetch("/api/auth/logout", { method: "POST" });
+            if (!response.ok) {
+              const body = await response.json().catch(() => ({}));
+              throw new Error((body as { error?: string }).error ?? "Sign out failed.");
+            }
+            router.push("/login");
+            router.refresh();
+          } catch (reason) {
+            setError(reason instanceof Error ? reason.message : "Sign out failed.");
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "Signing out…" : "Sign out"}
+      </button>
+      {error && <div className="notice error" role="alert">{error}</div>}
+    </div>
+  );
 }
 
-export function LoginForm({ defaultEmail }: { defaultEmail: string }) {
+export function LoginForm({ returnTo }: { returnTo?: string | null }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,12 +53,12 @@ export function LoginForm({ defaultEmail }: { defaultEmail: string }) {
     const data = new FormData(event.currentTarget);
     try {
       await requestJson("/api/auth/login", { method: "POST", body: JSON.stringify({ email: data.get("email"), password: data.get("password") }) });
-      router.push("/"); router.refresh();
+      router.push(returnTo ?? "/"); router.refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Sign in failed."); } finally { setBusy(false); }
   }
   return (
     <form onSubmit={submit}>
-      <div className="field"><label htmlFor="email">Email</label><input id="email" name="email" type="email" defaultValue={defaultEmail} autoComplete="email" required /></div>
+      <div className="field"><label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="email" required /></div>
       <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="current-password" required /></div>
       {error && <div className="notice error">{error}</div>}
       <button className="button" disabled={busy}>{busy ? "Signing in…" : "Sign in to Relay"}</button>
