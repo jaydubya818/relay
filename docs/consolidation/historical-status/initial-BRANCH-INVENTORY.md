@@ -51,4 +51,4 @@ Classifications use ancestry, commit/file deltas and the documented source/quali
 | refs/tags/relay-v0.1.0 | fccf8a6cb883547f6d53c486ef1f20f099f42c26 | 170	0 | ALREADY_CONTAINED | Existing immutable tag; do not move or delete. |
 | refs/tags/relay-v1.0.0-rc.1 | 435960cf5a5de4f4b877fcf2f16bfd25968823b0 | 146	0 | ALREADY_CONTAINED | Existing immutable tag; do not move or delete. |
 
-Full branch unique-commit lists and merge bases: [branch-dispositions.json](branch-dispositions.json). Initial reflogs, unreferenced candidates, migration hashes, evidence indexes and worktree status: [inventory.initial.json](inventory.initial.json).
+Full branch unique-commit lists and merge bases: `branch-dispositions.json` (not committed to this repo). Initial reflogs, unreferenced candidates, migration hashes, evidence indexes and worktree status: `inventory.initial.json` (not committed to this repo).
