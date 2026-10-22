@@ -1,5 +1,8 @@
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { capabilityLeases, leaseCallReceipts } from "@/lib/db/schema";
 import { generateKeyPairSync, sign } from "node:crypto";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApprovalRequest, decideApproval } from "@/lib/v2/approvals";
 import { createBudget, releaseBudgetReservation, reserveBudget } from "@/lib/v2/budgets";
 import { canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
@@ -74,6 +77,43 @@ describe("Relay V2 capability leases and workload identity", () => {
     await expect(authorizeLeaseCall(base, fixture.resolver, fixture.signer)).rejects.toMatchObject({ status: 409 });
     await expect(authorizeLeaseCall({ ...base, callId: "call-2" }, fixture.resolver, fixture.signer)).resolves.toMatchObject({ remainingCalls: 0 });
     await expect(introspectLease(fixture.accountId, lease.leaseId)).resolves.toMatchObject({ active: false, reason: "EXHAUSTED" });
+  });
+
+  it("checks the complete identity and recomputes operation binding before online or offline consumption", async () => {
+    const fixture = await setup();
+    const lease = await issueCapabilityLease({ accountId: fixture.accountId, action: fixture.action,
+      workloadId: fixture.workload.workloadId, workloadIdentityToken: fixture.workload.token,
+      audience: "relay-pep", maxCalls: 2, ttlSeconds: 30, allowOffline: true }, fixture.signer, fixture.resolver);
+    const consume = vi.fn(async () => true);
+    const request = { token: lease.token, expectedAccountId: fixture.accountId, expectedAudience: "relay-pep",
+      expectedWorkloadId: fixture.workload.workloadId, action: fixture.action, callId: "identity-guard", online: true };
+    const variants = [
+      { accountId: "acct_other000" }, { agentId: "agt_other000" }, { taskId: "tsk_other000" },
+      { runtimeClientId: "rtc_other000" }, { workloadId: "wkl_other000" },
+      { parameters: { operation: "write" } },
+    ];
+    for (const changes of variants) {
+      for (const online of [true, false]) {
+        await expect(authorizeLeaseCall({ ...request, online, action: { ...fixture.action, ...changes } },
+          fixture.resolver, fixture.signer, { consume })).rejects.toMatchObject({ status: 403 });
+      }
+    }
+    expect(consume).not.toHaveBeenCalled();
+    expect(await db().select().from(leaseCallReceipts)).toHaveLength(0);
+    const [unused] = await db().select().from(capabilityLeases).where(eq(capabilityLeases.id, lease.leaseId));
+    expect(unused?.callCount).toBe(0);
+    await expect(authorizeLeaseCall(request, fixture.resolver, fixture.signer)).resolves.toMatchObject({ remainingCalls: 1 });
+    await expect(authorizeLeaseCall({ ...request, callId: "explicit-workload", action: {
+      ...fixture.action, workloadId: fixture.workload.workloadId,
+    } }, fixture.resolver, fixture.signer)).resolves.toMatchObject({ remainingCalls: 0 });
+  });
+
+  it("rejects an explicitly conflicting workload at issuance without creating a lease", async () => {
+    const fixture = await setup();
+    await expect(issueCapabilityLease({ accountId: fixture.accountId, action: { ...fixture.action, workloadId: "wkl_other000" },
+      workloadId: fixture.workload.workloadId, workloadIdentityToken: fixture.workload.token,
+      audience: "relay-pep", maxCalls: 1 }, fixture.signer, fixture.resolver)).rejects.toMatchObject({ status: 403 });
+    expect(await db().select().from(capabilityLeases)).toHaveLength(0);
   });
 
   it("atomically consumes approval while issuing a consequential lease", async () => {

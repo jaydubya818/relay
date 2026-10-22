@@ -112,7 +112,7 @@ export async function issueCapabilityLease(input: { accountId: string; action: A
   const action = actionIntentSchema.parse(input.action);
   if (action.accountId !== input.accountId || canonicalHash({ capability: action.capability, resource: action.resource, parameters: action.parameters }) !== action.canonicalHash) throw new RelayError("INVALID_INPUT", "Action intent binding is invalid.");
   const workloadIdentity = await authenticateWorkloadToken(input.workloadIdentityToken, keyResolver, { accountId: input.accountId, workloadId: input.workloadId, audience: input.audience });
-  if (workloadIdentity.agentId !== action.agentId || workloadIdentity.runtimeClientId !== action.runtimeClientId || workloadIdentity.taskId !== action.taskId) throw new RelayError("CAPABILITY_DENIED", "Workload identity does not match the action.", undefined, 403);
+  if ((action.workloadId !== undefined && action.workloadId !== input.workloadId) || workloadIdentity.agentId !== action.agentId || workloadIdentity.runtimeClientId !== action.runtimeClientId || workloadIdentity.taskId !== action.taskId) throw new RelayError("CAPABILITY_DENIED", "Workload identity does not match the action.", undefined, 403);
   const issuedAt = now();
   return await withTransaction(async (transaction) => {
     const [workload] = await transaction.select().from(workloads).where(and(eq(workloads.accountId, input.accountId), eq(workloads.id, input.workloadId), eq(workloads.agentId, action.agentId), eq(workloads.runtimeClientId, action.runtimeClientId), eq(workloads.taskId, action.taskId), eq(workloads.audience, input.audience), eq(workloads.status, "ACTIVE"), gt(workloads.expiresAt, issuedAt))).limit(1);
@@ -184,7 +184,16 @@ export async function issueCapabilityLease(input: { accountId: string; action: A
 
 async function validateLeaseToken(input: { token: string; expectedAccountId: string; expectedAudience: string; expectedWorkloadId: string; action: ActionIntent }, resolver: LeaseKeyResolver) {
   const claims = capabilityLeaseClaimsSchema.parse(await verifyWithResolver(input.token, "RLY-LEASE", resolver));
+  const action = actionIntentSchema.parse(input.action);
   const current = Math.floor(Date.now() / 1_000);
+  if (action.accountId !== claims.accountId || action.agentId !== claims.sub
+    || action.taskId !== claims.taskId || action.runtimeClientId !== claims.runtimeClientId
+    || (action.workloadId !== undefined && action.workloadId !== claims.workloadId)) {
+    throw new RelayError("CAPABILITY_DENIED", "Lease action identity mismatch.", undefined, 403);
+  }
+  if (canonicalHash({ capability: action.capability, resource: action.resource, parameters: action.parameters }) !== action.canonicalHash) {
+    throw new RelayError("CAPABILITY_DENIED", "Lease action canonical binding is invalid.", undefined, 403);
+  }
   if (claims.accountId !== input.expectedAccountId) throw new RelayError("CAPABILITY_DENIED", "Lease tenant mismatch.", undefined, 403);
   if (claims.aud !== input.expectedAudience) throw new RelayError("CAPABILITY_DENIED", "Lease audience mismatch.", undefined, 403);
   if (claims.workloadId !== input.expectedWorkloadId) throw new RelayError("CAPABILITY_DENIED", "Lease workload mismatch.", undefined, 403);
@@ -202,11 +211,11 @@ export async function authorizeLeaseCall(input: { token: string; expectedAccount
   }
   return await withTransaction(async (transaction) => {
     const timestamp = now();
-    const [lease] = await transaction.select().from(capabilityLeases).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, claims.jti), eq(capabilityLeases.tokenHash, canonicalHash(input.token)), eq(capabilityLeases.workloadId, input.expectedWorkloadId), eq(capabilityLeases.status, "ACTIVE"), gt(capabilityLeases.expiresAt, timestamp), isNull(capabilityLeases.revokedAt))).limit(1);
+    const [lease] = await transaction.select().from(capabilityLeases).where(and(eq(capabilityLeases.accountId, input.expectedAccountId), eq(capabilityLeases.id, claims.jti), eq(capabilityLeases.tokenHash, canonicalHash(input.token)), eq(capabilityLeases.workloadId, input.expectedWorkloadId), eq(capabilityLeases.agentId, claims.sub), eq(capabilityLeases.taskId, claims.taskId), eq(capabilityLeases.runtimeClientId, claims.runtimeClientId), eq(capabilityLeases.status, "ACTIVE"), gt(capabilityLeases.expiresAt, timestamp), isNull(capabilityLeases.revokedAt))).limit(1);
     if (!lease) throw new RelayError("CAPABILITY_DENIED", "Lease is inactive, expired, or revoked.", undefined, 403);
     const [epoch] = await transaction.select().from(agentRevocationEpochs).where(and(eq(agentRevocationEpochs.accountId, input.expectedAccountId), eq(agentRevocationEpochs.agentId, claims.sub))).limit(1);
     if (!epoch || epoch.epoch !== claims.revocationEpoch) throw new RelayError("CAPABILITY_DENIED", "Lease revocation epoch is stale.", undefined, 403);
-    const [workload] = await transaction.select({ id: workloads.id }).from(workloads).where(and(eq(workloads.accountId, input.expectedAccountId), eq(workloads.id, input.expectedWorkloadId), eq(workloads.status, "ACTIVE"), gt(workloads.expiresAt, timestamp))).limit(1);
+    const [workload] = await transaction.select({ id: workloads.id }).from(workloads).where(and(eq(workloads.accountId, input.expectedAccountId), eq(workloads.id, input.expectedWorkloadId), eq(workloads.agentId, claims.sub), eq(workloads.taskId, claims.taskId), eq(workloads.runtimeClientId, claims.runtimeClientId), eq(workloads.audience, input.expectedAudience), eq(workloads.status, "ACTIVE"), gt(workloads.expiresAt, timestamp))).limit(1);
     if (!workload) throw new RelayError("CAPABILITY_DENIED", "Workload identity is inactive.", undefined, 403);
     if (lease.budgetReservationId) {
       await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`budget:${input.expectedAccountId}`}, 0))`);

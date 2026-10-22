@@ -192,6 +192,30 @@ Use the [developer platform guide](docs/v2/developer-platform.md), [OpenAPI](doc
 
 ## Tests and release checks
 
+The IR-01 correction binds lease use to the authenticated account, Agent, task,
+runtime client, workload and recomputed operation hash before online or offline
+call consumption. An explicit ActionIntent workload must match the trusted
+workload; omitting that optional field remains supported.
+
+Durable runtime action replay now compares every immutable intent field, the
+normalized workload and audience. Exact concurrent replay returns one command
+and consumes one lease call. A changed identity returns a conflict. Historical
+command payloads without the new identity digest fail closed on submission
+replay (409); inspect their original receipt through the existing read API
+instead of resubmitting under a new key.
+
+Run the focused identity, replay and concurrency regressions with a disposable
+local PostgreSQL URL:
+
+```sh
+RELAY_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/postgres \
+  pnpm exec vitest run tests/v2/leases.test.ts tests/v2/developer-platform.test.ts --fileParallelism=false
+```
+
+The correction branch `codex/ir01-identity-fix-20261021` explicitly disables
+Vercel Git deployments. Local regressions do not establish production qualification.
+
+
 ```bash
 pnpm v2:frontier:check
 pnpm db:check
