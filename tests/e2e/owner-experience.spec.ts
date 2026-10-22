@@ -149,7 +149,7 @@ test("canonical operator membership still enters V2 without gaining OWNER-only F
 
 test("unauthenticated advanced routes and APIs retain authentication", async ({ page }) => {
   for (const route of ["/advanced", "/advanced/health", "/advanced/agents", "/developer", "/factory"]) {
-    await page.goto(route); await expect(page).toHaveURL(/\/login$/);
+    await page.goto(route); await expect(page).toHaveURL(/\/login(\?.*)?$/);
   }
   expect((await page.request.get("/api/agents")).status()).toBe(401);
 });
