@@ -254,3 +254,18 @@ The current two-tester mission includes qualified owner-facing Relay only. It do
 | [`tests`](tests) | Authentication, isolation, protocol, provider and release tests |
 | [`docs/v2`](docs/v2) | Domain contracts, operations and dated qualification |
 | [`docs/federation`](docs/federation) | Federation contracts and historical campaigns |
+
+
+The optional Relay → MyEve component integration runs the exact MyEve source
+selected by `RELAY_MYEVE_SOURCE` in its own disposable database. This preserves
+MyEve migrations' canonical schema functions and keeps the two products' ledgers
+separate. With the local PostgreSQL URL above:
+
+```sh
+RELAY_MYEVE_TESTS=1 RELAY_MYEVE_SOURCE=/absolute/path/to/selected/MyEve \
+  pnpm exec vitest run tests/v2/channel-myeve.integration.test.mjs --testTimeout=30000 --hookTimeout=60000
+```
+
+This checks owner handoff, approval response loss, one effect, durable outcome
+and revocation across the real implementations. Provider and transport fixtures
+are synthetic; this does not qualify hosted or paid execution.
