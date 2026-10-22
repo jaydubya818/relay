@@ -1,7 +1,7 @@
 import { runChannelCancellationCycle } from '@/lib/v2/channels/cancellation';
 import { readFile,readdir } from 'node:fs/promises';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import path from 'node:path';
 import { Pool } from 'pg';
 import { sql } from 'drizzle-orm';
 import { afterAll,beforeAll,describe,expect,it,vi } from 'vitest';
@@ -38,7 +38,7 @@ suite('Relay to canonical MyEve component golden path',()=>{
   const post=(text,updateId)=>webhook({update_id:updateId,message:{message_id:updateId,date:Math.floor(Date.now()/1000),from:{id:123,is_bot:false},chat:{id:123,type:'private'},text}});
   const challenge=await setupTelegramPairing(owner.accountId,owner.principalId,config);expect((await post(`/start ${new URL(challenge.url).searchParams.get('start')}`,1)).status).toBe(200);
   const [binding]=await rows(sql`SELECT id FROM telegram_bindings`);
-  const url=new URL(process.env.RELAY_DATABASE_URL);if(!/^relay_test_/.test(url.pathname.slice(1)))throw new Error('Isolated test database required.');
+  const url=new URL(process.env.RELAY_DATABASE_URL);if(!/^relay_test_/.test(url.pathname.slice(1))||!['127.0.0.1','localhost'].includes(url.hostname))throw new Error('Isolated local test database required.');
   // Canonical MyEve SECURITY DEFINER functions pin their search_path to public.
   // Use a separate disposable database; never rewrite those security boundaries.
   myeveDatabaseName=`relay_test_myeve_${randomUUID().replaceAll('-','')}`;
