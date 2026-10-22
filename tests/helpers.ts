@@ -42,7 +42,7 @@ export async function secondAccount() {
 export async function cleanupDatabase() {
   await closeDatabasesForTests();
   if (databaseName) {
-    await adminQuery(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`);
+    await adminQuery(`DROP DATABASE IF EXISTS ${databaseName}`);
   }
   databaseName = undefined;
   delete process.env.RELAY_DATABASE_URL;

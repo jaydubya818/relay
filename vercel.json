@@ -10,6 +10,7 @@
       "codex/relay-final-integration": false,
       "codex/telegram-current-integration": false,
       "codex/relay-owner-experience": false,
+      "codex/unified-capability-control-plane": false,
       "beta/unified-candidate-20261022": false
     }
   },
