@@ -2,15 +2,14 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { currentUser, signupEnabled } from "@/lib/auth";
 import { LoginForm } from "@/components/actions";
+import { safeReturnTo } from "@/lib/url-safety";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   if (await currentUser()) redirect("/");
   const params = await searchParams;
-  const rawReturn = params.returnTo ?? "";
-  // Accept only relative paths that are not the login page itself (same-origin guard).
-  const returnTo = /^\/[^/]/.test(rawReturn) && !rawReturn.startsWith("/login") ? rawReturn : null;
+  const returnTo = safeReturnTo(params.returnTo);
   return (
     <main className="login-page">
       <section className="login-card">

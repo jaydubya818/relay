@@ -1,5 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { safeReturnTo } from "@/lib/url-safety";
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
@@ -146,11 +147,8 @@ export async function requireUser() {
   if (!user) {
     const store = await headers();
     const pathname = store.get("x-relay-pathname") ?? "";
-    // Only carry forward safe relative paths; drop /login to avoid redirect loops.
-    const safeReturn = /^\/[^/]/.test(pathname) && !pathname.startsWith("/login")
-      ? `?returnTo=${encodeURIComponent(pathname)}`
-      : "";
-    redirect(`/login${safeReturn}`);
+    const safe = safeReturnTo(pathname);
+    redirect(`/login${safe ? `?returnTo=${encodeURIComponent(safe)}` : ""}`);
   }
   return user;
 }

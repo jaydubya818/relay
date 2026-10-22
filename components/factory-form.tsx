@@ -2,11 +2,26 @@
 import { useRef, useState } from "react";
 import type { HostedResult } from "@/lib/myfactory-protocol.mjs";
 
-/** Returns true when the URL resolves only on the owner's local machine. */
-function isLocalhostUrl(url: string): boolean {
+/** Returns true when the URL resolves only on the owner's local machine (loopback). */
+export function isLocalhostUrl(url: string): boolean {
   try {
     const { hostname } = new URL(url);
-    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+    // Note: URL.hostname encodes IPv6 with brackets, e.g. "[::1]".
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  } catch { return false; }
+}
+
+/**
+ * Returns true when the URL is safe to render as an <a href>.
+ * Requires: scheme http or https, non-loopback hostname, parseable.
+ * Rejects: javascript:, ftp:, data:, localhost, 127.0.0.1, [::1], etc.
+ */
+export function isSafeExternalUrl(url: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(url);
+    // Note: URL.hostname encodes IPv6 with brackets, e.g. "[::1]".
+    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") return false;
+    return protocol === "http:" || protocol === "https:";
   } catch { return false; }
 }
 
@@ -72,9 +87,11 @@ export function FactoryForm({ configured }: { configured: boolean }) {
           {result.receipt ? (
             <p>
               WorkOrder{" "}
-              {isLocalhostUrl(result.receipt.workOrderUrl)
-                ? <span title="Link resolves only on the factory Mac">{result.receipt.workOrderId} (local Mac only)</span>
-                : <a href={result.receipt.workOrderUrl}>{result.receipt.workOrderId}</a>}
+              {isSafeExternalUrl(result.receipt.workOrderUrl)
+                ? <a href={result.receipt.workOrderUrl}>{result.receipt.workOrderId}</a>
+                : isLocalhostUrl(result.receipt.workOrderUrl)
+                  ? <span title="Link resolves only on the factory Mac">{result.receipt.workOrderId} (local Mac only)</span>
+                  : <span>{result.receipt.workOrderId}</span>}
               {" "}· {result.receipt.state}. Execution and review continue in MyFactory.
             </p>
           ) : (
