@@ -1,8 +1,9 @@
 export interface HostedInput { idempotencyKey: string; title: string; description: string; kind: "feature" | "defect" | "investigation"; acceptanceCriteria: string[]; allowedPaths: string[] }
 /**
- * receiptPublicKey: PEM string for the legacy single-key mode (no keyId in receipt).
+ * receiptPublicKey: PEM string for the legacy single-key mode (no keyId field in receipt).
  * receiptPublicKeys: optional key ring for keyId-signed receipts.  Map keyId → PEM.
  *   Include the legacy key under "" to support both legacy and keyId receipts simultaneously.
+ *   readReceipt treats a keyId of null or any non-string as an error (not legacy fallback).
  */
 export interface HostedConfig { clientId: string; repository: string; teamId: string; token: string; labelId?: string; receiptPublicKey: string; receiptPublicKeys?: Record<string, string> }
 export interface HostedReceipt { version: number; issueId: string; workOrderId: string; keyId?: string; state: string; updatedAt: string; workOrderUrl: string }

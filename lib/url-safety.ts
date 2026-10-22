@@ -18,7 +18,7 @@
 export function safeReturnTo(value: string | undefined | null): string | null {
   if (!value || typeof value !== "string") return null;
   // Absolute URL: any string with a scheme (e.g. http:, https:, javascript:, ftp:)
-  if (/^[a-zA-Z][a-zA-Z0-9+.\-]*:/.test(value)) return null;
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) return null;
   // Protocol-relative (// prefix) or backslash variant (/\)
   if (value.startsWith("//") || value.startsWith("/\\")) return null;
   // Must be a relative path: /[non-slash non-backslash]…

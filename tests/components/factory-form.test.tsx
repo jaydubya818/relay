@@ -59,8 +59,9 @@ function fillAndSubmit(container: HTMLElement) {
   fireEvent.change(screen.getByRole("textbox", { name: /permitted repository paths/i }), {
     target: { value: "docs/" },
   });
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  fireEvent.submit(container.querySelector("form")!);
+  const form = container.querySelector("form");
+  if (!form) throw new Error("form not found");
+  fireEvent.submit(form);
 }
 
 // ---------------------------------------------------------------------------
@@ -138,10 +139,10 @@ describe("FactoryForm — QA-08: workOrderUrl rendering", () => {
   });
 
   it("does NOT render javascript: URLs as links", async () => {
+    const jsUrl = "javascript:alert(1)";
     fetchSpy.mockResolvedValueOnce({
       ok: true,
-      // eslint-disable-next-line no-script-url
-      json: async () => makeResult("javascript:alert(1)"),
+      json: async () => makeResult(jsUrl),
     });
     const { container } = render(<FactoryForm configured />);
     fillAndSubmit(container);
@@ -240,7 +241,9 @@ describe("FactoryForm — QA-11: error handling and idempotency key semantics", 
     });
 
     // Second submit
-    fireEvent.submit(container.querySelector("form")!);
+    const form2 = container.querySelector("form");
+    if (!form2) throw new Error("form not found");
+    fireEvent.submit(form2);
     await waitFor(() => expect(screen.getByRole("status")).toBeInTheDocument());
 
     const secondBody = JSON.parse(fetchSpy.mock.calls[1][1].body);

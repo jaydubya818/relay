@@ -8,7 +8,7 @@
  *  - Cross-entry isolation: a keyId receipt is not accepted with the wrong key
  */
 import { describe, expect, it } from "vitest";
-import { generateKeyPairSync, sign } from "node:crypto";
+import { generateKeyPairSync } from "node:crypto";
 import {
   receiptDescription,
   readReceipt,
@@ -74,8 +74,7 @@ describe("myfactory-protocol readReceipt — legacy mode", () => {
   });
 
   it("throws when the signature is truncated", () => {
-    const truncated = LEGACY_DESC.replace(/"signature":"[A-Za-z0-9_-]+"/,
-      (_m) => `"signature":"AAAA"`);
+    const truncated = LEGACY_DESC.replace(/"signature":"[A-Za-z0-9_-]+"/, `"signature":"AAAA"`);
     expect(() => readReceipt(truncated, LEGACY_KEY.publicKey, ISSUE_ID)).toThrow();
   });
 
@@ -86,6 +85,29 @@ describe("myfactory-protocol readReceipt — legacy mode", () => {
   it("throws when the issueId does not match", () => {
     const wrongId = requestId("relay", "completely-different-key");
     expect(() => readReceipt(LEGACY_DESC, LEGACY_KEY.publicKey, wrongId)).toThrow("Wrong factory receipt");
+  });
+});
+
+describe("myfactory-protocol readReceipt — null/non-string keyId rejection (security)", () => {
+  it("rejects a receipt with keyId: null — does NOT fall back to legacy verification", () => {
+    // A receipt that explicitly carries null must not be silently treated as legacy.
+    // If it did, an attacker who replaces a valid keyId string with null could downgrade
+    // verification to the legacy key (if the payload+signature happened to match).
+    // This test confirms that null is rejected outright.
+    const nullKeyIdDesc = makeDescription({ ...BASE_RECEIPT, keyId: null }, LEGACY_KEY.privateKey);
+    // Rejected with a plain PEM string
+    expect(() => readReceipt(nullKeyIdDesc, LEGACY_KEY.publicKey, ISSUE_ID))
+      .toThrow("Unverified factory receipt");
+    // Rejected with a key ring (even one that has a "" legacy slot)
+    const ringWithLegacy = { "": LEGACY_KEY.publicKey, "key-a": KEY_A.publicKey };
+    expect(() => readReceipt(nullKeyIdDesc, ringWithLegacy, ISSUE_ID))
+      .toThrow("Unverified factory receipt");
+  });
+
+  it("rejects a receipt with a numeric keyId (non-string non-string type)", () => {
+    const numericKeyIdDesc = makeDescription({ ...BASE_RECEIPT, keyId: 42 }, LEGACY_KEY.privateKey);
+    expect(() => readReceipt(numericKeyIdDesc, LEGACY_KEY.publicKey, ISSUE_ID))
+      .toThrow("Unverified factory receipt");
   });
 });
 
