@@ -1,0 +1,22 @@
+{
+  "_comment": "Branch-scoped Preview DB overrides verified to point at an isolated database. codex/fq-relay-6384519e0e01 -> database fq_relay_6384519e0e01 via roles fq_relay_6384519e0e01_{owner,app}: no superuser/neon_superuser, no pg_read_all_data/pg_write_all_data, SELECT 0/104 and write 0/104 production tables, no CREATE on public/drizzle (verified 2026-10-22). It still shares the production Neon compute.",
+  "branchOverrides": [
+    "relay/DATABASE_URL@codex/fq-relay-6384519e0e01",
+    "relay/DATABASE_URL_UNPOOLED@codex/fq-relay-6384519e0e01",
+    "relay/POSTGRES_URL@codex/fq-relay-6384519e0e01",
+    "relay/POSTGRES_URL_NON_POOLING@codex/fq-relay-6384519e0e01",
+    "relay/POSTGRES_PRISMA_URL@codex/fq-relay-6384519e0e01",
+    "relay/POSTGRES_URL_NO_SSL@codex/fq-relay-6384519e0e01",
+    "relay/PGHOST@codex/fq-relay-6384519e0e01",
+    "relay/PGHOST_UNPOOLED@codex/fq-relay-6384519e0e01",
+    "relay/POSTGRES_HOST@codex/fq-relay-6384519e0e01",
+    "relay/PGDATABASE@codex/fq-relay-6384519e0e01",
+    "relay/POSTGRES_DATABASE@codex/fq-relay-6384519e0e01",
+    "relay/PGUSER@codex/fq-relay-6384519e0e01",
+    "relay/POSTGRES_USER@codex/fq-relay-6384519e0e01",
+    "relay/PGPASSWORD@codex/fq-relay-6384519e0e01",
+    "relay/POSTGRES_PASSWORD@codex/fq-relay-6384519e0e01",
+    "relay/NEON_PROJECT_ID@codex/fq-relay-6384519e0e01",
+    "relay/RELAY_DATABASE_URL@codex/fq-relay-6384519e0e01"
+  ]
+}

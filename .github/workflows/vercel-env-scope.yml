@@ -1,0 +1,44 @@
+name: Vercel env scope
+
+# Fails if any database credential is exposed to Preview or Development deployments.
+# Requires repository secrets:
+#   VERCEL_ENV_AUDIT_TOKEN — Vercel token with read access to the team's projects
+#   VERCEL_TEAM_ID         — team_... id for jaydubya818
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  env-scope:
+    name: env-scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.5.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Unit tests for the guard
+        run: pnpm exec vitest run tests/unit/vercel-env-scope.test.ts
+      - name: Audit live Vercel env scoping
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_ENV_AUDIT_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_TEAM_ID" ]; then
+            echo "::error::VERCEL_ENV_AUDIT_TOKEN / VERCEL_TEAM_ID secrets are not configured; the env-scope audit cannot run."
+            exit 1
+          fi
+          pnpm exec tsx scripts/ci/vercel-env-scope.ts relay
