@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 
 export const relayId = (prefix: string) => z.string().regex(new RegExp(`^${prefix}_[a-zA-Z0-9]{8,}$`));
 export const isoTimestamp = z.string().datetime({ offset: true });

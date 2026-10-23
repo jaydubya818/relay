@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { errorResponse } from "@/lib/api";
 import { bearer, boundedBody, federationBindings } from "@/lib/v2/federation/api";
 import { handleFederationMcp } from "@/lib/v2/federation/mcp";

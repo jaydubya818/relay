@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { RelayError } from "@/lib/errors";
 import { executeFederationCommand } from "./api";
 import { authenticateFederationAgent } from "./service";

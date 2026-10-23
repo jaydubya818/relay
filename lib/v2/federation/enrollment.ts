@@ -1,6 +1,6 @@
 import { lockActiveAccount } from "@/lib/account-fence";
 import { and, desc, eq } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { db, withTransaction } from "@/lib/db";
 import { agents, agentPassports, capabilityDefinitions, federationAgents } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";

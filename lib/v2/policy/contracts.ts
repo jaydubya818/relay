@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { capabilityReferenceSchema, effectClassSchema, policyOutcomeSchema, riskClassSchema } from "@/lib/v2/contracts/schemas";
 
 export const capabilityDefinitionSchema = z.object({

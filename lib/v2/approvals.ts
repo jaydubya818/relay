@@ -8,7 +8,7 @@ import { appendAuditRecordInTransaction } from "@/lib/v2/evidence/audit";
 import type { AuditSigner } from "@/lib/v2/evidence/crypto";
 import { redactForEvidence } from "@/lib/v2/evidence/redaction";
 import { requireMembership } from "@/lib/v2/identity";
-import { z } from "zod";
+import { z } from "zod/v3";
 
 type AuthenticationEvidence = { sessionId: string; method: "password" | "webauthn" | "oidc_acr"; authenticatedAt: string; stepUpChallengeId?: string };
 const authenticationEvidenceSchema = z.object({ sessionId: z.string().min(1).max(255), method: z.enum(["password", "webauthn", "oidc_acr"]), authenticatedAt: z.string().datetime({ offset: true }), stepUpChallengeId: z.string().optional() }).strict();

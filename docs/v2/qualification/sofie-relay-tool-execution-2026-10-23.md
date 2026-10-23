@@ -7,7 +7,7 @@ Status: **LOCAL SERVER-CONTRACT CANDIDATE**. Live MyEve adapter, HTTPS transport
 - Relay PR #40 merged to `main` as `fce3f8fe48fae5114acf17704cbbdd549861c3d9` (squash of qualified `e1389c0eebb7314244cdd47463fdeed33971bbdf`).
 - Post-merge GitHub Actions `40010427081` completed successfully on that SHA.
 - Serving production is `dpl_BYbeQYt8hyFbsouAQiAgje1VJZCG` at `fce3f8f` (`target: production`, READY). Rollback anchor remains the previous production snapshot `dpl_EFzeN3YFu3ggVgrVKLAusNMV18Km` (`source: cli`, no git SHA in deployment metadata). No rollback, alias change, credential change, or project-setting change was made.
-- Cause of the #40 promotion: the merge was a GitHub push onto `main`, which this project tracks as the Production branch. Vercel Git creates a Production deployment on merge to that branch and, with default `github.autoAlias`, assigns the public aliases. `vercel.json` on `fce3f8f` already had `git.deploymentEnabled.main=false` (since `88bd2e8`, 2026-09-20). That file-level skip did not prevent this Git production deploy. The snapshot being replaced was CLI-origin, not a prior Git production deploy, so the Git app applied production-branch auto-deploy rather than honoring the repo exclusion for this promotion. Dashboard Git settings were not modified to confirm the production-branch toggle.
+- Production trigger for `dpl_BYbeQYt8hyFbsouAQiAgje1VJZCG` remains **UNVERIFIED**. This agent ran `gh pr merge 40 --squash` at 12:18:50 PM PDT / 19:18:50Z; GitHub `mergedAt` is 12:18:53 PM PDT. The deployment `createdAt` is 12:27:04 PM PDT / 19:27:04Z. This log contains no Vercel CLI/MCP/API create or promote. Git source fields (`source: null`, github/`main`/`fce3f8f`, `githubDeployment=1`) and `vercel[bot]` deployment `7286965084` at 12:28:26 PM PDT do not distinguish automatic Git from an explicitly requested Git-backed deploy. `git.deploymentEnabled.main=false` was already on `fce3f8f`. The earlier claim that a prior CLI snapshot caused auto-promotion is withdrawn.
 - After promotion, `/api/health` remains 200 with `database: ready`. The public login page no longer carries an email `value` attribute (live QA-01). Unique deployment URLs stay behind Vercel SSO (`prod_deployment_urls_and_all_previews`).
 - This agent did not change Vercel/Neon credentials, databases, or spending flags. `DATABASE_URL` / Neon variables remain Production-only except the existing synthetic preview branch `codex/fq-relay-6384519e0e01`, which is not this candidate. PR #43 preview is not a production target and has no all-preview database URL.
 - `#43` adds `ignoreCommand` for a later git push to `main`. That skip is not live on production until `#43` is merged; this coordination does not merge it.
@@ -57,3 +57,17 @@ Real MyEve adapter plus transport-level identity/error/reconnect coverage is a d
 Safe disposable recipe, when that owner is ready: local/preview Relay only; Bearer `rly_` to `/mcp`; `initialize` / `tools/list` / one memory write / one search / rotate / revoke; no owner-session cookie on `/mcp`; no V2 actions or federation flags; no Deep Agent.
 
 Merging this candidate is not paid execution and does not enable V2 actions.
+
+## GHSA-mrhx-c7xc-m3w5 (dependency metadata, 2026-10-23)
+
+Primary advisory: https://github.com/advisories/GHSA-mrhx-c7xc-m3w5 (updated 2026-10-23T18:26:52Z). Range: npm `zod` `< 4.6.6`, first patched `4.6.6`. Latest official patched line at inspection: `4.6.7`. This is not a production incident and this record does not reproduce exhaustion.
+
+**Tree at `43298bd` (before this correction):** direct pin `zod@3.25.76`; nested `@vercel/cli-config@0.2.3` → `zod@4.1.11`. No other zod copies.
+
+**Official upstream:** the published fix is colinhacks/zod#6652 in the v4 parser, first released as `4.6.6`. There is no official Zod 3 backport; latest `zod@3` remains `3.25.76`, and the maintainer closed the v3 follow-up as “new versions of v3 are no longer being published.” Unofficial GitHub forks are not used.
+
+**This source correction:** pin and `pnpm.overrides.zod` to exact `4.6.7` so every lockfile copy, including `@vercel/cli-config`, is the patched 4.6 line. Application and test schemas import `zod/v3` (official compatibility subpath) rather than the v4 default export. That is not a Zod v4 API migration and is not an unchanged dependency surface.
+
+**Residual risk, kept explicit:** #6652 moves `.max()` / `.length()` / `.size()` checks before element parsing on the **v4** parser. The `zod/v3` subpath still records `too_big` then walks elements. Unbounded containers remain uncapped even on 4.6.6+ (maintainer). This PR does not add new collection caps, does not ignore the advisory, and does not weaken audit/quality gates. Full adoption of the v4 default export would change schema/error APIs (`z.record`, datetime helpers, `ZodError`) and is **not** done here; that would need independent review of auth, owner isolation, capability denial, and `INVALID_INPUT` regressions before adoption.
+
+Production aliases, grants, tester chats, and billing are unchanged by this source preparation. Merge/deploy of `#43` remain held.

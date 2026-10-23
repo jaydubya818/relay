@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { recordActivity } from "@/lib/activity";
 import { authenticateAgent } from "@/lib/auth";
 import { listAllowedCapabilities } from "@/lib/authorization";

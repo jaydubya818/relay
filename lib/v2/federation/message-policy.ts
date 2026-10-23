@@ -1,7 +1,7 @@
 import { canonicalHash } from "@/lib/v2/contracts";
 import type { PolicyRule } from "@/lib/v2/policy/contracts";
 import { and, eq } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { db } from "@/lib/db";
 import { agents, policyBundles } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";

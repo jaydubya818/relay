@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import type { ConnectorAdapter } from "@/lib/v2/connectors";
 
 type Access = { scopes: string[]; accessibleResourceIds: string[]; writableResourceIds: string[] };

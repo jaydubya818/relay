@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { hashSecret } from "@/lib/crypto";
 import { db, withTransaction } from "@/lib/db";
 import { approvalRequests, budgetReservations, budgets, computerControlEvents, computerControlSessions, financialAccounts, financialTransactions, paymentCredentialReferences, purchaseCheckoutPermits, purchaseIntents, purchaseReceipts } from "@/lib/db/schema";

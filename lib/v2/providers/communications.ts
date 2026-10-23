@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { CommunicationProviderError, type CommunicationSender } from "@/lib/v2/communications";
 
 export interface CommunicationHttpResponse {

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { errorResponse, requireApiUser, verifySameOrigin } from "@/lib/api";
 import { RelayError } from "@/lib/errors";
 import { operatorContext } from "@/lib/v2/dashboard";

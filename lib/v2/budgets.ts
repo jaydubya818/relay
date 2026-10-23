@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { db, type RelayDatabase, withTransaction } from "@/lib/db";
 import { agentDelegations, agents, budgetEvents, budgetReservations, budgets, budgetUsageRecords } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";

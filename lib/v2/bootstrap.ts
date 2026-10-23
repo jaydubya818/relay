@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { hashPassword } from "@/lib/crypto";
 import { withTransaction } from "@/lib/db";
 import { accountMemberships, accounts, principals, users } from "@/lib/db/schema";

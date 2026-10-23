@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { canTransition, taskTransitions, type TaskState } from "@/lib/v2/contracts";
 import { RelayError } from "@/lib/errors";
 

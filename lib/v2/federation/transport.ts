@@ -1,6 +1,6 @@
 import { purposeSigner } from "@/lib/v2/evidence/signing-provider";
 import { createPublicKey } from "node:crypto";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { canonicalJson } from "@/lib/v2/contracts";
 import { decryptArtifact, encryptArtifact, verifyAuditSignature, type AuditSigner, type KeyWrapper } from "@/lib/v2/evidence/crypto";
 import { RelayError } from "@/lib/errors";

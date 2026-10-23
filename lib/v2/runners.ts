@@ -1,6 +1,6 @@
 import { createHash, createPublicKey, randomBytes, verify as verifySignature } from "node:crypto";
 import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { hashSecret } from "@/lib/crypto";
 import { db, withTransaction } from "@/lib/db";
 import { capabilityLeases, privateGatewayReceipts, privateGatewayResources, runnerAssignments, runnerEnrollments, runnerEvidenceReceipts, runners, v2Tasks, workloads } from "@/lib/db/schema";

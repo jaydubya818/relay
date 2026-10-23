@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { db, withTransaction } from "@/lib/db";
 import { agents, federationAgents, federationGrants, federationMessageDelegations } from "@/lib/db/schema";
 import { hashSecret } from "@/lib/crypto";

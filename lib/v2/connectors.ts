@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { hashSecret } from "@/lib/crypto";
 import { db, withTransaction } from "@/lib/db";
 import { capabilityLeases, connectorConnections, connectorDefinitions, connectorOauthFlows, connectorOperations, connectorResources, policyDecisions } from "@/lib/db/schema";

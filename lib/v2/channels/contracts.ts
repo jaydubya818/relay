@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 
 const ref = z.string().min(1).max(255);
 export const workRequestSchema = z.object({

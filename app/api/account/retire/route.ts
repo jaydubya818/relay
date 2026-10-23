@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { errorResponse, requireApiUser, verifySameOrigin } from "@/lib/api";
 import { planDisposableBetaRetirement, retireDisposableBetaAccount } from "@/lib/beta-account-retirement";
 import { RelayError } from "@/lib/errors";
