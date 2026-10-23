@@ -94,4 +94,6 @@ Official smallest supported corrections, staying on Next 15.5 maintenance:
 
 `next@15.5.28` `optionalDependencies.sharp` is `^0.34.3 || ^0.35.5`. Pinning `0.35.5` is the supported 0.35 patch. A Next 16 / sharp 0.36 framework migration is not required. Existing `next>postcss: 8.5.23` is unchanged. `eslint-config-next` stays on the same 15.5.28 line. No advisory ignore, no `patchedDependencies`, no auth/OIDC downgrade, no exploit reproduction.
 
+**Local qualify of `2ea19ce`:** `pnpm typecheck`, `pnpm lint`, `pnpm test:ci` (564 passed, 6 skipped), `pnpm build` (`Next.js 15.5.28`). Performance assertions passed (2/2); local process exit 1 was leftover `DROP DATABASE … FORCE` `57P01` pg events, not assertion failures. `pnpm audit --prod` is empty after the pins; that is corroboration of the version range, not a substitute for the lockfile/import contract in `tests/unit/production-advisory-tree.test.ts`. GitHub quality and owner-browser re-run on this SHA.
+
 `ccd3287` evidence remains historical and is not a PASS for this changed dependency surface.
