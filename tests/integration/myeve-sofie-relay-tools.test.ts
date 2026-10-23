@@ -1,10 +1,9 @@
 /**
- * Sofie (MyEve) → Relay tool-execution contract.
+ * Sofie → Relay server-contract coverage.
  *
- * MyEve's RelayClient posts Bearer rly_ credentials to /api/v2/federation.
- * Real tool execution for the MyEve beta uses HTTPS /mcp with the same
- * credential. This suite is local only: no hosted MyEve, production Relay,
- * paid providers, or Deep Agent.
+ * These tests call Relay route handlers with in-process Request objects.
+ * They do not import MyEve RelayClient, open an HTTPS wire, consume tester
+ * chats, or enable V2 paid actions. Live MyEve-to-Relay remains NOT_RUN.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as mcpGet, POST as mcpPost } from "@/app/mcp/route";

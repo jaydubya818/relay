@@ -1,18 +1,20 @@
 # Sofie → Relay → tool execution candidate — 2026-10-23
 
-Status: **LOCAL CANDIDATE QUALIFIED**. Live MyEve-to-hosted-Relay tool execution is **NOT_RUN**. This does not change production, Vercel env isolation, credentials, or spending controls.
+Status: **LOCAL SERVER-CONTRACT CANDIDATE**. Live MyEve adapter, HTTPS transport, and tester-chat execution are **NOT_RUN**. This does not change production aliases, Vercel env isolation, credentials, or spending controls.
 
 ## Upstream merge
 
 - Relay PR #40 merged to `main` as `fce3f8fe48fae5114acf17704cbbdd549861c3d9` (squash of qualified `e1389c0eebb7314244cdd47463fdeed33971bbdf`).
 - Post-merge GitHub Actions `40010427081` completed successfully on that SHA.
-- `vercel.json` still sets `git.deploymentEnabled.main=false`. That guard did **not** skip this merge: Vercel promoted `dpl_BYbeQYt8hyFbsouAQiAgje1VJZCG` with `target: production` and aliased `https://relay-jaydubya818.vercel.app`, `https://relay-sage-nine.vercel.app`, and `https://relay-git-main-jaydubya818.vercel.app` to `fce3f8f`. No rollback was performed; the SHA was the authorized qualified merge. This candidate adds `ignoreCommand` so a later git push to `main` exits 0 and skips the build; preview branches still build.
+- Serving production is `dpl_BYbeQYt8hyFbsouAQiAgje1VJZCG` at `fce3f8f` (`target: production`, READY). Rollback anchor remains the previous production snapshot `dpl_EFzeN3YFu3ggVgrVKLAusNMV18Km` (`source: cli`, no git SHA in deployment metadata). No rollback, alias change, credential change, or project-setting change was made.
+- Cause of the #40 promotion: the merge was a GitHub push onto `main`, which this project tracks as the Production branch. Vercel Git creates a Production deployment on merge to that branch and, with default `github.autoAlias`, assigns the public aliases. `vercel.json` on `fce3f8f` already had `git.deploymentEnabled.main=false` (since `88bd2e8`, 2026-09-20). That file-level skip did not prevent this Git production deploy. The snapshot being replaced was CLI-origin, not a prior Git production deploy, so the Git app applied production-branch auto-deploy rather than honoring the repo exclusion for this promotion. Dashboard Git settings were not modified to confirm the production-branch toggle.
 - After promotion, `/api/health` remains 200 with `database: ready`. The public login page no longer carries an email `value` attribute (live QA-01). Unique deployment URLs stay behind Vercel SSO (`prod_deployment_urls_and_all_previews`).
-- This agent did not change Vercel/Neon credentials, databases, or spending flags. `DATABASE_URL` / Neon variables remain Production-only except the existing synthetic preview branch `codex/fq-relay-6384519e0e01`, which is not this candidate. PR #43 preview `dpl_Cs7551KzFx1PqU2NRbsnm1yiXKyr` is not a production target and has no all-preview database URL.
+- This agent did not change Vercel/Neon credentials, databases, or spending flags. `DATABASE_URL` / Neon variables remain Production-only except the existing synthetic preview branch `codex/fq-relay-6384519e0e01`, which is not this candidate. PR #43 preview is not a production target and has no all-preview database URL.
+- `#43` adds `ignoreCommand` for a later git push to `main`. That skip is not live on production until `#43` is merged; this coordination does not merge it.
 
 ## What this candidate proves locally
 
-Relay's MyEve-facing surfaces, against disposable PostgreSQL, with no paid providers:
+In-process Relay route handlers (`mcpPost` / `federationPost` via `Request`), against disposable PostgreSQL. This is server-contract coverage only. It does not import or execute MyEve `RelayClient`, open HTTPS, consume MyEve tester chats (#99 / `5895b129`), or grant production tools.
 
 | Check | Result |
 | --- | --- |
@@ -29,12 +31,12 @@ Relay's MyEve-facing surfaces, against disposable PostgreSQL, with no paid provi
 | Rotate then reconnect; revoke then deny | Pass |
 | Private-preview keeps V2 runtime actions closed even if `RELAY_V2_ACTIONS_ENABLED=true` | Pass |
 | `/api/v2/mcp` `tools/call` denied while actions are closed | Pass |
-| MyEve `RelayClient` path `/api/v2/federation` returns 503 `CAPABILITY_DENIED` in private-preview | Pass |
-| Local federation discover + identity + ungranted `message.send` + rotate/reconnect/revoke | Pass |
+| In-process `POST /api/v2/federation` returns 503 `CAPABILITY_DENIED` in private-preview | Pass |
+| In-process federation discover + identity + ungranted `message.send` + rotate/reconnect/revoke | Pass |
 
-Evidence: `tests/integration/myeve-sofie-relay-tools.test.ts`. Existing budget, isolation, and federation golden-path suites remain the spending-limit and peer-message authority records.
+Evidence: `tests/integration/myeve-sofie-relay-tools.test.ts`. HTTP 200 JSON-RPC `CAPABILITY_DENIED` is proven on Relay's handler, not through MyEve's adapter. Existing budget, isolation, and federation golden-path suites remain the spending-limit and peer-message authority records.
 
-## Contract MyEve must implement for beta tools
+## Client handshake / error contract (for the MyEve adapter owner; not implemented here)
 
 MyEve `apps/eve/lib/relay/client.ts` only posts to `/api/v2/federation`. That path requires V2 runtime actions **and** `RELAY_FEDERATION_ENABLED=true`. Private-preview forces runtime actions off, so federation tool execution must stay closed on current production.
 
@@ -46,17 +48,12 @@ The private-preview-safe tool path is HTTPS `/mcp` with `Authorization: Bearer r
 
 Do not point Sofie at `/api/v2/mcp`. That surface is V2 action execution and stays disabled in private-preview.
 
-## Next steps to enable Relay tools in the active MyEve beta
+## Next steps (owner-gated; not started here)
 
-These are owner/MyEve steps. They are not authorized by this Relay candidate.
+Preserve production on `#40` / `fce3f8f` / `dpl_BYbeQYt8hyFbsouAQiAgje1VJZCG`. Preserve the two active MyEve tester chats on `#99` / `5895b129` and their chat-only bounds. Do not consume tester turns.
 
-1. Treat production as already on `fce3f8f` / `dpl_BYbeQYt8hyFbsouAQiAgje1VJZCG`. Do not roll it back. After this candidate lands, git pushes to `main` should skip via `ignoreCommand`; still confirm the Vercel project Git setting so a dashboard production deploy remains an explicit owner action.
-2. In MyEve, add an MCP client for `{MYEVE_RELAY_ORIGIN}/mcp` using the existing per-agent `rly_` connection credential. Do not send the owner session cookie to `/mcp`. Keep the current federation client unchanged.
-3. Pin origin checks already in `relayOrigin()`: HTTPS, no credentials, no path/query/hash. Local HTTP remains a development-only exception.
-4. First live grant on a disposable Sofie agent: `memory.read` and `memory.write` only. Do not grant GitHub, Gmail, sandbox, browser, or factory until that memory path is observed in Relay Activity.
-5. Exercise `initialize`, `tools/list`, one `relay_memory_add`, one `relay_memory_search`, credential rotation, and revoke against a **preview** Relay, not production. Confirm JSON-RPC denials for ungranted tools.
-6. Leave `RELAY_DEPLOYMENT_MODE`, `RELAY_V2_ACTIONS_ENABLED`, and `RELAY_FEDERATION_ENABLED` unchanged unless a separate production authorization is recorded. Do not raise budget ceilings or attach paid providers for this milestone.
-7. After preview evidence, decide whether production Sofie gets memory-only MCP. GitHub/factory remain owner-opt-in and require their existing connection + grant checks.
-8. Deep Agent is still absent from deployable Relay/MyEve code. Do not advertise or enable it.
+Real MyEve adapter plus transport-level identity/error/reconnect coverage is a distinct gap. HTTP 200 JSON-RPC error handling must be proven through that adapter. Coordinate the MyEve adapter implementation owner before starting it. Do not duplicate Relay implementation or grant production tools.
+
+Safe disposable recipe, when that owner is ready: local/preview Relay only; Bearer `rly_` to `/mcp`; `initialize` / `tools/list` / one memory write / one search / rotate / revoke; no owner-session cookie on `/mcp`; no V2 actions or federation flags; no Deep Agent.
 
 Merging this candidate is not paid execution and does not enable V2 actions.
