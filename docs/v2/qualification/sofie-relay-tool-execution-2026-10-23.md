@@ -6,7 +6,7 @@ Status: **LOCAL CANDIDATE QUALIFIED**. Live MyEve-to-hosted-Relay tool execution
 
 - Relay PR #40 merged to `main` as `fce3f8fe48fae5114acf17704cbbdd549861c3d9` (squash of qualified `e1389c0eebb7314244cdd47463fdeed33971bbdf`).
 - Post-merge GitHub Actions `40010427081` completed successfully on that SHA.
-- `vercel.json` still sets `git.deploymentEnabled.main=false`. That guard did **not** skip this merge: Vercel promoted `dpl_BYbeQYt8hyFbsouAQiAgje1VJZCG` with `target: production` and aliased `https://relay-jaydubya818.vercel.app`, `https://relay-sage-nine.vercel.app`, and `https://relay-git-main-jaydubya818.vercel.app` to `fce3f8f`. No rollback was performed; the SHA was the authorized qualified merge.
+- `vercel.json` still sets `git.deploymentEnabled.main=false`. That guard did **not** skip this merge: Vercel promoted `dpl_BYbeQYt8hyFbsouAQiAgje1VJZCG` with `target: production` and aliased `https://relay-jaydubya818.vercel.app`, `https://relay-sage-nine.vercel.app`, and `https://relay-git-main-jaydubya818.vercel.app` to `fce3f8f`. No rollback was performed; the SHA was the authorized qualified merge. This candidate adds `ignoreCommand` so a later git push to `main` exits 0 and skips the build; preview branches still build.
 - After promotion, `/api/health` remains 200 with `database: ready`. The public login page no longer carries an email `value` attribute (live QA-01). Unique deployment URLs stay behind Vercel SSO (`prod_deployment_urls_and_all_previews`).
 - This agent did not change Vercel/Neon credentials, databases, or spending flags. `DATABASE_URL` / Neon variables remain Production-only except the existing synthetic preview branch `codex/fq-relay-6384519e0e01`, which is not this candidate. PR #43 preview `dpl_Cs7551KzFx1PqU2NRbsnm1yiXKyr` is not a production target and has no all-preview database URL.
 
@@ -50,7 +50,7 @@ Do not point Sofie at `/api/v2/mcp`. That surface is V2 action execution and sta
 
 These are owner/MyEve steps. They are not authorized by this Relay candidate.
 
-1. Treat production as already on `fce3f8f` / `dpl_BYbeQYt8hyFbsouAQiAgje1VJZCG`. Do not roll it back. Confirm in the Vercel project why `git.deploymentEnabled.main=false` did not skip this promotion before the next `main` push.
+1. Treat production as already on `fce3f8f` / `dpl_BYbeQYt8hyFbsouAQiAgje1VJZCG`. Do not roll it back. After this candidate lands, git pushes to `main` should skip via `ignoreCommand`; still confirm the Vercel project Git setting so a dashboard production deploy remains an explicit owner action.
 2. In MyEve, add an MCP client for `{MYEVE_RELAY_ORIGIN}/mcp` using the existing per-agent `rly_` connection credential. Do not send the owner session cookie to `/mcp`. Keep the current federation client unchanged.
 3. Pin origin checks already in `relayOrigin()`: HTTPS, no credentials, no path/query/hash. Local HTTP remains a development-only exception.
 4. First live grant on a disposable Sofie agent: `memory.read` and `memory.write` only. Do not grant GitHub, Gmail, sandbox, browser, or factory until that memory path is observed in Relay Activity.

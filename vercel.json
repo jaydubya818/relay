@@ -12,6 +12,7 @@
       "codex/relay-owner-experience": false
     }
   },
+  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" = main ]",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build",
   "regions": [
