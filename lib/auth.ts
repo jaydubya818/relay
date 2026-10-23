@@ -1,5 +1,6 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { safeReturnTo } from "@/lib/url-safety";
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
@@ -143,7 +144,12 @@ export async function currentUser() {
 
 export async function requireUser() {
   const user = await currentUser();
-  if (!user) redirect("/login");
+  if (!user) {
+    const store = await headers();
+    const pathname = store.get("x-relay-pathname") ?? "";
+    const safe = safeReturnTo(pathname);
+    redirect(`/login${safe ? `?returnTo=${encodeURIComponent(safe)}` : ""}`);
+  }
   return user;
 }
 
