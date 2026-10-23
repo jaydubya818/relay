@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { hashSecret } from "@/lib/crypto";
 import { db, withTransaction } from "@/lib/db";
 import { approvalRequests, budgetReservations, budgets, computerControlEvents, computerControlSessions, financialAccounts, financialTransactions, paymentCredentialReferences, purchaseCheckoutPermits, purchaseIntents, purchaseReceipts } from "@/lib/db/schema";
@@ -59,7 +59,7 @@ export async function syncReadOnlyFinancialData(input: { accountId: string; prin
       const accountId = id("fac"); const [row] = await transaction.insert(financialAccounts).values({ id: accountId, accountId: input.accountId, provider: adapter.provider, ...parsed }).onConflictDoUpdate({ target: [financialAccounts.accountId, financialAccounts.provider, financialAccounts.externalAccountId], set: { displayName: parsed.displayName, kind: parsed.kind, currency: parsed.currency, balance: parsed.balance, balanceAsOf: parsed.balanceAsOf, status: "ACTIVE", updatedAt: now() } }).returning({ id: financialAccounts.id, externalAccountId: financialAccounts.externalAccountId }); accountIds.set(row!.externalAccountId, row!.id);
     }
     for (const item of result.transactions) {
-      const parsed = z.object({ externalAccountId: z.string().min(1), providerTransactionId: z.string().min(1), amount: amountSchema, currency: currencySchema, merchant: z.string().max(512).optional(), description: z.string().max(2_000).optional(), occurredAt: z.string().datetime({ offset: true }), providerData: z.record(z.unknown()).optional() }).strict().parse(item); const financialAccountId = accountIds.get(parsed.externalAccountId); if (!financialAccountId) throw new RelayError("INVALID_INPUT", "Transaction references an account outside this sync.");
+      const parsed = z.object({ externalAccountId: z.string().min(1), providerTransactionId: z.string().min(1), amount: amountSchema, currency: currencySchema, merchant: z.string().max(512).optional(), description: z.string().max(2_000).optional(), occurredAt: z.string().datetime({ offset: true }), providerData: z.record(z.string(), z.unknown()).optional() }).strict().parse(item); const financialAccountId = accountIds.get(parsed.externalAccountId); if (!financialAccountId) throw new RelayError("INVALID_INPUT", "Transaction references an account outside this sync.");
       await transaction.insert(financialTransactions).values({ id: id("ftx"), accountId: input.accountId, financialAccountId, providerTransactionId: parsed.providerTransactionId, amount: parsed.amount, currency: parsed.currency, merchant: parsed.merchant, description: parsed.description, occurredAt: parsed.occurredAt, providerData: redactForEvidence(parsed.providerData ?? {}) }).onConflictDoNothing();
     }
     return { accountCount: result.accounts.length, transactionCount: result.transactions.length };

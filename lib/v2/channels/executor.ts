@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
 import { channelExecutionNonces, channelExecutionReceipts } from "@/lib/db/schema";

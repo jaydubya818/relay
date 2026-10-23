@@ -1,6 +1,6 @@
 import { requireCurrentAgentPassport } from "@/lib/v2/passports";
 import { authenticateFederationAgent } from "./service";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { RelayError } from "@/lib/errors";
 import { requireRuntimeActionsEnabled } from "@/lib/v2/deployment";
 import { requireV2PlatformBindings } from "@/lib/v2/platform-bindings";

@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { db, withTransaction } from "@/lib/db";
 import { controlOutbox, runtimeClients, taskCommands, v2Tasks } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";

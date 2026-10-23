@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { canonicalJson } from "@/lib/v2/contracts";
 
 export const FEDERATION_SIGNING_VERSION = 2;

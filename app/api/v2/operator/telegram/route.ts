@@ -2,7 +2,7 @@ import { readBoundedTelegramBody } from "@/lib/v2/telegram-input";
 import { requireApiUser,verifySameOrigin } from "@/lib/api";
 import { operatorContext } from "@/lib/v2/dashboard";
 import { disconnectTelegram,setupTelegramPairing,telegramManagement } from "@/lib/v2/channels/management";
-import { z } from "zod/v3";
+import { z } from "zod";
 const schema=z.discriminatedUnion("operation",[z.object({operation:z.literal("pair"),grantOwnerChannel:z.literal(true)}).strict(),z.object({operation:z.literal("revoke"),bindingId:z.string().max(255)}).strict()]);
 const headers={"cache-control":"no-store"};
 export async function GET(){try{const user=await requireApiUser();const owner=await operatorContext(user.accountId,user.id);return Response.json(await telegramManagement(user.accountId,owner.principalId),{headers});}catch{return Response.json({error:"Owner access required."},{status:403,headers});}}

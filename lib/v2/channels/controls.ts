@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { withTransaction } from "@/lib/db";
 import { id } from "@/lib/ids";
 import { RelayError } from "@/lib/errors";

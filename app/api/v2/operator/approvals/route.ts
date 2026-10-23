@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { errorResponse, requireApiUser, verifySameOrigin } from "@/lib/api";
 import { db } from "@/lib/db";
 import { approvalRequests } from "@/lib/db/schema";

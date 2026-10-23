@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 import { entrySchema, knowledgeResponseSchema, recordSchema, type KnowledgeResponse } from "./contracts";
 
 const queryEnvelopeSchema = z.object({

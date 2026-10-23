@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 import { errorResponse, verifySameOrigin } from "@/lib/api";
 import { lookupBetaInvite } from "@/lib/auth";
 

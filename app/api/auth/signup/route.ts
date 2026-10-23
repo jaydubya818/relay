@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 import { NextResponse } from "next/server";
 import { createAccountOwner, createSession, sessionCookieName, sessionMaxAge } from "@/lib/auth";
 import { errorResponse, verifySameOrigin } from "@/lib/api";

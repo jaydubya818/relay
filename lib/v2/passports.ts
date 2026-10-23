@@ -7,7 +7,7 @@ import { accounts, accountMemberships, principals, agentPassports, agents, capab
 import { RelayError } from "@/lib/errors";
 import { id, now } from "@/lib/ids";
 import { canonicalHash } from "@/lib/v2/contracts";
-import { agentPassportSchema, signedAgentPassportSchema, type AgentPassport, type SignedAgentPassport } from "@/lib/v2/contracts/schemas";
+import { agentPassportObjectSchema, agentPassportSchema, signedAgentPassportSchema, type AgentPassport, type SignedAgentPassport } from "@/lib/v2/contracts/schemas";
 import { appendAuditRecordInTransaction } from "@/lib/v2/evidence/audit";
 import { verifyAuditSignature, type AuditSigner } from "@/lib/v2/evidence/crypto";
 import { requireMembership } from "@/lib/v2/identity";
@@ -39,7 +39,7 @@ export async function createV2Agent(input: { accountId: string; ownerPrincipalId
   return { agentId, status: "DRAFT" as const };
 }
 
-const passportPolicySchema = agentPassportSchema.innerType().pick({ trustTier: true, capabilityEligibility: true, policyReferences: true, budgetReferences: true, allowedEnvironments: true, dataAccess: true, expiresAt: true }).strict();
+const passportPolicySchema = agentPassportObjectSchema.pick({ trustTier: true, capabilityEligibility: true, policyReferences: true, budgetReferences: true, allowedEnvironments: true, dataAccess: true, expiresAt: true }).strict();
 
 type IssuePassportInput = { accountId: string; agentId: string; ownerPrincipalId: string; policy: PassportPolicy; expectedVersion?: number };
 

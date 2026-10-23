@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 import { requireApiUser, errorResponse, verifySameOrigin } from "@/lib/api";
 import { issueBetaInvite, listBetaInvites, revokeBetaInvite } from "@/lib/auth";
 

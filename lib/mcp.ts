@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { recordActivity } from "@/lib/activity";
 import { authenticateAgent } from "@/lib/auth";
 import { listAllowedCapabilities } from "@/lib/authorization";
@@ -10,6 +10,13 @@ import type { CapabilityName } from "@/lib/types";
 import { touchAgentSession } from "@/lib/agent-sessions";
 
 type McpRequest = { jsonrpc?: string; id?: string | number | null; method?: string; params?: any };
+
+function toolArgumentRecord(value: unknown): Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new RelayError("INVALID_INPUT", "Tool arguments are invalid.");
+  }
+  return value as Record<string, unknown>;
+}
 
 const toolDefinitions = {
   relay_factory_workorder_create: {
@@ -258,7 +265,7 @@ export async function handleMcp(secret: string, request: McpRequest, requestId: 
       action: definition.action,
       provider: "provider" in definition ? definition.provider : undefined,
       sessionId: session.id,
-      arguments: parsedArguments.data,
+      arguments: toolArgumentRecord(parsedArguments.data),
     });
     return { content: [{ type: "text", text: JSON.stringify(result) }] };
   }

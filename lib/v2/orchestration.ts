@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { db, type RelayDatabase, withTransaction } from "@/lib/db";
 import { accounts, agents, controlOutbox, deadLetterEntries, eventRoutes, eventSourceCursors, federationRequests, taskCommands, taskStateHistory, v2Events, v2Tasks } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";

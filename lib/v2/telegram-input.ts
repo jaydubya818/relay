@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { RelayError } from "@/lib/errors";
 
 export const TELEGRAM_MAX_BODY_BYTES = 32 * 1024;

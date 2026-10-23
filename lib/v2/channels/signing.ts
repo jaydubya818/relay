@@ -1,5 +1,5 @@
 import { createPrivateKey, createPublicKey, randomUUID, sign, verify } from "node:crypto";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { canonicalHash, canonicalJson } from "@/lib/v2/contracts";
 import type { AuditSigner } from "@/lib/v2/evidence/crypto";
 import { executionCommandSchema, type Environment, type ExecutionCommand } from "./contracts";

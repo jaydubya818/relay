@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 
 export const relayId = (prefix: string) => z.string().regex(new RegExp(`^${prefix}_[a-zA-Z0-9]{8,}$`));
 export const isoTimestamp = z.string().datetime({ offset: true });
@@ -15,14 +15,14 @@ export const capabilityReferenceSchema = z.object({
 export const resourceConstraintSchema = z.object({
   type: z.string().min(1).max(128),
   ids: z.array(z.string().min(1).max(512)).max(1_000).optional(),
-  attributes: z.record(z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])).optional(),
+  attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])).optional(),
 }).strict();
 
 export const actionIntentSchema = z.object({
   schemaVersion: z.literal("relay.action-intent.v2"),
   id: relayId("act"), accountId: relayId("acct"), agentId: relayId("agt"), runtimeClientId: relayId("rtc"),
   workloadId: relayId("wkl").optional(), taskId: relayId("tsk"), capability: capabilityReferenceSchema,
-  resource: resourceConstraintSchema, parameters: z.record(z.unknown()), idempotencyKey: z.string().min(8).max(255),
+  resource: resourceConstraintSchema, parameters: z.record(z.string(), z.unknown()), idempotencyKey: z.string().min(8).max(255),
   createdAt: isoTimestamp, canonicalHash: z.string().regex(/^sha256:[a-f0-9]{64}$/),
 }).strict();
 
@@ -59,7 +59,7 @@ export const approvalScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("session"), sessionId: relayId("ses"), capability: capabilityReferenceSchema, resource: resourceConstraintSchema, maxUses: z.number().int().positive() }).strict(),
 ]);
 
-export const agentPassportSchema = z.object({
+export const agentPassportObjectSchema = z.object({
   schemaVersion: z.literal("relay.agent-passport.v1"), issuer: z.string().url(), passportId: relayId("psp"),
   agentId: relayId("agt"), owner: z.object({ accountId: relayId("acct"), principalId: relayId("prn") }).strict(),
   version: z.number().int().positive(), trustTier: z.enum(["UNVERIFIED", "REGISTERED", "VERIFIED", "HIGH_ASSURANCE"]),
@@ -69,7 +69,9 @@ export const agentPassportSchema = z.object({
   dataAccess: z.array(z.object({ classification: z.enum(["public", "internal", "confidential", "restricted"]), resourceTypes: z.array(z.string().min(1).max(128)).max(100) }).strict()).max(100),
   signingKey: z.object({ id: z.string().min(1).max(255), version: z.string().min(1).max(255), purpose: z.literal("passport"), algorithm: z.literal("Ed25519") }).strict().optional(),
   validFrom: isoTimestamp, expiresAt: isoTimestamp, revocationEpoch: z.number().int().nonnegative(),
-}).strict().refine((passport) => Date.parse(passport.expiresAt) > Date.parse(passport.validFrom), { path: ["expiresAt"], message: "expiresAt must follow validFrom" });
+}).strict();
+
+export const agentPassportSchema = agentPassportObjectSchema.refine((passport) => Date.parse(passport.expiresAt) > Date.parse(passport.validFrom), { path: ["expiresAt"], message: "expiresAt must follow validFrom" });
 
 export const signedAgentPassportSchema = z.object({ passport: agentPassportSchema, payloadHash: z.string().regex(/^sha256:[a-f0-9]{64}$/), signature: z.string().min(1), signingKeyId: z.string().min(1).max(255) }).strict();
 

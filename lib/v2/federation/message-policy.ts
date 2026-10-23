@@ -1,7 +1,7 @@
 import { canonicalHash } from "@/lib/v2/contracts";
 import type { PolicyRule } from "@/lib/v2/policy/contracts";
 import { and, eq } from "drizzle-orm";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { agents, policyBundles } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";
@@ -42,7 +42,7 @@ export async function manageMessagePolicy(owner: { accountId: string; principalI
   }
   const [bundle] = await db().select().from(policyBundles).where(and(eq(policyBundles.id, command.bundleId), eq(policyBundles.accountId, owner.accountId), eq(policyBundles.name, name), eq(policyBundles.layer, "ACCOUNT"))).limit(1);
   if (!bundle) throw new RelayError("INVALID_INPUT", "Message policy not found.", undefined, 404);
-  const storedRules = z.array(z.object({ match: z.object({ facts: z.record(z.unknown()) }) })).min(1).max(2).parse(bundle.rules);
+  const storedRules = z.array(z.object({ match: z.object({ facts: z.record(z.string(), z.unknown()) }) })).min(1).max(2).parse(bundle.rules);
   const peers = sortedPeers(owner.accountId, storedRules.map(rule => ({ ownerId: rule.match.facts["federation.caller_owner"], agentId: rule.match.facts["federation.caller_agent"] })));
   const rules = messageRules(agent.id, peers);
   const document = { schemaVersion: "relay.policy-bundle.v1", accountId: owner.accountId, name, layer: "ACCOUNT", version: bundle.version, rules };

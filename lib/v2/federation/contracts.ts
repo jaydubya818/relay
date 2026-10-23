@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 
 export const capabilitySchema = z.enum(["knowledge.query", "message.send", "message.receive", "artifact.share", "artifact.receive", "work.request"]);
 export const availabilitySchema = z.enum(["ONLINE", "OFFLINE", "DEGRADED", "PAUSED", "REVOKED", "UNKNOWN"]);

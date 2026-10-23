@@ -1,7 +1,7 @@
 import { qualificationEnabled } from "@/lib/qualification";
 import { withQualificationSigningAuthority } from "@/lib/v2/evidence/qualification-admission";
 import { authenticateFederationAgent } from "@/lib/v2/federation/service";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { errorResponse } from "@/lib/api";
 import { bearer, boundedBody, executeFederationCommand, federationBindings } from "@/lib/v2/federation/api";
 export async function POST(request: Request) {

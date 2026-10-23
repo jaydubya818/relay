@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, isNull, lte, sql } from "drizzle-orm";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { db, withTransaction } from "@/lib/db";
 import { capabilityLeases, communicationConnections, communicationMessages, communicationThreads } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";

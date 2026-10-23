@@ -2,7 +2,7 @@ import type { AuditSigner } from "@/lib/v2/evidence/crypto";
 import { requireCurrentAgentPassport } from "@/lib/v2/passports";
 import { messageResponseSchema } from "./contracts";
 import { and, asc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { db, withTransaction, type RelayDatabase } from "@/lib/db";
 import { accountMemberships, accounts, agentCredentials, agents, approvalRequests, budgetReservations, budgets, controlOutbox, federationAgents, federationAttempts, federationGrants, federationRateWindows, federationRelationships, federationRequests, policyDecisions, publishedViews } from "@/lib/db/schema";
 import { hashSecret } from "@/lib/crypto";

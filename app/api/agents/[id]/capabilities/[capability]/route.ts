@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 import { setCapabilityGrant } from "@/lib/agents";
 import { errorResponse, requireApiUser, verifySameOrigin } from "@/lib/api";
 import { CAPABILITIES } from "@/lib/types";

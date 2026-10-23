@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 import { errorResponse, requireApiUser, verifySameOrigin } from "@/lib/api";
 import { connectGitHub, disconnectGitHub, testGitHub } from "@/lib/connections";
 

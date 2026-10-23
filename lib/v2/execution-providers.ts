@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { db, withTransaction } from "@/lib/db";
 import { agentPassports, capabilityLeases, executionAttempts, executionPlacements, executionProviderDefinitions, policyDecisions, providerCircuitStates, v2Tasks } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";

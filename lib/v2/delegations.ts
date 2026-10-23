@@ -1,5 +1,5 @@
 import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { db, withTransaction } from "@/lib/db";
 import { agentDelegations, agentPassports, agents, budgetReservations, budgets, capabilityLeases, controlOutbox, delegatedAuthorities, delegationBudgetAllocations, delegationContextEntries, delegationResults, evidenceArtifacts, memories, taskCommands, taskStateHistory, v2Tasks } from "@/lib/db/schema";
 import { RelayError } from "@/lib/errors";

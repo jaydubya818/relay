@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 import { createAgent, listAgents } from "@/lib/agents";
 import { errorResponse, requireApiUser, verifySameOrigin } from "@/lib/api";
 import { CAPABILITIES } from "@/lib/types";

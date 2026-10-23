@@ -1,7 +1,7 @@
 import { purposeSigner } from "@/lib/v2/evidence/signing-provider";
 import { createHash, createPublicKey, randomBytes, verify as verifySignature } from "node:crypto";
 import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
-import { z } from "zod/v3";
+import { z } from "zod";
 import { hashSecret } from "@/lib/crypto";
 import { db, withTransaction } from "@/lib/db";
 import { agentPassports, agentRevocationEpochs, budgetReservations, budgets, capabilityDefinitions, capabilityLeases, leaseCallReceipts, policyDecisions, runtimeClients, workloadBootstraps, workloads } from "@/lib/db/schema";
