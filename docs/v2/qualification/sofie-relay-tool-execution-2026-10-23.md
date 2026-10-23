@@ -77,3 +77,21 @@ Primary advisory: https://github.com/advisories/GHSA-mrhx-c7xc-m3w5 (updated 202
 **Residual risk, kept explicit:** #6652 only rejects oversized **bounded** arrays/sets/maps before walking elements. Unbounded containers remain uncapped even on 4.6.6+ (maintainer). This PR does not add new collection caps, does not ignore the advisory, and does not weaken gates. The v3 subpath is still present inside the 4.6.7 tarball and remains unpatched; application code must not import it.
 
 Production aliases, grants, tester chats, and billing are unchanged by this source preparation. Merge/deploy of `#43` remain held.
+
+## Production dependency inventory (after `ccd3287`, source-only)
+
+Root audited `ccd3287` with `pnpm audit --prod` (exit 1): one critical, three high, two moderate. Inventory only; not a reachability or live-incident claim. That audit is historical for this later tree.
+
+Official smallest supported corrections, staying on Next 15.5 maintenance:
+
+| Advisory | Module at `ccd3287` | Official patched line | This tree |
+| --- | --- | --- | --- |
+| GHSA-2464-fhr4-w9xw (critical) | `next@15.5.24` | `next@15.5.28` | `15.5.28` |
+| GHSA-p3m5-59mp-jv5r (high) | `next@15.5.24` | `next@15.5.28` | `15.5.28` |
+| GHSA-4jqv-mc3x-m676 / GHSA-mcj8-r9mp-w47p (moderate cache) | `next@15.5.24` | `next@>=15.5.27` | `15.5.28` |
+| GHSA-68fv-2mgg-jv7q (high) | `source-map-js@1.2.1` via `postcss@8.5.23` | `>=1.2.2` | override `1.2.2` |
+| GHSA-wq5f-xc86-pv6w (high) | `sharp@0.35.4` via Next | `>=0.35.5` | `next>sharp` `0.35.5` |
+
+`next@15.5.28` `optionalDependencies.sharp` is `^0.34.3 || ^0.35.5`. Pinning `0.35.5` is the supported 0.35 patch. A Next 16 / sharp 0.36 framework migration is not required. Existing `next>postcss: 8.5.23` is unchanged. `eslint-config-next` stays on the same 15.5.28 line. No advisory ignore, no `patchedDependencies`, no auth/OIDC downgrade, no exploit reproduction.
+
+`ccd3287` evidence remains historical and is not a PASS for this changed dependency surface.
