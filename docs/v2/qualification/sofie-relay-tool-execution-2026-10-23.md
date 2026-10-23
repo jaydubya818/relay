@@ -96,4 +96,6 @@ Official smallest supported corrections, staying on Next 15.5 maintenance:
 
 **Local qualify of `2ea19ce`:** `pnpm typecheck`, `pnpm lint`, `pnpm test:ci` (564 passed, 6 skipped), `pnpm build` (`Next.js 15.5.28`). Performance assertions passed (2/2); local process exit 1 was leftover `DROP DATABASE … FORCE` `57P01` pg events, not assertion failures. `pnpm audit --prod` is empty after the pins; that is corroboration of the version range, not a substitute for the lockfile/import contract in `tests/unit/production-advisory-tree.test.ts`. GitHub quality and owner-browser re-run on this SHA.
 
+**Independent review of `2ea19ce`:** APPROVE, no findings, for the production-pin requirement. Official 15.5.28 / sharp 0.35.5 / source-map-js 1.2.2 match the GHSA first-patched lines. Residual notes only: optional/transitive metadata resolution is lockfile-durable; `.npmrc` audit-ignore is absent and not asserted. Merge of `#43` stays held.
+
 `ccd3287` evidence remains historical and is not a PASS for this changed dependency surface.
