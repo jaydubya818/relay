@@ -1,3 +1,4 @@
+import { advanceRelayPolicyFence } from "@/lib/v2/policy/ordering";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { hashSecret } from "@/lib/crypto";
@@ -49,8 +50,10 @@ export async function verifyRuntimeClient(input: { accountId: string; actorPrinc
   if (!client) throw new RelayError("INVALID_INPUT", "Runtime client not found.", undefined, 404);
   const verified = await verifier.verify(input.proof);
   return await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, input.accountId);
     const updated = await transaction.update(runtimeClients).set({ verifiedProduct: verified.product, verificationStatus: "VERIFIED", verificationEvidence: verified.evidence, verifiedAt: now() }).where(and(eq(runtimeClients.accountId, input.accountId), eq(runtimeClients.id, input.runtimeClientId), isNull(runtimeClients.revokedAt))).returning({ id: runtimeClients.id });
     if (!updated.length) throw new RelayError("INVALID_INPUT", "Runtime client not found.", undefined, 404);
+    await advanceRelayPolicyFence(transaction, input.accountId, "revoke");
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.actorPrincipalId, runtimeClientId: input.runtimeClientId, eventType: "runtime_client.verified", outcome: "SUCCESS", details: { verifiedProduct: verified.product } }, signer);
     return { verifiedProduct: verified.product, verificationStatus: "VERIFIED" as const };
   });
@@ -59,8 +62,10 @@ export async function verifyRuntimeClient(input: { accountId: string; actorPrinc
 export async function revokeRuntimeClient(input: { accountId: string; actorPrincipalId: string; runtimeClientId: string }, signer: AuditSigner) {
   await requireMembership({ accountId: input.accountId, principalId: input.actorPrincipalId, allowedRoles: ["OWNER", "ADMIN"] });
   await withTransaction(async (transaction) => {
+    await lockActiveAccount(transaction, input.accountId);
     const updated = await transaction.update(runtimeClients).set({ verificationStatus: "REVOKED", revokedAt: now() }).where(and(eq(runtimeClients.accountId, input.accountId), eq(runtimeClients.id, input.runtimeClientId), isNull(runtimeClients.revokedAt))).returning({ id: runtimeClients.id });
     if (!updated.length) throw new RelayError("INVALID_INPUT", "Runtime client not found.", undefined, 404);
+    await advanceRelayPolicyFence(transaction, input.accountId, "revoke");
     await appendAuditRecordInTransaction(transaction, { accountId: input.accountId, actorPrincipalId: input.actorPrincipalId, runtimeClientId: input.runtimeClientId, eventType: "runtime_client.revoked", outcome: "SUCCESS" }, signer);
   });
 }

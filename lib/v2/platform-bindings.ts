@@ -3,7 +3,9 @@ import type { AuditSigner, KeyWrapper } from "@/lib/v2/evidence/crypto";
 import type { DeveloperAccessTokenVerifier } from "@/lib/v2/developer-platform";
 import type { LeaseKeyResolver } from "@/lib/v2/leases";
 
-export interface V2PlatformBindings { signer: AuditSigner; keyResolver: LeaseKeyResolver; oauthVerifier?: DeveloperAccessTokenVerifier; federation?: { keyWrapper: KeyWrapper; issuer: string } }
+import type { RemoteCapabilityPreparationBindings } from "./remote-capability-leases";
+
+export interface V2PlatformBindings { remoteCapabilityPreparation?: RemoteCapabilityPreparationBindings; signer: AuditSigner; keyResolver: LeaseKeyResolver; oauthVerifier?: DeveloperAccessTokenVerifier; federation?: { keyWrapper: KeyWrapper; issuer: string } }
 // Next instrumentation and route handlers may load separate copies of this module.
 // Keep the injected provider process-local, shared across those bundles, never on disk.
 const bindingKey = Symbol.for("relay.v2.platform-bindings");

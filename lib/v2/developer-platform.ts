@@ -74,6 +74,7 @@ type RuntimeActionCommandPayload = {
   runtimeClientId: string;
   actionIntentId: string;
   actionCanonicalHash: string;
+  actionIdentityHash: string;
   redactedAction: unknown;
   leaseId: string;
   submittedAt: string;
@@ -104,10 +105,16 @@ export async function submitDurableRuntimeAction(input: {
   if (
     action.accountId !== input.accountId
     || action.runtimeClientId !== client.runtimeClientId
+    || (action.workloadId !== undefined && action.workloadId !== input.workloadId)
     || canonicalHash({ capability: action.capability, resource: action.resource, parameters: action.parameters }) !== action.canonicalHash
   ) throw new RelayError("CAPABILITY_DENIED", "Runtime action identity or canonical binding is invalid.", undefined, 403);
   if (!input.idempotencyKey || input.idempotencyKey.length > 255) throw new RelayError("INVALID_INPUT", "A bounded idempotency key is required.");
 
+  // Normalize the optional workload field while binding every immutable intent field.
+  const actionIdentityHash = canonicalHash({
+    action: { ...action, workloadId: input.workloadId },
+    audience: input.expectedAudience,
+  });
   const durableKey = `runtime-action:${client.runtimeClientId}:${input.idempotencyKey}`;
   return await withTransaction(async (transaction) => {
     await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`runtime-action:${input.accountId}:${durableKey}`}, 0))`);
@@ -117,7 +124,7 @@ export async function submitDurableRuntimeAction(input: {
     )).limit(1);
     if (existing) {
       const payload = existing.payload as RuntimeActionCommandPayload;
-      if (payload.actionCanonicalHash !== action.canonicalHash) {
+      if (payload.actionIdentityHash !== actionIdentityHash) {
         throw new RelayError("INVALID_INPUT", "Runtime action idempotency key was reused with a different action.", undefined, 409);
       }
       return runtimeActionResultSchema.parse({
@@ -155,6 +162,7 @@ export async function submitDurableRuntimeAction(input: {
       runtimeClientId: client.runtimeClientId,
       actionIntentId: action.id,
       actionCanonicalHash: action.canonicalHash,
+      actionIdentityHash,
       redactedAction: redactForEvidence(action),
       leaseId: authority.leaseId,
       submittedAt,

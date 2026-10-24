@@ -5,7 +5,7 @@ export const capabilityDefinitionSchema = z.object({
   name: capabilityReferenceSchema.shape.name, version: capabilityReferenceSchema.shape.version,
   domain: z.string().min(1).max(128), description: z.string().min(1).max(2_000),
   effectClass: effectClassSchema, riskClass: riskClassSchema, resourceType: z.string().min(1).max(128),
-  inputSchema: z.record(z.unknown()), outputSchema: z.record(z.unknown()), meteringDimensions: z.array(z.enum(["TOKENS", "MODEL_SPEND", "CONNECTOR_CALLS", "COMPUTE_SECONDS", "COMPUTER_SECONDS", "PURCHASE_AMOUNT"])).max(6).optional(),
+  inputSchema: z.record(z.string(), z.unknown()), outputSchema: z.record(z.string(), z.unknown()), meteringDimensions: z.array(z.enum(["TOKENS", "MODEL_SPEND", "CONNECTOR_CALLS", "COMPUTE_SECONDS", "COMPUTER_SECONDS", "PURCHASE_AMOUNT"])).max(6).optional(),
 }).strict().superRefine((definition, context) => {
   if (definition.meteringDimensions?.includes("PURCHASE_AMOUNT") && definition.effectClass !== "financial") context.addIssue({ code: z.ZodIssueCode.custom, path: ["effectClass"], message: "purchase-metered capabilities must be financial" });
 });
@@ -14,10 +14,10 @@ const factValue = z.union([z.string(), z.number(), z.boolean()]);
 export const policyRuleSchema = z.object({
   id: z.string().regex(/^[a-z][a-z0-9_-]{2,127}$/),
   effect: policyOutcomeSchema,
-  match: z.object({ capability: capabilityReferenceSchema.optional(), effectClass: effectClassSchema.optional(), riskClass: riskClassSchema.optional(), resourceType: z.string().min(1).max(128).optional(), facts: z.record(factValue).optional() }).strict(),
+  match: z.object({ capability: capabilityReferenceSchema.optional(), effectClass: effectClassSchema.optional(), riskClass: riskClassSchema.optional(), resourceType: z.string().min(1).max(128).optional(), facts: z.record(z.string(), factValue).optional() }).strict(),
   reasonCode: z.string().regex(/^[A-Z][A-Z0-9_]{2,127}$/),
   approval: z.object({ class: z.string().min(1).max(128), allowedScopes: z.array(z.enum(["once", "task", "session"])).min(1) }).strict().optional(),
-  limits: z.record(z.number().nonnegative()).optional(),
+  limits: z.record(z.string(), z.number().nonnegative()).optional(),
   escalationTarget: z.string().min(1).max(128).optional(),
 }).strict().superRefine((rule, context) => {
   if (rule.effect === "REQUIRE_APPROVAL" && !rule.approval) context.addIssue({ code: z.ZodIssueCode.custom, path: ["approval"], message: "approval is required" });

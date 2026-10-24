@@ -83,7 +83,7 @@ export async function verifyDelivery(token: string, input: {
     payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
   }
   if (!key || !verifyAuditSignature(key, signingMaterial, parts[2])) throw new Error("Invalid Relay signature.");
-  const claims = z.object({ iss: z.string(), aud: z.string(), jti: z.string(), iat: z.number().int(), exp: z.number().int(), envelope: z.record(z.unknown()) }).strict().parse(payload);
+  const claims = z.object({ iss: z.string(), aud: z.string(), jti: z.string(), iat: z.number().int(), exp: z.number().int(), envelope: z.record(z.string(), z.unknown()) }).strict().parse(payload);
   const current = Math.floor(Date.now() / 1000);
   if (claims.iss !== input.issuer || claims.aud !== input.audience || claims.iat > current + 5 || claims.exp <= current || claims.exp - claims.iat > 60 || claims.envelope.id !== claims.jti) throw new Error("Relay claims are invalid or expired.");
   const envelope = envelopeSchema.parse(claims.envelope);
