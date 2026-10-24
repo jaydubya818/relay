@@ -116,7 +116,7 @@ MyEve `a82fbfacb6a9300d1880db022efd922bb8ffabc8` (`codex/beta-qa-adoption-202610
 
 Vite `7.3.7` is a direct devDependency as well as an override: the inherited lockfile did not re-resolve the override alone (`7.3.6` remained until the direct pin).
 
-**`3ca9a59` is unselected.** It lacked the exact-branch Vercel guard and added skipped exhaustion cases. Not a freeze.
+**`3ca9a59` is HISTORICAL / UNSELECTED, not a freeze.** Docs blob `c74d2604dc3c9968d10ce7b50a719ee778c0517d` lines 119/123 recorded **673 passed / 8 skipped** and “two nested-brace glob patterns … stay skipped” as current. Those two skips were 3ca-only. `67a8fc6` inherited that same docs blob (`c74d2604`); the 673/8 text was a handoff mismatch against 67a source, which has **no such skips**.
 
 ## Publication guard, Node 24 owner-browser, withdrawn braces advisory (`67a8fc6`)
 
@@ -130,7 +130,20 @@ Vite `7.3.7` is a direct devDependency as well as an override: the inherited loc
 
 **GHSA-vfj7-8cjw-p6xm** withdrawn 2026-10-23T12:53:02Z (not practically exploitable). Do not call `braces@3.0.3` an active high finding. Successor test records official 15.5.28 identity, no `patchedDependencies`/aliases/`auditConfig`, `typescript-eslint@8.48.0` tinyglobby, and ordinary glob compatibility. Nested-pattern exhaustion cases are retired with that withdrawn advisory, not skipped. Empty `pnpm audit` is not chain-absence.
 
-**Local qualify of `67a8fc6`:** typecheck, lint, `db:check`, `pnpm audit` empty, ordinary `test:ci` **669 passed / 6 skipped** (6 prior live skips preserved; 6f's 6 exhaustion cases retired = 674−6+1), performance 2/2, build Next.js 15.5.28, owner-browser **18/18 on Node 24.22.1** with `RELAY_OWNER_SKIP_VISUAL=true`. Graph-absence security qualification stays **HOLD** for independent review of this successor contract.
+**Retired-case accounting (ordinary `test:ci`):** 6f official `40047434000` = 674 PASS + 6 SKIP + 1 FAIL (681). 3ca local = 673 PASS + 8 SKIP (681; the extra 2 skips are UNSELECTED). 67a retirement of 6 exhaustion cases + 1 metadata pass = **669 PASS + 6 SKIP** (675). No new skips on 67a.
+
+**Official runs (do not treat cancelled 67a quality as PASS):**
+
+| Run | SHA | Result |
+| --- | --- | --- |
+| Quality `40047434000` / `120732260306` | `6f881e4` | 674 PASS / 6 SKIP / 1 FAIL (history) |
+| Browser `40047434097` | `6f881e4` | SUCCESS at Node 22.5.0 (history; not this runtime) |
+| Quality `40049825143` | `67a8fc6` | **cancelled** mid-`test:ci` |
+| Browser `40049825062` / `120739812233` | `67a8fc6` | SUCCESS, Node **v24.21.0**, 18 passed |
+| Quality `40050392088` / `120741661102` | `f05a563` (67a source + docs) | SUCCESS: frozen install, audit, frontier, dbcheck, types, lint, **669 passed / 6 skipped**, performance 2/2, Next.js 15.5.28 build |
+| Browser `40050392065` | `f05a563` | SUCCESS, Node **v24.21.0**, 18 passed |
+
+Graph-absence security qualification stays **HOLD** for independent review of the 67a successor contract. Empty `pnpm audit` is not chain-absence. 3ca 673/8 is not current.
 
 **`createRequire` contract for a82's missing imports:** `advanceRelayPolicyFence` / `flushRelayPolicyFences` / `forwardOwnerPolicyFence` resolve as functions from `lib/v2/policy/ordering.ts`; `configureV2PlatformBindings` accepts `remoteCapabilityPreparation`. Relay's own composed harness uses `createRequire`. a82 ESM `import()` loader seam stays with the MyEve sole writer. This tree does not repin MyEve.
 
