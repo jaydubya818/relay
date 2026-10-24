@@ -99,3 +99,29 @@ Official smallest supported corrections, staying on Next 15.5 maintenance:
 **Independent review of `2ea19ce`:** APPROVE, no findings, for the production-pin requirement. Official 15.5.28 / sharp 0.35.5 / source-map-js 1.2.2 match the GHSA first-patched lines. Residual notes only: optional/transitive metadata resolution is lockfile-durable; `.npmrc` audit-ignore is absent and not asserted. Merge of `#43` stays held.
 
 `ccd3287` evidence remains historical and is not a PASS for this changed dependency surface.
+
+## Canonical unified lineage reconciliation (same PR, 2026-10-23)
+
+MyEve `a82fbfacb6a9300d1880db022efd922bb8ffabc8` (`codex/beta-qa-adoption-20261023` / PR #101) composed against selected Relay `f7264e0a8df036c5fb505b61c55ad978f5a81f9e` failed before the real contracts: `f7264e0` lacked `lib/v2/policy/ordering.ts` (`advanceRelayPolicyFence` / `flushRelayPolicyFences` / `forwardOwnerPolicyFence`) and `V2PlatformBindings.remoteCapabilityPreparation`. Official unpaid run `40046116881` / job `120728121159` is that import gap. Production `fce3f8f` is unchanged. This is not an incident claim.
+
+**Reused canonical identity, not a competing tree.** Merge-base with this PR is `f340f1a29d09d3cc114577270972a91774a31fa2`. Canonical `231b286c909856914c9eeb369dd4d320006e410c` descends `b25a90c3ebeaeff731c26690e289331142dae904` and includes `12dec6dd1ecb2628fded8393cc2cd8da7fcd493e` (complete action identity/replay) and `5f77f85bc64af81f79bc93ec78287c6816360ec8` (canonical MyEve fixture isolation). First merge commit on this PR: `6f881e4e0d71a567d1047d0827a1fa2416d12328` (parents `f7264e0` + `231b286`).
+
+**Conflict files (4):** `lib/v2/passports.ts`, `package.json`, `pnpm-lock.yaml`, `vercel.json`. Drizzle `0000`–`0028` (59 files): 0 hash mismatches. No SQL rewrite, no new production migration.
+
+| Keep from this PR | Take from `231b286` | Not taken |
+| --- | --- | --- |
+| Sofie/MCP tests, QA remediations, `ignoreCommand` | policy-fence/admission, remote-capability preparation, native receiving, identity/replay, UNKNOWN retention, default-denial | `patchedDependencies` / `.pnpmfile.cjs` for `@next/eslint-plugin-next@15.5.27` |
+| `zod@4.6.7` v4 default export; passport `agentPassportObjectSchema.pick()` (no `innerType()`) | Vitest `4.1.12`, Vite `7.3.7`, `typescript-eslint` `8.48.0`, engines `>=22.12.0`, brace-expansion / esbuild overrides | Next `15.5.27` |
+| `next` / `eslint-config-next` `15.5.28`, `next>sharp` `0.35.5`, `source-map-js` `1.2.2`, `undici@8.12.3` | ordered fence routes and tests | private plugin patch that swapped `fast-glob` for `tinyglobby` |
+
+Vite `7.3.7` is a direct devDependency as well as an override: the inherited lockfile did not re-resolve the override alone (`7.3.6` remained until the direct pin).
+
+**Local qualify (docs SHA after this note):** `pnpm typecheck`, `pnpm lint`, `RELAY_DATABASE_URL` `pnpm db:check`, `pnpm audit` and `pnpm audit --prod` empty, `pnpm test:ci` **673 passed / 8 skipped** (ordinary, no `RELAY_MYEVE_TESTS`; 6 prior live skips + 2 residual nested-brace glob cases), `pnpm test:performance` 2/2, `pnpm build` (`Next.js 15.5.28`, new fence/lease routes present), owner-browser 18/18 with `RELAY_OWNER_SKIP_VISUAL=true`. Canonical MyEve channel fixture against `14f07f403ffeac07f9ba5839130e38849dafefed` (workflow pin, `npm ci --include=dev`): `tests/v2/channel-myeve.integration.test.mjs` 1/1 with `RELAY_MYEVE_TESTS=1`. Auth, isolation, capability denial, passport, money, federation, Sofie in-process MCP, native admission, remote-capability leases, and policy-propagation suites are in the 673.
+
+**`createRequire` contract for a82's missing imports:** `advanceRelayPolicyFence` / `flushRelayPolicyFences` / `forwardOwnerPolicyFence` resolve as functions from `lib/v2/policy/ordering.ts`; `configureV2PlatformBindings` accepts `remoteCapabilityPreparation`. Relay's own composed harness (`scripts/qualify-capability-composed.mjs`) uses `createRequire` and matches that shape.
+
+**Residuals, kept explicit.** Official `@next/eslint-plugin-next@15.5.28` still depends on `fast-glob@3.3.1`; two nested-brace glob patterns still overflow on that official `get-root-dirs`. Those two cases stay skipped. Do not reintroduce the 15.5.27 tinyglobby `patchedDependencies` hook. `typescript-eslint@8.48.0` continues to use `tinyglobby`. `pnpm audit` empty is not a substitute for `tests/unit/production-advisory-tree.test.ts` or `tests/unit/zod-advisory-tree.test.ts`.
+
+**Loader shape for a82's ESM `import()`:** with this package not `"type": "module"`, `node --import tsx` dynamic `import()` of Relay `.ts` files exposes named exports on `default` only. a82 `scripts/composed-admission/relay-fixture.mts` destructures named exports from `import(pathToFileURL(...))`. That is MyEve's fixture loader seam (MyEve sole writer). This PR does not add `type: module` or change a82. Full a82 composed-admission (MissionControl `f9bcd0d` + Convex) is **NOT_RUN** here.
+
+MyEve workflow pins remain `f7264e0` until the coordinator's independent source + official CI review of this successor. This tree does not repin MyEve. Merge/deploy, grants, testers, billing, and production aliases stay held. Broader MissionControl remains deferred.
