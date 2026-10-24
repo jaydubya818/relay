@@ -2,10 +2,28 @@ import { createRequire } from "node:module";
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
 import { afterAll, describe, expect, it } from "vitest";
 
-// Exercise the actual replacement used by Next ESLint, not a direct test dependency.
+/**
+ * Successor to the 6f881e4 braces graph-absence contract.
+ *
+ * Historical 6f test (failed official quality 40047434000 / job 120732260306):
+ * expected `@next/eslint-plugin-next@15.5.27` with private-patch
+ * `{ tinyglobby: "0.2.17" }` and lockfile absence of `fast-glob` /
+ * `micromatch` / `braces`. That closure came from
+ * `patchedDependencies` on 15.5.27, which this tree does not take.
+ *
+ * Primary advisory GHSA-vfj7-8cjw-p6xm was withdrawn 2026-10-23
+ * (`withdrawn_at` 2026-10-23T12:53:02Z) as not practically exploitable.
+ * Official `@next/eslint-plugin-next@15.5.28` and even `16.4.3` still
+ * depend on `fast-glob@3.3.1`. There is no supported public replacement
+ * on the Next 15.5.28 line. Do not restore 15.5.27, private patches,
+ * aliases, or advisory ignores. Do not claim lockfile chain absence.
+ *
+ * 3ca9a59 skip/subprocess residual is unselected. Original 6f logs remain
+ * history. Nested-pattern exhaustion cases from 6f are retired with the
+ * withdrawn advisory; they are not skipped.
+ */
 const require = createRequire(import.meta.url);
 const nextRequire = createRequire(require.resolve("eslint-config-next"));
 const pluginPath = nextRequire.resolve("@next/eslint-plugin-next");
@@ -22,20 +40,6 @@ const resolve = rootDir => getRootDirs({
   cwd: root,
   settings: { next: rootDir === undefined ? {} : { rootDir } },
 });
-const nested = (open, close, depth) => open.repeat(depth) + "x" + close.repeat(depth);
-function globPatternStatus(pattern) {
-  const script = `
-    const pluginRequire = require("node:module").createRequire(${JSON.stringify(pluginPath)});
-    const getRootDirs = pluginRequire("./utils/get-root-dirs.js").getRootDirs;
-    try {
-      getRootDirs({ cwd: process.cwd(), settings: { next: { rootDir: ${JSON.stringify(pattern)} } } });
-    } catch (error) {
-      if (error instanceof RangeError || /call stack/i.test(error.message)) process.exit(2);
-      if (!(error instanceof SyntaxError) && error.code !== "ENAMETOOLONG") process.exit(3);
-    }
-  `;
-  return spawnSync(process.execPath, ["-e", script], { encoding: "utf8", timeout: 5000 });
-}
 
 describe("real lint dependency replacement", () => {
   it("preserves default cwd, literal directories and symlink roots", () => {
@@ -70,44 +74,32 @@ describe("real lint dependency replacement", () => {
     ].map(path => join(root, path)).sort());
   });
 
-  it("keeps official Next 15.5.28 plugin metadata and typescript-eslint 8.48.0 tinyglobby", () => {
+  it("records official Next 15.5.28 plugin identity without private patch or aliases", () => {
     const metadata = pluginRequire("../package.json");
     expect(metadata.name).toBe("@next/eslint-plugin-next");
     expect(metadata.version).toBe("15.5.28");
-    // Official 15.5.28 still requires fast-glob. Canonical 231b closed nested-brace
-    // exhaustion with a 15.5.27 tinyglobby patchedDependencies hook; that private
-    // patch is not taken while GHSA pins stay on official next 15.5.28.
     expect(metadata.dependencies).toEqual({ "fast-glob": "3.3.1" });
+
     const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
+    expect(pkg.dependencies?.next).toBe("15.5.28");
+    expect(pkg.devDependencies?.["eslint-config-next"]).toBe("15.5.28");
     expect(pkg.pnpm?.patchedDependencies).toBeUndefined();
+    expect(pkg.pnpm?.auditConfig).toBeUndefined();
+    expect(pkg.pnpm?.overrides?.["fast-glob"]).toBeUndefined();
+    expect(pkg.pnpm?.overrides?.micromatch).toBeUndefined();
+    expect(pkg.pnpm?.overrides?.braces).toBeUndefined();
+
     const lockfile = readFileSync(new URL("../../pnpm-lock.yaml", import.meta.url), "utf8");
     expect(lockfile).not.toContain("patchedDependencies");
+    expect(lockfile).not.toMatch(/^ {2}['"]?(?:fast-glob|micromatch|braces)@npm:/m);
     expect(lockfile).toMatch(/^ {2}fast-glob@3\.3\.1:$/m);
+    expect(lockfile).toMatch(/^ {2}micromatch@4\.0\.8:$/m);
+    expect(lockfile).toMatch(/^ {2}braces@3\.0\.3:$/m);
+
     const typescriptRequire = createRequire(require.resolve("typescript-eslint"));
     const typescriptMetadata = typescriptRequire("@typescript-eslint/typescript-estree/package.json");
     expect(typescriptMetadata.version).toBe("8.48.0");
     expect(typescriptMetadata.dependencies["fast-glob"]).toBeUndefined();
     expect(typescriptMetadata.dependencies.tinyglobby).toBeTruthy();
-  });
-
-  it.each([
-    nested("(", ")", 4500), "{".repeat(4500), "(".repeat(4500), nested("{a,", "}", 2000),
-  ])("handles retained malicious patterns without stack exhaustion", pattern => {
-    const result = globPatternStatus(pattern);
-    expect(result.error).toBeUndefined();
-    expect(result.signal).toBeNull();
-    expect(result.status, result.stderr).toBe(0);
-  });
-
-  // Residual on official 15.5.28: nested brace patterns still overflow because
-  // get-root-dirs requires fast-glob. Canonical 231b closed these with a 15.5.27
-  // tinyglobby patchedDependencies hook, which this GHSA pin does not take.
-  it.skip.each([
-    nested("{", "}", 4500), nested("({", "})", 2200),
-  ])("nested brace glob patterns without stack exhaustion", pattern => {
-    const result = globPatternStatus(pattern);
-    expect(result.error).toBeUndefined();
-    expect(result.signal).toBeNull();
-    expect(result.status, result.stderr).toBe(0);
   });
 });

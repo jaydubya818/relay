@@ -4,6 +4,7 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
+      "cursor/sofie-relay-tool-execution-e098": false,
       "codex/ir01-identity-fix-20261021": false,
       "codex/peer-message-answers": false,
       "codex/grant-never-expire": false,
