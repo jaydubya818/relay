@@ -1,0 +1,75 @@
+RUN  v3.2.4 /Users/jaywest/Documents/ChatGPT/MissoionControl_Enterprise_Factory_of_Factories/worktrees/Relay-capabilities
+
+ ✓ tests/federation/federation.test.ts (24 tests) 62099ms
+   ✓ federation trust boundaries > retires an outgoing peer and cancels its event in the receiving account  8413ms
+   ✓ federation trust boundaries > serializes incoming Knowledge requests and publication with retirement  7929ms
+   ✓ federation trust boundaries > persists a metadata-only signed denial receipt after authorization rolls back  7506ms
+   ✓ federation trust boundaries > qualifies the two-owner golden path from publication through work and artifact sharing  13754ms
+   ✓ federation trust boundaries > rejects caller spoofing, forged registration ownership, sibling agents, and unrelated result readers  1076ms
+   ✓ federation trust boundaries > rechecks revoke before delivery  4384ms
+   ✓ federation trust boundaries > rechecks version before delivery  1183ms
+   ✓ federation trust boundaries > rechecks delete before delivery  708ms
+   ✓ federation trust boundaries > rechecks block before delivery  500ms
+   ✓ federation trust boundaries > rechecks rotate before delivery  566ms
+   ✓ federation trust boundaries > rejects unpublished records, hidden reasoning, and mismatched versions  620ms
+   ✓ federation trust boundaries > deduplicates concurrent admission, bounds redelivery, and separates offline delivery from acceptance  704ms
+   ✓ federation trust boundaries > returns written answers only for the exact authorized request and receiving peer  615ms
+   ✓ federation trust boundaries > keeps message authority separate and allows local refusal  669ms
+   ✓ federation trust boundaries > bounds work, rejects privilege escalation, and returns evidence  689ms
+   ✓ federation trust boundaries > uses shared approvals, denies default policy even with an approval floor, and resumes exact approved delivery  718ms
+   ✓ federation trust boundaries > shares expiring audience-bound artifacts and rejects forged work context  659ms
+   ✓ federation trust boundaries > enforces public query policy and excludes private metadata from discovery  574ms
+   ✓ federation trust boundaries > rejects expired requests and enforces durable rate limits  1610ms
+   ✓ federation trust boundaries > preserves identity through credential rotation and applies owner grants without transferring Agent-specific grants  1070ms
+   ✓ federation trust boundaries > keeps MCP semantics identical and completes authenticated messaging  4306ms
+   ✓ federation trust boundaries > indexes only explicitly public profiles and view metadata  3779ms
+ ✓ tests/v2/leases.test.ts (14 tests) 14824ms
+   ✓ Relay V2 capability leases and workload identity > Passport revocation fences existing leases and durably requests backend cleanup  2770ms
+   ✓ Relay V2 capability leases and workload identity > rejects a prior ALLOW decision after account policy activates DENY while preserving an admitted lease  2160ms
+   ✓ Relay V2 capability leases and workload identity > serializes concurrent lease calls and revocation without resurrecting authority  892ms
+   ✓ Relay V2 capability leases and workload identity > binds original action digests while keeping secret-bearing evidence redacted  671ms
+   ✓ Relay V2 capability leases and workload identity > uses one-time proof-of-possession workload bootstrap with tenant binding  551ms
+   ✓ Relay V2 capability leases and workload identity > requires and atomically binds an action-scoped reservation for metered capabilities  656ms
+   ✓ Relay V2 capability leases and workload identity > rejects wrong tenant, audience, workload, resource, replay, and exhaustion at the reference PEP  604ms
+   ✓ Relay V2 capability leases and workload identity > atomically consumes approval while issuing a consequential lease  687ms
+   ✓ Relay V2 capability leases and workload identity > rejects child leases after parent revocation and reserves parent call authority  739ms
+   ✓ Relay V2 capability leases and workload identity > propagates emergency revocation within the online five-second SLO  849ms
+   ✓ Relay V2 capability leases and workload identity > denies offline financial leases and detects cryptographic expiry  3054ms
+   ✓ Relay V2 capability leases and workload identity > permits only short low-risk read leases through an offline local counter  342ms
+   ✓ ordered remote lease issuance requires durable exact ACKs and preserves duplicate retry  485ms
+   ✓ a suspended canonical owner cannot turn a previously evaluated action into a new lease  361ms
+ ✓ tests/federation/message-policy.test.ts (3 tests) 2240ms
+   ✓ explicit owner peer-message policy > requires fresh password and exact owner/hash scope before allowing all six correlated directions  1284ms
+   ✓ explicit owner peer-message policy > rejects generic reserved-name policies and durable document tampering  445ms
+   ✓ explicit owner peer-message policy > preserves unrelated allowed capabilities while requiring facts for applicable message rules  510ms
+ ✓ tests/v2/passports.test.ts (5 tests) 1644ms
+   ✓ Relay V2 Agent Passport and runtime attribution > creates a draft Agent, signs a versioned Passport, and requires it for activation  410ms
+   ✓ Relay V2 Agent Passport and runtime attribution > quarantines a valid imported Passport without creating grants  307ms
+   ✓ Relay V2 Agent Passport and runtime attribution > rejects forged imports and cross-account Passport access  312ms
+   ✓ Relay V2 Agent Passport and runtime attribution > increments the revocation epoch and invokes incompatible-work revocation on trust downgrade  310ms
+   ✓ Relay V2 Agent Passport and runtime attribution > keeps product labels self-declared until trusted verification and isolates credentials  305ms
+ ✓ tests/v2/capability-administration.test.ts (5 tests) 1467ms
+   ✓ capability administration uses canonical Relay contracts > stages, step-up activates and retires the existing signed account bundle  411ms
+   ✓ capability administration uses canonical Relay contracts > denies cross-account and revoked administrative membership  306ms
+   ✓ capability administration uses canonical Relay contracts > rejects activating an older staged version after concurrent policy changes  416ms
+   ✓ capability administration uses canonical Relay contracts > version-fences agent eligibility and revokes the exact current Passport  331ms
+ ✓ tests/v2/policy.test.ts (6 tests) 1303ms
+   ✓ Relay V2 capability registry and policy engine > persists and reproduces the exact historic decision  335ms
+   ✓ Relay V2 capability registry and policy engine > accepts an authoritative fact observed while the resolver is running  314ms
+   ✓ Relay V2 capability registry and policy engine > requires action-bound step-up to activate account policy and rejects tenant substitution  340ms
+ ✓ tests/v2/policy-propagation.test.ts (2 tests) 656ms
+   ✓ authenticates exact event/account/installation and distinguishes delivery, fencing and cleanup  339ms
+   ✓ dedicated policy deliveries cannot starve unrelated outbox publication  316ms
+ ✓ tests/v2/capability-administration-route.test.ts (4 tests) 5ms
+stdout | tests/v2/capability-maintenance.test.ts > one unavailable receiver cannot starve another owner revocation delivery
+{"level":"info","event":"maintenance_cycle","sandboxes":0,"browsers":0,"policyDeliveries":[{"accountId":"owner-a","owner":"DRAINED","relay":"PENDING_BACKEND"},{"accountId":"owner-b","owner":"DRAINED","relay":"DRAINED"}],"durationMs":0}
+
+stdout | tests/v2/capability-maintenance.test.ts > an owner-delivery failure preserves independent Relay and other-owner progress
+{"level":"info","event":"maintenance_cycle","sandboxes":0,"browsers":0,"policyDeliveries":[{"accountId":"owner-a","owner":"PENDING_BACKEND","relay":"DRAINED"},{"accountId":"owner-b","owner":"DRAINED","relay":"DRAINED"}],"durationMs":0}
+
+ ✓ tests/v2/capability-maintenance.test.ts (2 tests) 2ms
+
+ Test Files  9 passed (9)
+      Tests  65 passed (65)
+   Start at  10:03:49
+   Duration  95.28s (transform 2.20s, setup 0ms, collect 8.39s, tests 84.24s, environment 1ms, prepare 681ms)
