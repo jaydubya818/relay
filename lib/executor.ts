@@ -65,6 +65,7 @@ export async function executeCapability(input: {
       case "github.branch.get":
       case "github.workflow.list":
       case "github.run.list":
+      case "github.run.get":
       case "github.deployment.list":
       case "github.deployment.status.list":
         result = await githubProvider.execute(

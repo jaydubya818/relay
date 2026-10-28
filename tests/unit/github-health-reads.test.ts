@@ -17,6 +17,26 @@ function response(body: unknown, headers: Record<string, string> = {}, status = 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("bounded GitHub health reads", () => {
+  const detail = () => ({ id: 42, run_attempt: 2, head_sha: "a".repeat(40), repository: { id: 9001, full_name: "example/dashboard" } });
+  it("resolves a selected run's latest attempt using a fixed identity-bound GET", async () => {
+    const fetch = vi.fn().mockResolvedValue(response(detail())); vi.stubGlobal("fetch", fetch);
+    expect(await githubProvider.execute(secret, "run.get", { ...repository, runId: "42" })).toMatchObject({ id: 42, run_attempt: 2 });
+    expect(fetch.mock.calls[0][0]).toBe("https://api.github.com/repos/example/dashboard/actions/runs/42");
+    expect(fetch.mock.calls[0][1]).toMatchObject({ method: "GET", redirect: "manual" });
+  });
+  it.each([
+    { id: 43 }, { run_attempt: 0 }, { head_sha: "invalid" },
+    { repository: { id: 9001, full_name: "foreign/dashboard" } },
+    { repository: { id: 0, full_name: "example/dashboard" } },
+  ])("rejects substituted or malformed run identity: %j", async (override) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response({ ...detail(), ...override })));
+    await expect(githubProvider.execute(secret, "run.get", { ...repository, runId: "42" })).rejects.toMatchObject({ code: "PROVIDER_ERROR", capability: "github.actions.read" });
+  });
+  it.each(["0", "-1", "42/../1", "42?url=foreign", "0042"])("rejects unsafe run identifiers before fetch: %s", async (runId) => {
+    const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
+    await expect(githubProvider.execute(secret, "run.get", { ...repository, runId })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it.each(operations)("reads %s with a fixed GET path and explicit page coverage", async (operation, path, body) => {
     const fetch = vi.fn().mockResolvedValue(response(body));
     vi.stubGlobal("fetch", fetch);

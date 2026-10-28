@@ -27,8 +27,8 @@ describe("GitHub health MCP authorization", () => {
   it("does not expand an existing repository grant", async () => {
     const agent = await createAgent(accountId, { name: "Existing reader", capabilities: ["github.repo.read"] });
     expect((await names(agent.credential)).map((tool) => tool.name)).toEqual(["relay_github_repo_list", "relay_github_repo_get"]);
-    for (const name of ["relay_github_branch_list", "relay_github_branch_get", "relay_github_workflow_list", "relay_github_run_list", "relay_github_deployment_list", "relay_github_deployment_status_list"]) {
-      const input = { ...args, ...(name.endsWith("branch_get") ? { branch: "main" } : {}), ...(name.endsWith("status_list") ? { deploymentId: "1" } : {}) };
+    for (const name of ["relay_github_branch_list", "relay_github_branch_get", "relay_github_workflow_list", "relay_github_run_list", "relay_github_run_get", "relay_github_deployment_list", "relay_github_deployment_status_list"]) {
+      const input = { ...args, ...(name.endsWith("branch_get") ? { branch: "main" } : {}), ...(name.endsWith("status_list") ? { deploymentId: "1" } : {}), ...(name.endsWith("run_get") ? { runId: "42" } : {}) };
       await expect(call(agent.credential, name, input)).rejects.toMatchObject({ code: "CAPABILITY_DENIED" });
     }
     expect(fetch).not.toHaveBeenCalled();
@@ -37,7 +37,7 @@ describe("GitHub health MCP authorization", () => {
   it("advertises only separately granted families with bounded input schemas", async () => {
     const agent = await createAgent(accountId, { name: "Actions reader", capabilities: ["github.actions.read"] });
     const tools = await names(agent.credential);
-    expect(tools.map((tool) => tool.name)).toEqual(["relay_github_workflow_list", "relay_github_run_list"]);
+    expect(tools.map((tool) => tool.name)).toEqual(["relay_github_workflow_list", "relay_github_run_list", "relay_github_run_get"]);
     expect(tools[1].inputSchema).toMatchObject({ type: "object", required: ["owner", "repo"], additionalProperties: false, properties: { page: { maximum: 5 }, perPage: { maximum: 100 } } });
     await setCapabilityGrant(accountId, agent.agentId, "github.branch.read", "ALLOW");
     expect((await names(agent.credential)).map((tool) => tool.name)).toContain("relay_github_branch_get");
@@ -82,6 +82,27 @@ describe("GitHub health MCP authorization", () => {
     const agent = await createAgent(accountId, { name: "Reader", capabilities: ["github.actions.read"] });
     await revokeCredential(accountId, agent.agentId);
     await expect(call(agent.credential)).rejects.toMatchObject({ code: "REVOKED_CREDENTIAL" });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("resolves a current run attempt through the authorized account and then denies revocation", async () => {
+    fetch.mockImplementation(async (url: string) => new Response(JSON.stringify(url.endsWith("/user") ? { id: 1, login: "synthetic" } :
+      { id: 42, run_attempt: 2, head_sha: "a".repeat(40), repository: { id: 9001, full_name: "example/dashboard" } }), { headers: { "content-type": "application/json" } }));
+    const agent = await createAgent(accountId, { name: "Run detail reader", capabilities: ["github.actions.read"] });
+    await connectGitHub(accountId, "synthetic-owner-token"); fetch.mockClear();
+    const result = await call(agent.credential, "relay_github_run_get", { ...args, runId: "42" });
+    expect(JSON.parse((result as { content: { text: string }[] }).content[0].text)).toMatchObject({ id: 42, run_attempt: 2 });
+    expect(fetch).toHaveBeenCalledWith("https://api.github.com/repos/example/dashboard/actions/runs/42", expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer synthetic-owner-token" }) }));
+    await setCapabilityGrant(accountId, agent.agentId, "github.actions.read", "DENY"); fetch.mockClear();
+    await expect(call(agent.credential, "relay_github_run_get", { ...args, runId: "42" })).rejects.toMatchObject({ code: "CAPABILITY_DENIED" });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("does not borrow another account's connection or accept identity overrides for run detail", async () => {
+    await connectGitHub(accountId, "synthetic-other-owner-token");
+    const peer = await createAgent(await secondAccount(), { name: "Peer detail reader", capabilities: ["github.actions.read"] }); fetch.mockClear();
+    await expect(call(peer.credential, "relay_github_run_get", { ...args, runId: "42" })).rejects.toMatchObject({ code: "CONNECTION_REQUIRED" });
+    await expect(call(peer.credential, "relay_github_run_get", { ...args, runId: "42", accountId })).rejects.toMatchObject({ code: "INVALID_INPUT" });
     expect(fetch).not.toHaveBeenCalled();
   });
 });

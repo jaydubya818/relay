@@ -91,6 +91,11 @@ const toolDefinitions = {
     description: "Read one bounded workflow-run page, optionally filtered by branch, headSha and an ISO UTC created range of at most 24 hours. Incomplete coverage is not a health pass.",
     inputSchema: z.toJSONSchema(githubHealthSchemas["run.list"], { io: "input", target: "draft-07" }),
   },
+  relay_github_run_get: {
+    capability: "github.actions.read", action: "github.run.get", provider: "GITHUB",
+    description: "Read a selected run's current attempt through its repository and numeric runId. The response must match both identities; the caller must also bind workflow/ref/SHA and authorization context before resolving coverage.",
+    inputSchema: z.toJSONSchema(githubHealthSchemas["run.get"], { io: "input", target: "draft-07" }),
+  },
   relay_github_deployment_list: {
     capability: "github.deployment.read", action: "github.deployment.list", provider: "GITHUB",
     description: "Read one bounded page of deployment records, optionally filtered by ref and sha. A deployment record alone is not a successful deployment.",
@@ -237,6 +242,7 @@ const toolInputSchemas: Record<RelayToolName, z.ZodTypeAny> = {
   relay_github_branch_get: githubHealthSchemas["branch.get"],
   relay_github_workflow_list: githubHealthSchemas["workflow.list"],
   relay_github_run_list: githubHealthSchemas["run.list"],
+  relay_github_run_get: githubHealthSchemas["run.get"],
   relay_github_deployment_list: githubHealthSchemas["deployment.list"],
   relay_github_deployment_status_list: githubHealthSchemas["deployment.status.list"],
   relay_sandbox_create: z.object({

@@ -21,6 +21,7 @@ export const githubHealthSchemas = {
   "branch.get": z.object({ ...repository, branch }).strict(),
   "workflow.list": z.object({ ...repository, ...page }).strict(),
   "run.list": z.object({ ...repository, ...page, branch: branch.optional(), headSha: sha.optional(), created: created.optional() }).strict(),
+  "run.get": z.object({ ...repository, runId: z.string().regex(/^[1-9][0-9]{0,19}$/) }).strict(),
   "deployment.list": z.object({ ...repository, ...page, ref: branch.optional(), sha: sha.optional() }).strict(),
   "deployment.status.list": z.object({ ...repository, ...page, deploymentId: z.string().regex(/^[1-9][0-9]{0,19}$/) }).strict(),
 };
@@ -28,7 +29,7 @@ export const githubHealthSchemas = {
 const capabilities = {
   "repo.list": "github.repo.read", "repo.get": "github.repo.read",
   "branch.list": "github.branch.read", "branch.get": "github.branch.read",
-  "workflow.list": "github.actions.read", "run.list": "github.actions.read",
+  "workflow.list": "github.actions.read", "run.list": "github.actions.read", "run.get": "github.actions.read",
   "deployment.list": "github.deployment.read", "deployment.status.list": "github.deployment.read",
 } as const satisfies Record<string, CapabilityName>;
 
@@ -77,6 +78,7 @@ export async function executeGitHubHealthRead(secret: string, operation: keyof t
     case "branch.get": path = `${prefix}/branches/${encodeURIComponent((args as z.infer<typeof githubHealthSchemas["branch.get"]>).branch)}`; break;
     case "workflow.list": path = `${prefix}/actions/workflows`; break;
     case "run.list": path = `${prefix}/actions/runs`; break;
+    case "run.get": path = `${prefix}/actions/runs/${(args as z.infer<typeof githubHealthSchemas["run.get"]>).runId}`; break;
     case "deployment.list": path = `${prefix}/deployments`; break;
     case "deployment.status.list": path = `${prefix}/deployments/${(args as z.infer<typeof githubHealthSchemas["deployment.status.list"]>).deploymentId}/statuses`; break;
   }
@@ -99,6 +101,18 @@ export async function executeGitHubHealthRead(secret: string, operation: keyof t
     if (response.status === 403) throw new RelayError("CAPABILITY_DENIED", "GitHub did not permit this read.", capability, 403);
     if (!response.ok) throw new RelayError("PROVIDER_ERROR", `GitHub returned ${response.status}.`, capability, response.status === 404 ? 404 : 502);
     const body = await readJson(response, capability);
+    if (operation === "run.get") {
+      const identity = z.object({ id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+        run_attempt: z.number().int().positive().max(Number.MAX_SAFE_INTEGER), head_sha: sha,
+        repository: z.object({ id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER), full_name: z.string() }).passthrough(),
+      }).passthrough().safeParse(body);
+      const requested = args as z.infer<typeof githubHealthSchemas["run.get"]>;
+      if (!identity.success || String(identity.data.id) !== requested.runId ||
+        identity.data.repository.full_name.toLowerCase() !== `${args.owner}/${args.repo}`.toLowerCase()) {
+        throw new RelayError("PROVIDER_ERROR", "GitHub run identity is invalid.", capability, 502);
+      }
+      return body;
+    }
     if (operation === "branch.get") {
       if (!body || typeof body !== "object" || Array.isArray(body) || !("name" in body) || typeof body.name !== "string" || !("commit" in body) || !body.commit || typeof body.commit !== "object" || !("sha" in body.commit) || !sha.safeParse(body.commit.sha).success) throw new RelayError("PROVIDER_ERROR", "GitHub branch response is invalid.", capability, 502);
       return body;

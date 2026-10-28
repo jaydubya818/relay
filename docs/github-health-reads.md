@@ -8,7 +8,7 @@ continue to expose only repository list/get tools.
 | Capability | MCP tools | Provider operations |
 | --- | --- | --- |
 | `github.branch.read` | `relay_github_branch_list`, `relay_github_branch_get` | List branches; get one branch tip |
-| `github.actions.read` | `relay_github_workflow_list`, `relay_github_run_list` | List workflows; list workflow runs |
+| `github.actions.read` | `relay_github_workflow_list`, `relay_github_run_list`, `relay_github_run_get` | List workflows; list runs; read a run's current attempt |
 | `github.deployment.read` | `relay_github_deployment_list`, `relay_github_deployment_status_list` | List deployments; list deployment statuses |
 
 Each tool authenticates the existing Agent credential, checks its current
@@ -27,6 +27,12 @@ integer `page` (1–5, default 1) and `perPage` (1–100, default 100).
 `created` as two ISO UTC date-times separated by `..`, spanning at most 24 hours.
 `deployment.list` optionally accepts `ref` and `sha`. New input schemas reject
 unknown properties. Existing repository list/get contracts remain unchanged.
+`run.get` requires a positive decimal `runId` and returns one current provider
+run object. Its run ID and repository identity must match the requested path;
+attempt, repository ID and head SHA must be well formed. Adapters must additionally
+verify workflow/event/ref/SHA/creation identity against their selected list record,
+recheck authorization context and reject missing, older or substituted attempts.
+List pagination alone does not prove that a selected latest attempt is resolved.
 
 Each list response has `items`, `page`, `perPage`, `hasMore`, and, for Actions,
 `totalCount`. Branch get returns the provider branch object after checking its

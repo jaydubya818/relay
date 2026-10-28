@@ -24,7 +24,7 @@ V1 capability groups:
 - `relay_memory_search`, `relay_memory_get`, `relay_memory_list` → `memory.read`
 - `relay_github_repo_list`, `relay_github_repo_get` → `github.repo.read`
 - `relay_github_branch_list`, `relay_github_branch_get` → `github.branch.read`
-- `relay_github_workflow_list`, `relay_github_run_list` → `github.actions.read`
+- `relay_github_workflow_list`, `relay_github_run_list`, `relay_github_run_get` → `github.actions.read`
 - `relay_github_deployment_list`, `relay_github_deployment_status_list` → `github.deployment.read`
 
 The GitHub health read families require separate grants. See
