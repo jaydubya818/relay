@@ -188,6 +188,10 @@ The migration, seed and bootstrap scripts do not automatically load `.env.local`
 
 Runtime actions bind account, client, workload identity, canonical action, capability lease, resource and idempotency key. A successful submission means acceptance and wake-up are durable; it does not mean the requested effect has completed.
 
+OAuth verifier metadata must contain a finite, unexpired expiry. Malformed or
+expired metadata is denied before runtime lookup; verified claims still require
+a current, nonrevoked runtime registration in the same account.
+
 Use the [developer platform guide](docs/v2/developer-platform.md), [OpenAPI](docs/v2/openapi.yaml), [runtime compatibility matrix](docs/v2/runtime-compatibility.md), [TypeScript SDK](sdks/typescript), [Python SDK](sdks/python) and [V1 MCP guide](docs/mcp.md). Frozen V1 references remain protected by the V2 frontier check.
 
 ## Tests and release checks

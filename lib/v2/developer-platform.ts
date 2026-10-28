@@ -50,7 +50,8 @@ export async function authenticateDeveloperClient(input: {
   }
   if (!input.oauthVerifier) throw new RelayError("INVALID_CREDENTIAL", "OAuth access token verification is not configured.", undefined, 401);
   const claims = await input.oauthVerifier.verify({ token: input.credential, expectedResource: input.expectedResource });
-  if (claims.accountId !== input.accountId || claims.audience !== input.expectedResource || Date.parse(claims.expiresAt) <= Date.now()) {
+  const expiresAt = Date.parse(claims.expiresAt);
+  if (claims.accountId !== input.accountId || claims.audience !== input.expectedResource || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
     throw new RelayError("INVALID_CREDENTIAL", "OAuth token tenant, resource, or expiry is invalid.", undefined, 401);
   }
   const [runtime] = await db().select({ id: runtimeClients.id }).from(runtimeClients).where(and(
