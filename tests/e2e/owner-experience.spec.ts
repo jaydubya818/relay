@@ -74,6 +74,9 @@ for (const width of [1440, 768, 390]) {
     await expect(page.getByLabel("Fine-grained personal access token")).toHaveCount(0);
     await accessible(page);
     await primary.getByRole("link", { name: "Settings", exact: true }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+    await expect(page).toHaveTitle("Settings · Relay");
     await accessible(page);
   });
   test(`empty owner is understandable at ${width}px`, async ({ page }) => {

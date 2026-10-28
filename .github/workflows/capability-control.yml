@@ -1,0 +1,93 @@
+name: Capability administration qualification
+on:
+  push:
+    branches: [codex/unified-capability-control-plane]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm audit
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm exec eslint lib/v2/native-admission.ts lib/v2/policy/lifecycle-wire.ts tests/v2/native-admission.test.ts lib/v2/policy/ordering.ts lib/v2/policy/ordering-wire.ts lib/worker.ts tests/v2/capability-maintenance.test.ts lib/v2/policy/administration.ts lib/v2/policy/propagation.ts lib/v2/policy/service.ts lib/v2/passports.ts lib/v2/leases.ts tests/v2/policy-propagation.test.ts app/api/v2/operator/capability-policy/route.ts tests/v2/capability-administration.test.ts
+      - run: CAPABILITY_TEST_POSTGRES_BIN="$(pg_config --bindir)" node scripts/qualify-capability-administration.mjs
+      - run: CAPABILITY_TEST_POSTGRES_BIN="$(pg_config --bindir)" node scripts/qualify-native-composed.mjs
+      - run: pnpm build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capability-administration-evidence
+          path: docs/capability-control/evidence
+  native-owner-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      NODE_ENV: test
+      RELAY_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      RELAY_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/relay_ci
+      RELAY_SESSION_SECRET: synthetic-ci-only
+      RELAY_ENCRYPTION_KEY: synthetic-ci-only
+      RELAY_MYEVE_TESTS: '1'
+      RELAY_LIVE_PLAYWRIGHT: '1'
+      RELAY_LIVE_DOCKER: '1'
+      RELAY_DOCKER_BIN: docker
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Select the disposable MyEve checkout directory
+        run: echo "RELAY_MYEVE_SOURCE=$RUNNER_TEMP/relay-myeve-14f07f4" >> "$GITHUB_ENV"
+      - name: Materialize the exact public MyEve owner-channel source
+        run: |
+          git init "$RELAY_MYEVE_SOURCE"
+          git -C "$RELAY_MYEVE_SOURCE" fetch --depth=1 https://github.com/jaydubya818/MyEveBot.git 14f07f403ffeac07f9ba5839130e38849dafefed
+          git -C "$RELAY_MYEVE_SOURCE" checkout --detach FETCH_HEAD
+          test "$(git -C "$RELAY_MYEVE_SOURCE" rev-parse HEAD)" = 14f07f403ffeac07f9ba5839130e38849dafefed
+          npm ci --prefix "$RELAY_MYEVE_SOURCE" --include=dev
+          git -C "$RELAY_MYEVE_SOURCE" diff --exit-code HEAD
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: docker pull alpine:3.20
+      - name: Full regression with all six opt-in cases required
+        run: |
+          mkdir -p docs/capability-control/evidence
+          pnpm test:ci --reporter=default --reporter=json --outputFile=docs/capability-control/evidence/native-owner-regression.json
+          node --input-type=module -e 'import fs from "node:fs"; const r=JSON.parse(fs.readFileSync("docs/capability-control/evidence/native-owner-regression.json","utf8")); if (!r.success || r.numPendingTests !== 0 || r.numTodoTests !== 0) throw new Error("Full owner regression must pass without skipped or todo tests");'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-owner-regression-evidence
+          path: docs/capability-control/evidence/native-owner-regression.json

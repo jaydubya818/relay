@@ -23,6 +23,14 @@ V1 capability groups:
 - `relay_memory_add` → `memory.write`
 - `relay_memory_search`, `relay_memory_get`, `relay_memory_list` → `memory.read`
 - `relay_github_repo_list`, `relay_github_repo_get` → `github.repo.read`
+- `relay_github_branch_list`, `relay_github_branch_get` → `github.branch.read`
+- `relay_github_workflow_list`, `relay_github_run_list`, `relay_github_run_get` → `github.actions.read`
+- `relay_github_deployment_list`, `relay_github_deployment_status_list` → `github.deployment.read`
+
+The GitHub health read families require separate grants. See
+[the bounded read contract](github-health-reads.md) for pagination, provider
+permissions and failure semantics. Existing repository grants do not imply these
+new permissions.
 - `relay_email_search`, `relay_email_read` → Gmail read-only capabilities
 - `relay_calendar_event_list`, `relay_calendar_event_read`, `relay_calendar_availability_read` → Calendar reads
 - `relay_sandbox_*` → governed sandbox lifecycle, execution, and file operations

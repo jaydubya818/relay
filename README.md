@@ -159,7 +159,7 @@ The beta identity lifecycle supports pending invitation revocation and condition
 
 ## Local development
 
-Requirements: Node.js 22.5 or newer, pnpm 9, PostgreSQL, and Docker/Playwright only for relevant local provider/browser qualification.
+Requirements: Node.js 22.12 or newer, pnpm 9, PostgreSQL, and Docker/Playwright only for relevant local provider/browser qualification.
 
 ```bash
 git clone https://github.com/jaydubya818/relay.git
@@ -188,9 +188,45 @@ The migration, seed and bootstrap scripts do not automatically load `.env.local`
 
 Runtime actions bind account, client, workload identity, canonical action, capability lease, resource and idempotency key. A successful submission means acceptance and wake-up are durable; it does not mean the requested effect has completed.
 
+OAuth verifier metadata must contain a finite, unexpired expiry. Malformed or
+expired metadata is denied before runtime lookup; verified claims still require
+a current, nonrevoked runtime registration in the same account.
+
 Use the [developer platform guide](docs/v2/developer-platform.md), [OpenAPI](docs/v2/openapi.yaml), [runtime compatibility matrix](docs/v2/runtime-compatibility.md), [TypeScript SDK](sdks/typescript), [Python SDK](sdks/python) and [V1 MCP guide](docs/mcp.md). Frozen V1 references remain protected by the V2 frontier check.
 
 ## Tests and release checks
+
+On pull requests, the existing `quality` and `owner-browser` checks validate the
+merge candidate. The companion `reviewed-source-quality` and `reviewed-source-owner-browser`
+checks additionally check out the exact PR head and retain its actual commit,
+tree, checked-out workflow digest and executed workflow commit/ref. Verify the
+executed workflow bytes separately; its commit can differ from the checked-out
+source. Both contexts remain distinct qualification evidence; neither authorizes
+deployment or live execution. Repository check requirements are unchanged. See the [checkout documentation](https://github.com/actions/checkout/tree/v4#checkout-pull-request-head-commit-instead-of-merge-commit).
+
+The IR-01 correction binds lease use to the authenticated account, Agent, task,
+runtime client, workload and recomputed operation hash before online or offline
+call consumption. An explicit ActionIntent workload must match the trusted
+workload; omitting that optional field remains supported.
+
+Durable runtime action replay now compares every immutable intent field, the
+normalized workload and audience. Exact concurrent replay returns one command
+and consumes one lease call. A changed identity returns a conflict. Historical
+command payloads without the new identity digest fail closed on submission
+replay (409); inspect their original receipt through the existing read API
+instead of resubmitting under a new key.
+
+Run the focused identity, replay and concurrency regressions with a disposable
+local PostgreSQL URL:
+
+```sh
+RELAY_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/postgres \
+  pnpm exec vitest run tests/v2/leases.test.ts tests/v2/developer-platform.test.ts --fileParallelism=false
+```
+
+The correction branch `codex/ir01-identity-fix-20261021` explicitly disables
+Vercel Git deployments. Local regressions do not establish production qualification.
+
 
 ```bash
 pnpm v2:frontier:check
@@ -230,3 +266,18 @@ The current two-tester mission includes qualified owner-facing Relay only. It do
 | [`tests`](tests) | Authentication, isolation, protocol, provider and release tests |
 | [`docs/v2`](docs/v2) | Domain contracts, operations and dated qualification |
 | [`docs/federation`](docs/federation) | Federation contracts and historical campaigns |
+
+
+The optional Relay → MyEve component integration runs the exact MyEve source
+selected by `RELAY_MYEVE_SOURCE` in its own disposable database. This preserves
+MyEve migrations' canonical schema functions and keeps the two products' ledgers
+separate. With the local PostgreSQL URL above:
+
+```sh
+RELAY_MYEVE_TESTS=1 RELAY_MYEVE_SOURCE=/absolute/path/to/selected/MyEve \
+  pnpm exec vitest run tests/v2/channel-myeve.integration.test.mjs --testTimeout=30000 --hookTimeout=60000
+```
+
+This checks owner handoff, approval response loss, one effect, durable outcome
+and revocation across the real implementations. Provider and transport fixtures
+are synthetic; this does not qualify hosted or paid execution.

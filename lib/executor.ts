@@ -3,6 +3,7 @@ import { factoryRequest } from "@/lib/myfactory";
 import { recordActivity } from "@/lib/activity";
 import { authorize } from "@/lib/authorization";
 import { githubProvider } from "@/lib/connectors/github";
+import { githubActionCapability } from "@/lib/connectors/github-health";
 import { googleProvider } from "@/lib/connectors/google";
 import { githubSecret, googleSecret } from "@/lib/connections";
 import { RelayError } from "@/lib/errors";
@@ -25,6 +26,9 @@ export async function executeCapability(input: {
   let status: ActivityStatus = "SUCCESS";
   try {
     await authorize(input.principal, input.capability);
+    if (input.action.startsWith("github.") && githubActionCapability(input.action) !== input.capability) {
+      throw new RelayError("CAPABILITY_DENIED", "The GitHub operation must match the authorized capability.", input.capability, 403);
+    }
     if (input.action.startsWith("factory.workorder.") && input.capability !== input.action) {
       throw new RelayError("CAPABILITY_DENIED", "The factory operation must match the authorized capability.", input.capability, 403);
     }
@@ -57,9 +61,16 @@ export async function executeCapability(input: {
         break;
       case "github.repo.list":
       case "github.repo.get":
+      case "github.branch.list":
+      case "github.branch.get":
+      case "github.workflow.list":
+      case "github.run.list":
+      case "github.run.get":
+      case "github.deployment.list":
+      case "github.deployment.status.list":
         result = await githubProvider.execute(
           await githubSecret(input.principal.accountId),
-          input.action === "github.repo.list" ? "repo.list" : "repo.get",
+          input.action.slice("github.".length),
           input.arguments,
         );
         break;
