@@ -196,6 +196,14 @@ Use the [developer platform guide](docs/v2/developer-platform.md), [OpenAPI](doc
 
 ## Tests and release checks
 
+On pull requests, the existing `quality` and `owner-browser` checks validate the
+merge candidate. The companion `reviewed-source-quality` and `reviewed-source-owner-browser`
+checks additionally check out the exact PR head and retain its actual commit,
+tree, checked-out workflow digest and executed workflow commit/ref. Verify the
+executed workflow bytes separately; its commit can differ from the checked-out
+source. Both contexts remain distinct qualification evidence; neither authorizes
+deployment or live execution. Repository check requirements are unchanged. See the [checkout documentation](https://github.com/actions/checkout/tree/v4#checkout-pull-request-head-commit-instead-of-merge-commit).
+
 The IR-01 correction binds lease use to the authenticated account, Agent, task,
 runtime client, workload and recomputed operation hash before online or offline
 call consumption. An explicit ActionIntent workload must match the trusted
