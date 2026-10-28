@@ -8,6 +8,7 @@ import { executeCapability } from "@/lib/executor";
 import { checkAgentRateLimit } from "@/lib/rate-limit";
 import type { CapabilityName } from "@/lib/types";
 import { touchAgentSession } from "@/lib/agent-sessions";
+import { githubHealthSchemas } from "@/lib/connectors/github-health";
 
 type McpRequest = { jsonrpc?: string; id?: string | number | null; method?: string; params?: any };
 
@@ -69,6 +70,36 @@ const toolDefinitions = {
     provider: "GITHUB",
     description: "Read a repository through the account-level GitHub connection.",
     inputSchema: { type: "object", required: ["owner", "repo"], properties: { owner: { type: "string" }, repo: { type: "string" } } },
+  },
+  relay_github_branch_list: {
+    capability: "github.branch.read", action: "github.branch.list", provider: "GITHUB",
+    description: "Read one bounded page of repository branches. Requires a separate branch-read grant; hasMore indicates incomplete coverage.",
+    inputSchema: z.toJSONSchema(githubHealthSchemas["branch.list"], { io: "input", target: "draft-07" }),
+  },
+  relay_github_branch_get: {
+    capability: "github.branch.read", action: "github.branch.get", provider: "GITHUB",
+    description: "Read the current commit of one repository branch through the account-owned connection.",
+    inputSchema: z.toJSONSchema(githubHealthSchemas["branch.get"], { io: "input", target: "draft-07" }),
+  },
+  relay_github_workflow_list: {
+    capability: "github.actions.read", action: "github.workflow.list", provider: "GITHUB",
+    description: "Read one bounded page of repository workflows. Does not establish an approved qualifying workflow catalog.",
+    inputSchema: z.toJSONSchema(githubHealthSchemas["workflow.list"], { io: "input", target: "draft-07" }),
+  },
+  relay_github_run_list: {
+    capability: "github.actions.read", action: "github.run.list", provider: "GITHUB",
+    description: "Read one bounded workflow-run page, optionally filtered by branch, headSha and an ISO UTC created range of at most 24 hours. Incomplete coverage is not a health pass.",
+    inputSchema: z.toJSONSchema(githubHealthSchemas["run.list"], { io: "input", target: "draft-07" }),
+  },
+  relay_github_deployment_list: {
+    capability: "github.deployment.read", action: "github.deployment.list", provider: "GITHUB",
+    description: "Read one bounded page of deployment records, optionally filtered by ref and sha. A deployment record alone is not a successful deployment.",
+    inputSchema: z.toJSONSchema(githubHealthSchemas["deployment.list"], { io: "input", target: "draft-07" }),
+  },
+  relay_github_deployment_status_list: {
+    capability: "github.deployment.read", action: "github.deployment.status.list", provider: "GITHUB",
+    description: "Read one bounded page of statuses for a numeric deploymentId. Never creates or changes deployment state.",
+    inputSchema: z.toJSONSchema(githubHealthSchemas["deployment.status.list"], { io: "input", target: "draft-07" }),
   },
   relay_sandbox_create: {
     capability: "sandbox.create", action: "sandbox.create", provider: "SANDBOX",
@@ -202,6 +233,12 @@ const toolInputSchemas: Record<RelayToolName, z.ZodTypeAny> = {
   }),
   relay_github_repo_list: z.object({}),
   relay_github_repo_get: z.object({ owner: z.string().trim().min(1).max(100), repo: z.string().trim().min(1).max(100) }),
+  relay_github_branch_list: githubHealthSchemas["branch.list"],
+  relay_github_branch_get: githubHealthSchemas["branch.get"],
+  relay_github_workflow_list: githubHealthSchemas["workflow.list"],
+  relay_github_run_list: githubHealthSchemas["run.list"],
+  relay_github_deployment_list: githubHealthSchemas["deployment.list"],
+  relay_github_deployment_status_list: githubHealthSchemas["deployment.status.list"],
   relay_sandbox_create: z.object({
     ttlSeconds: z.number().int().min(60).max(86_400).optional(), timeoutMs: z.number().int().min(100).max(120_000).optional(),
     cpuLimit: z.number().positive().max(4).optional(), memoryMb: z.number().int().min(64).max(4096).optional(),

@@ -21,6 +21,8 @@ const permissionLabels: Record<string, string> = {
   "factory.workorder.create": "Submit work", "factory.workorder.read": "Read work results",
   "memory.read": "Read memory", "memory.write": "Save memory", "memory.forget": "Remove memory",
   "github.repo.read": "Read repositories", "sandbox.create": "Start an execution environment",
+  "github.branch.read": "Read repository branches", "github.actions.read": "Read workflows and pipeline runs",
+  "github.deployment.read": "Read deployment status",
   "sandbox.exec": "Run commands", "sandbox.file.read": "Read files", "sandbox.file.write": "Write files",
   "sandbox.file.list": "List files", "sandbox.destroy": "Stop an execution environment",
   "browser.create": "Start a browser", "browser.navigate": "Open web pages", "browser.click": "Click on web pages",
