@@ -68,6 +68,7 @@ export async function requireRemoteAdmissionPolicy(transaction: RelayDatabase, i
     || permit.organizationId !== destination.organizationId || permit.incarnation !== destination.incarnation
     || permit.enrollmentVersion !== destination.enrollmentVersion || permit.expiresAt <= Date.now()
     || permit.issuedAt > Date.now() || destination.capabilityNames[permit.capabilityId] !== input.action.capability.name
+    || permit.budgetMicros !== 0
     || input.action.parameters.capabilityAdmissionDigest !== await policyMessageHash(permit)) throw Error('CAPABILITY_ADMISSION_SCOPE');
   const current = await epochRow(transaction, input.accountId), epoch = current?.payload as Epoch | undefined;
   if (!epoch || epoch.pending.length || canonicalHash(epoch.destinations) !== canonicalHash(config.destinations.filter(item => item.accountId === input.accountId)))
