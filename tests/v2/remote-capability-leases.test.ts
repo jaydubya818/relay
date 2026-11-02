@@ -88,11 +88,10 @@ async function remoteFixture(options: { approval?: boolean; metered?: boolean; s
   await withTransaction(async tx => { await lockActiveAccount(tx, f.accountId); await advanceRelayPolicyFence(tx, f.accountId); });
   await flushRelayPolicyFences(f.accountId);
   const issuedAt = Date.now();
-  f.action.parameters = {};
   const actionDigest = await admissionActionDigest(remoteAdmissionActionMaterial(f.action));
   const permit = { ...identity, kind: 'PERMIT' as const, authority: 'myeve' as const, version: 1, policyId: 'owner-policy-1', referenceId: crypto.randomUUID(), capabilityId: 'enterprise.fleet', requiredCapabilities: ['work', 'missioncontrol', 'enterprise.fleet'], registryVersion: 'qualification', agentId: f.agentId, agentRevision: 1, workId: 'work-1', missionId: 'mission-1', workGeneration: 1, actionDigest, budgetMicros: 0, issuedAt, expiresAt: issuedAt + 30000, sourcePermitHash: 'SELF' };
   const remoteAdmission = await signPolicyMessage(permit, source);
-  f.action.parameters = { capabilityAdmissionDigest: await policyMessageHash(permit) };
+  f.action.parameters = { ...f.action.parameters, capabilityAdmissionDigest: await policyMessageHash(permit) };
   f.action.canonicalHash = canonicalHash({ capability: f.action.capability, resource: f.action.resource, parameters: f.action.parameters });
   const policy = options.skipRemoteEvaluation ? f.policy : await evaluatePolicy({ accountId: f.accountId, action: f.action, resourceResolver: { resolveOwnership: async () => ({ name: 'resource.account_id', value: f.accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'fixture:1' }) } }, f.signer);
   const request = { action: f.action, workloadId: f.workload.workloadId, workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 1 as const, remoteAdmission, approvalRequestId: undefined as string | undefined, budgetReservationId: undefined as string | undefined };
@@ -156,6 +155,35 @@ it('rejects a signed permit that maps money or binds a different action', async 
   expect(await mismatched.json()).toMatchObject({ code: 'CAPABILITY_DENIED', message: 'CAPABILITY_ADMISSION_SCOPE' });
   expect(await db().select().from(capabilityLeases)).toHaveLength(0);
   expect((await f.send()).status).toBe(200);
+});
+
+it('rejects a signed permit after the resource or a parameter changes', async () => {
+  const f = await remoteFixture();
+  async function sendMutated(mutate: (action: ActionIntent) => void) {
+    const action: ActionIntent = {
+      ...f.action,
+      resource: { ...f.action.resource, ids: [...(f.action.resource.ids ?? [])], attributes: { ...f.action.resource.attributes } },
+      parameters: { ...f.action.parameters },
+    };
+    mutate(action);
+    action.canonicalHash = canonicalHash({ capability: action.capability, resource: action.resource, parameters: action.parameters });
+    await evaluatePolicy({
+      accountId: f.accountId, action, resourceResolver: {
+        resolveOwnership: async () => ({
+          name: 'resource.account_id', value: f.accountId, authoritative: true,
+          observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'fixture:1',
+        }),
+      },
+    }, f.signer);
+    return f.send({ ...f.request, action });
+  }
+  const resourceChanged = await sendMutated(action => { action.resource = { ...action.resource, ids: ['target-other'] }; });
+  expect(resourceChanged.status).toBe(403);
+  expect(await resourceChanged.json()).toMatchObject({ code: 'CAPABILITY_DENIED', message: 'CAPABILITY_ADMISSION_SCOPE' });
+  const parameterChanged = await sendMutated(action => { action.parameters = { ...action.parameters, operation: 'write' }; });
+  expect(parameterChanged.status).toBe(403);
+  expect(await parameterChanged.json()).toMatchObject({ code: 'CAPABILITY_DENIED', message: 'CAPABILITY_ADMISSION_SCOPE' });
+  expect(await db().select().from(capabilityLeases)).toHaveLength(0);
 });
 
 it('fails closed on disabled transport, wrong runtime/account, foreign identity, or changed Work proof', async () => {

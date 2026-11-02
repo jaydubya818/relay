@@ -4,7 +4,7 @@ import {withTransaction,type RelayDatabase} from '@/lib/db';
 import {runtimeClients,controlOutbox,policyDecisions} from '@/lib/db/schema';
 import {lockActiveAccount} from '@/lib/account-fence';
 import {RelayError} from '@/lib/errors';
-import {actionIntentSchema,canonicalHash,type ActionIntent} from './contracts';
+import {actionIntentSchema,canonicalHash} from './contracts';
 import {authenticateDeveloperClient,type DeveloperAccessTokenVerifier} from './developer-platform';
 import {boundedRemotePort,boundedRemoteSigner,boundedRemoteResolver,REMOTE_CAPABILITY_DEADLINE_MS} from './remote-capability-transport';
 import {requireRuntimeActionsEnabled} from './deployment';
@@ -15,7 +15,9 @@ import {evaluatePolicyInTransaction,type PolicyResourceResolver,type PolicyFactR
 import {createApprovalRequestInTransaction} from './approvals';
 import {requireCurrentAgentPassport} from './passports';
 import {requireRemoteAdmissionPolicy} from './policy/ordering';
-import {admissionActionDigest,verifyPolicyMessage,policyMessageHash,type AdmissionPermit} from './policy/ordering-wire';
+import {verifyPolicyMessage,policyMessageHash} from './policy/ordering-wire';
+
+export {remoteAdmissionActionMaterial} from './policy/ordering';
 
 export const remoteLeaseRequestSchema=z.object({
  action:actionIntentSchema,workloadId:z.string().regex(/^wkl_/).max(200),workloadIdentityToken:z.string().min(1).max(16384),
@@ -26,27 +28,11 @@ export const remoteLeaseRequestSchema=z.object({
 type RemoteInput={accountId:string;credential:string;expectedResource:string;request:unknown;oauthVerifier?:DeveloperAccessTokenVerifier};
 type RemoteContext={transaction:RelayDatabase;request:z.infer<typeof remoteLeaseRequestSchema>;current:Awaited<ReturnType<typeof requireRemoteAdmissionPolicy>>;signer:AuditSigner;resolver:LeaseKeyResolver};
 
-/** Exact action material hashed into a MyEve PERMIT. The source-permit digest is excluded to avoid a cycle. */
-export function remoteAdmissionActionMaterial(action: ActionIntent) {
-  const { capabilityAdmissionDigest: _sourceReference, ...parameters } = action.parameters;
-  void _sourceReference;
-  return { schemaVersion: 'relay.remote-action.v1' as const, action: {
-    id: action.id, accountId: action.accountId, agentId: action.agentId, runtimeClientId: action.runtimeClientId,
-    taskId: action.taskId, workloadId: action.workloadId, capability: action.capability, resource: action.resource,
-    parameters, idempotencyKey: action.idempotencyKey,
-  } };
-}
-
 function denyCapability(error: unknown): never {
   if (error instanceof RelayError) throw error;
   if (error instanceof Error && error.message.startsWith('CAPABILITY_'))
     throw new RelayError('CAPABILITY_DENIED', error.message, undefined, 403);
   throw error;
-}
-
-async function assertRemoteAdmissionActionBinding(permit: AdmissionPermit, action: ActionIntent) {
-  if (permit.actionDigest !== await admissionActionDigest(remoteAdmissionActionMaterial(action)))
-    throw new RelayError('CAPABILITY_DENIED', 'CAPABILITY_ADMISSION_SCOPE', undefined, 403);
 }
 
 async function withRemoteContext<T>(input:RemoteInput,signer:AuditSigner,resolver:LeaseKeyResolver,operation:(context:RemoteContext)=>Promise<T>){
@@ -68,7 +54,6 @@ async function withRemoteContext<T>(input:RemoteInput,signer:AuditSigner,resolve
   let current: Awaited<ReturnType<typeof requireRemoteAdmissionPolicy>>;
   try {
     current=await requireRemoteAdmissionPolicy(transaction,{accountId:input.accountId,action:request.action,source:request.remoteAdmission});
-    await assertRemoteAdmissionActionBinding(current.permit,request.action);
   } catch (error) { denyCapability(error); }
   await validateWorkloadForPreparation(transaction,{accountId:input.accountId,...request},resolver);
   return operation({transaction,request,current,signer,resolver});

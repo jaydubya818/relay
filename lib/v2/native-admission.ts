@@ -8,6 +8,7 @@ import { actionIntentSchema, canonicalHash, type ActionIntent } from '@/lib/v2/c
 import { appendAuditRecordInTransaction } from '@/lib/v2/evidence/audit';
 import type { AuditSigner } from '@/lib/v2/evidence/crypto';
 import { authenticateWorkloadToken, authorizeLeaseCallInTransaction, issueCapabilityLeaseInTransaction, type LeaseKeyResolver } from '@/lib/v2/leases';
+import { remoteAdmissionActionMaterial } from '@/lib/v2/policy/ordering';
 import { admissionActionDigest, assertPolicyIdentity, policyMessageHash, verifyPolicyMessage,
   type AdmissionPermit, type Fence, type PolicyKey, type SignedPolicyMessage } from '@/lib/v2/policy/ordering-wire';
 
@@ -48,15 +49,9 @@ export interface NativeReceivingHost {
     leaseId: string; idempotencyKey: string; requestHash: string }): Promise<{ commandId: string }>;
 }
 
-/** Exact action material; the source-permit digest itself is excluded to avoid a cycle. */
-export function nativeAdmissionActionMaterial(binding: NativeWorkBinding, action: ActionIntent) {
-  const { capabilityAdmissionDigest: _sourceReference, ...parameters } = action.parameters;
-  void _sourceReference;
-  return { schemaVersion: 'relay.native-action.v1', binding, action: {
-    id: action.id, accountId: action.accountId, agentId: action.agentId, runtimeClientId: action.runtimeClientId,
-    taskId: action.taskId, workloadId: action.workloadId, capability: action.capability, resource: action.resource, parameters,
-    idempotencyKey: action.idempotencyKey,
-  } };
+/** Same action digest as remote HTTP/in-process admission. Binding is enforced via permit work fields and execution material. */
+export function nativeAdmissionActionMaterial(_binding: NativeWorkBinding, action: ActionIntent) {
+  return remoteAdmissionActionMaterial(action);
 }
 function deny(reason: string): never { throw new Error(`NATIVE_ADMISSION_${reason}`); }
 function matchEnrollment(binding: NativeWorkBinding, host: NativeReceivingHost) {
@@ -110,7 +105,7 @@ export async function admitNativeCommand(input: { binding: NativeWorkBinding; le
   const source = await verifyPolicyMessage(input.source, host.enrollment.sourceKey);
   if (source.kind !== 'PERMIT' || source.authority !== 'myeve') deny('SOURCE_REQUIRED');
   if (source.budgetMicros !== 0) deny('MONETARY_MAPPING_UNQUALIFIED');
-  if (source.actionDigest !== await admissionActionDigest(nativeAdmissionActionMaterial(binding, action))
+  if (source.actionDigest !== await admissionActionDigest(remoteAdmissionActionMaterial(action))
     || action.parameters.capabilityAdmissionDigest !== await policyMessageHash(source)) deny('ACTION_INTEGRITY');
   const { workloadIdentityToken: _credential, ...leaseMaterial } = input.lease;
   void _credential;

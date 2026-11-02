@@ -4,7 +4,7 @@ import { controlOutbox } from '@/lib/db/schema';
 import { lockAccountDelivery } from '@/lib/account-fence';
 import { id, now } from '@/lib/ids';
 import { canonicalHash, type ActionIntent } from '@/lib/v2/contracts';
-import { assertPolicyIdentity, policyMessageHash, signPolicyMessage, verifyPolicyMessage,
+import { admissionActionDigest, assertPolicyIdentity, policyMessageHash, signPolicyMessage, verifyPolicyMessage,
   type Fence, type PolicyKey, type SignedPolicyMessage, type AdmissionPermit } from './ordering-wire';
 
 export type OrderedDestination = {
@@ -57,6 +57,17 @@ export async function advanceRelayPolicyFence(transaction: RelayDatabase, accoun
     aggregateId: accountId, type: 'capability.epoch', payload: epoch, idempotencyKey: epochKey, publishedAt: now() });
 }
 
+/** Exact action material hashed into a MyEve PERMIT. The source-permit digest is excluded to avoid a cycle. */
+export function remoteAdmissionActionMaterial(action: ActionIntent) {
+  const { capabilityAdmissionDigest: _sourceReference, ...parameters } = action.parameters;
+  void _sourceReference;
+  return { schemaVersion: 'relay.remote-action.v1' as const, action: {
+    id: action.id, accountId: action.accountId, agentId: action.agentId, runtimeClientId: action.runtimeClientId,
+    taskId: action.taskId, workloadId: action.workloadId, capability: action.capability, resource: action.resource,
+    parameters, idempotencyKey: action.idempotencyKey,
+  } };
+}
+
 export async function requireRemoteAdmissionPolicy(transaction: RelayDatabase, input: {accountId:string;action:ActionIntent;source:SignedPolicyMessage}) {
   const config = orderingConfiguration();
   const untrusted = JSON.parse(input.source.message) as AdmissionPermit;
@@ -69,6 +80,7 @@ export async function requireRemoteAdmissionPolicy(transaction: RelayDatabase, i
     || permit.enrollmentVersion !== destination.enrollmentVersion || permit.expiresAt <= Date.now()
     || permit.issuedAt > Date.now() || destination.capabilityNames[permit.capabilityId] !== input.action.capability.name
     || permit.budgetMicros !== 0
+    || permit.actionDigest !== await admissionActionDigest(remoteAdmissionActionMaterial(input.action))
     || input.action.parameters.capabilityAdmissionDigest !== await policyMessageHash(permit)) throw Error('CAPABILITY_ADMISSION_SCOPE');
   const current = await epochRow(transaction, input.accountId), epoch = current?.payload as Epoch | undefined;
   if (!epoch || epoch.pending.length || canonicalHash(epoch.destinations) !== canonicalHash(config.destinations.filter(item => item.accountId === input.accountId)))
