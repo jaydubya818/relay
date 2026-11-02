@@ -34,15 +34,15 @@ function closed(): RelayError {
 }
 
 function deny(reason: CapabilityFailureCode): RelayError {
-  return new RelayError('CAPABILITY_DENIED', reason, undefined, 403);
+  return new RelayError('CAPABILITY_DENIED', reason, undefined, 403, undefined, reason);
+}
+
+function pending(reason: CapabilityFailureCode, retryAfterSeconds: number): RelayError {
+  return new RelayError('CAPABILITY_PENDING', reason, undefined, 409, retryAfterSeconds, reason);
 }
 
 function unavailable(reason: CapabilityFailureCode, retryAfterSeconds?: number): RelayError {
-  return new RelayError('CONNECTION_REQUIRED', reason, undefined, 503, retryAfterSeconds);
-}
-
-function conflict(reason: CapabilityFailureCode, retryAfterSeconds: number): RelayError {
-  return new RelayError('CONNECTION_REQUIRED', reason, undefined, 409, retryAfterSeconds);
+  return new RelayError('CAPABILITY_UNAVAILABLE', reason, undefined, 503, retryAfterSeconds, reason);
 }
 
 export function mapCapabilityFailure(reason: string): RelayError {
@@ -56,6 +56,7 @@ export function mapCapabilityFailure(reason: string): RelayError {
   switch (code) {
     case 'CAPABILITY_ACK_MISMATCH':
     case 'CAPABILITY_ACK_SUPERSEDED':
+    case 'CAPABILITY_ACK_TOO_LARGE':
     case 'CAPABILITY_ADMISSION_SCOPE':
     case 'CAPABILITY_ENROLLMENT_CHANGED':
     case 'CAPABILITY_FENCE_CONFLICT':
@@ -70,10 +71,9 @@ export function mapCapabilityFailure(reason: string): RelayError {
     case 'CAPABILITY_SIGNATURE_INVALID':
       return deny(code);
     case 'CAPABILITY_PROPAGATION_PENDING':
-      return conflict(code, 1);
+      return pending(code, 1);
     case 'CAPABILITY_DELIVERY_UNAVAILABLE':
       return unavailable(code, 1);
-    case 'CAPABILITY_ACK_TOO_LARGE':
     case 'CAPABILITY_DESTINATION_LIMIT':
     case 'CAPABILITY_ENROLLMENT_UNAVAILABLE':
     case 'CAPABILITY_ENDPOINT_UNQUALIFIED':
@@ -85,4 +85,10 @@ export function mapCapabilityFailure(reason: string): RelayError {
       return closed();
     }
   }
+}
+
+export function asCapabilityRelayError(error: unknown): RelayError | undefined {
+  if (error instanceof RelayError) return error;
+  if (error instanceof Error && error.message.startsWith('CAPABILITY_')) return mapCapabilityFailure(error.message);
+  return undefined;
 }

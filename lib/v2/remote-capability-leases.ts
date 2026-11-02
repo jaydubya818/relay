@@ -15,7 +15,7 @@ import {evaluatePolicyInTransaction,type PolicyResourceResolver,type PolicyFactR
 import {createApprovalRequestInTransaction} from './approvals';
 import {requireCurrentAgentPassport} from './passports';
 import {requireRemoteAdmissionPolicy} from './policy/ordering';
-import {mapCapabilityFailure} from './policy/capability-failures';
+import {asCapabilityRelayError} from './policy/capability-failures';
 import {verifyPolicyMessage,policyMessageHash} from './policy/ordering-wire';
 
 export {remoteAdmissionActionMaterial} from './policy/ordering';
@@ -30,9 +30,7 @@ type RemoteInput={accountId:string;credential:string;expectedResource:string;req
 type RemoteContext={transaction:RelayDatabase;request:z.infer<typeof remoteLeaseRequestSchema>;current:Awaited<ReturnType<typeof requireRemoteAdmissionPolicy>>;signer:AuditSigner;resolver:LeaseKeyResolver};
 
 function denyCapability(error: unknown): never {
-  if (error instanceof RelayError) throw error;
-  if (error instanceof Error && error.message.startsWith('CAPABILITY_')) throw mapCapabilityFailure(error.message);
-  throw error;
+  throw asCapabilityRelayError(error) ?? error;
 }
 
 async function withRemoteContext<T>(input:RemoteInput,signer:AuditSigner,resolver:LeaseKeyResolver,operation:(context:RemoteContext)=>Promise<T>){
