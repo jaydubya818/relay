@@ -14,6 +14,7 @@ export class RelayError extends Error {
     message: string,
     public readonly capability?: string,
     public readonly status = 400,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = "RelayError";

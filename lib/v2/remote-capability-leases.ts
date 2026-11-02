@@ -15,6 +15,7 @@ import {evaluatePolicyInTransaction,type PolicyResourceResolver,type PolicyFactR
 import {createApprovalRequestInTransaction} from './approvals';
 import {requireCurrentAgentPassport} from './passports';
 import {requireRemoteAdmissionPolicy} from './policy/ordering';
+import {mapCapabilityFailure} from './policy/capability-failures';
 import {verifyPolicyMessage,policyMessageHash} from './policy/ordering-wire';
 
 export {remoteAdmissionActionMaterial} from './policy/ordering';
@@ -30,8 +31,7 @@ type RemoteContext={transaction:RelayDatabase;request:z.infer<typeof remoteLease
 
 function denyCapability(error: unknown): never {
   if (error instanceof RelayError) throw error;
-  if (error instanceof Error && error.message.startsWith('CAPABILITY_'))
-    throw new RelayError('CAPABILITY_DENIED', error.message, undefined, 403);
+  if (error instanceof Error && error.message.startsWith('CAPABILITY_')) throw mapCapabilityFailure(error.message);
   throw error;
 }
 
@@ -51,12 +51,11 @@ async function withRemoteContext<T>(input:RemoteInput,signer:AuditSigner,resolve
   const [runtime]=await transaction.select({id:runtimeClients.id}).from(runtimeClients).where(and(eq(runtimeClients.accountId,input.accountId),eq(runtimeClients.id,client.runtimeClientId),isNull(runtimeClients.revokedAt),sql`${runtimeClients.verificationStatus} <> 'REVOKED'`)).limit(1);
   if(!runtime)throw new RelayError('CAPABILITY_DENIED','Runtime authority was revoked.',undefined,403);
   await requireCurrentAgentPassport(input.accountId,request.action.agentId,signer,transaction);
-  let current: Awaited<ReturnType<typeof requireRemoteAdmissionPolicy>>;
   try {
-    current=await requireRemoteAdmissionPolicy(transaction,{accountId:input.accountId,action:request.action,source:request.remoteAdmission});
+    const current=await requireRemoteAdmissionPolicy(transaction,{accountId:input.accountId,action:request.action,source:request.remoteAdmission});
+    await validateWorkloadForPreparation(transaction,{accountId:input.accountId,...request},resolver);
+    return operation({transaction,request,current,signer,resolver});
   } catch (error) { denyCapability(error); }
-  await validateWorkloadForPreparation(transaction,{accountId:input.accountId,...request},resolver);
-  return operation({transaction,request,current,signer,resolver});
  });
 }
 

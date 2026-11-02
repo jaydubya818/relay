@@ -19,6 +19,8 @@ import { signPolicyMessage, verifyPolicyMessage, policyMessageHash, admissionAct
 import { remoteAdmissionActionMaterial } from '@/lib/v2/remote-capability-leases';
 import { POST } from '@/app/api/v2/runtime/capability-leases/route';
 import { POST as PREPARE } from '@/app/api/v2/runtime/capability-leases/prepare/route';
+import { errorResponse } from '@/lib/api';
+import { CAPABILITY_FAILURE_CODES } from '@/lib/v2/policy/capability-failures';
 import { cleanupDatabase, freshDatabase, secondAccount } from '../helpers';
 
 function proposedAction(accountId: string, agentId: string, runtimeClientId: string, capabilityName: string, target = "target-1"): ActionIntent {
@@ -98,7 +100,7 @@ async function remoteFixture(options: { approval?: boolean; metered?: boolean; s
   configureV2PlatformBindings({ signer: f.signer, keyResolver: f.resolver });
   const send = (body: unknown = request, accountId = f.accountId, credential = f.runtimeSecret) => POST(new Request('http://127.0.0.1/api/v2/runtime/capability-leases', { method: 'POST', headers: { authorization: `Bearer ${credential}`, 'x-relay-account-id': accountId, 'content-type': 'application/json' }, body: JSON.stringify(body) }));
   const prepare = (body: unknown = request) => PREPARE(new Request('http://127.0.0.1/api/v2/runtime/capability-leases/prepare', { method: 'POST', headers: { authorization: `Bearer ${f.runtimeSecret}`, 'x-relay-account-id': f.accountId, 'content-type': 'application/json' }, body: JSON.stringify(body) }));
-  return { ...f, policy, identity, permit, source, relay, transport, request, send, prepare };
+  return { ...f, policy, identity, permit, source, relay, destination, transport, request, send, prepare };
 }
 
 it('authenticates one canonical positive lease and recovers identical concurrent/lost-response retries without spending a call', async () => {
@@ -183,6 +185,74 @@ it('rejects a signed permit after the resource or a parameter changes', async ()
   const parameterChanged = await sendMutated(action => { action.parameters = { ...action.parameters, operation: 'write' }; });
   expect(parameterChanged.status).toBe(403);
   expect(await parameterChanged.json()).toMatchObject({ code: 'CAPABILITY_DENIED', message: 'CAPABILITY_ADMISSION_SCOPE' });
+  expect(await db().select().from(capabilityLeases)).toHaveLength(0);
+});
+
+const CAPABILITY_FAILURE_HTTP = [
+  { reason: 'CAPABILITY_ACK_MISMATCH', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_ACK_SUPERSEDED', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_ACK_TOO_LARGE', status: 503, code: 'CONNECTION_REQUIRED', retryAfter: null },
+  { reason: 'CAPABILITY_ADMISSION_SCOPE', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_DELIVERY_UNAVAILABLE', status: 503, code: 'CONNECTION_REQUIRED', retryAfter: '1' },
+  { reason: 'CAPABILITY_DESTINATION_LIMIT', status: 503, code: 'CONNECTION_REQUIRED', retryAfter: null },
+  { reason: 'CAPABILITY_ENROLLMENT_CHANGED', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_ENROLLMENT_UNAVAILABLE', status: 503, code: 'CONNECTION_REQUIRED', retryAfter: null },
+  { reason: 'CAPABILITY_ENDPOINT_UNQUALIFIED', status: 503, code: 'CONNECTION_REQUIRED', retryAfter: null },
+  { reason: 'CAPABILITY_FENCE_CONFLICT', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_FENCE_REQUIRED', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_INSTALLATION_UNQUALIFIED', status: 503, code: 'CONNECTION_REQUIRED', retryAfter: null },
+  { reason: 'CAPABILITY_LIFECYCLE_FUTURE', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_LIFECYCLE_INVALID', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_LIFECYCLE_SIGNATURE', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_OWNER_POLICY_STALE', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_POLICY_IDENTITY_MISMATCH', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_PROPAGATION_PENDING', status: 409, code: 'CONNECTION_REQUIRED', retryAfter: '1' },
+  { reason: 'CAPABILITY_PROTOCOL_INVALID', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_REFERENCE_EXPIRED', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_SIGNATURE_INVALID', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_NOT_A_REAL_CODE', status: 500, code: 'INTERNAL_ERROR', retryAfter: null, message: 'Relay could not complete the request.' },
+] as const;
+
+it('maps every CAPABILITY_* code to a precise status and body with no lease', async () => {
+  expect(CAPABILITY_FAILURE_HTTP.map(row => row.reason).sort()).toEqual(
+    [...CAPABILITY_FAILURE_CODES, 'CAPABILITY_NOT_A_REAL_CODE'].sort(),
+  );
+  const f = await remoteFixture();
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    for (const row of CAPABILITY_FAILURE_HTTP) {
+      const response = errorResponse(new Error(row.reason));
+      expect(response.status, row.reason).toBe(row.status);
+      expect(await response.json(), row.reason).toEqual({ code: row.code, message: 'message' in row ? row.message : row.reason });
+      expect(response.headers.get('retry-after'), row.reason).toBe(row.retryAfter);
+    }
+  } finally { errors.mockRestore(); }
+
+  const [epoch] = await db().select().from(controlOutbox).where(eq(controlOutbox.aggregateType, 'capability_epoch'));
+  const payload = epoch.payload as { pending: string[] };
+  await db().update(controlOutbox).set({ payload: { ...payload, pending: ['pending-dest'] } }).where(eq(controlOutbox.id, epoch.id));
+  const pending = await f.send();
+  expect(pending.status).toBe(409);
+  expect(pending.headers.get('retry-after')).toBe('1');
+  expect(await pending.json()).toEqual({ code: 'CONNECTION_REQUIRED', message: 'CAPABILITY_PROPAGATION_PENDING' });
+  await db().update(controlOutbox).set({ payload: { ...payload, pending: [] } }).where(eq(controlOutbox.id, epoch.id));
+
+  vi.stubEnv('RELAY_CAPABILITY_COORDINATION_JSON', JSON.stringify({ signer: f.relay, destinations: [] }));
+  const enrollment = await f.send();
+  expect(enrollment.status).toBe(503);
+  expect(enrollment.headers.get('retry-after')).toBeNull();
+  expect(await enrollment.json()).toEqual({ code: 'CONNECTION_REQUIRED', message: 'CAPABILITY_ENROLLMENT_UNAVAILABLE' });
+
+  vi.stubEnv('VERCEL', '1');
+  const unqualified = await f.send();
+  expect(unqualified.status).toBe(503);
+  expect(await unqualified.json()).toEqual({ code: 'CONNECTION_REQUIRED', message: 'CAPABILITY_INSTALLATION_UNQUALIFIED' });
+  delete process.env.VERCEL;
+  vi.stubEnv('RELAY_CAPABILITY_COORDINATION_JSON', JSON.stringify({ signer: f.relay, destinations: [f.destination] }));
+
+  const forged = await f.send({ ...f.request, remoteAdmission: { ...f.request.remoteAdmission, signature: 'a'.repeat(88) } });
+  expect(forged.status).toBe(403);
+  expect(await forged.json()).toEqual({ code: 'CAPABILITY_DENIED', message: 'CAPABILITY_SIGNATURE_INVALID' });
   expect(await db().select().from(capabilityLeases)).toHaveLength(0);
 });
 

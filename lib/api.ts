@@ -1,5 +1,6 @@
 import { currentUser } from "@/lib/auth";
 import { RelayError } from "@/lib/errors";
+import { mapCapabilityFailure } from "@/lib/v2/policy/capability-failures";
 
 export async function requireApiUser() {
   const user = await currentUser();
@@ -16,7 +17,11 @@ export function verifySameOrigin(request: Request) {
 }
 
 export function errorResponse(error: unknown) {
-  if (error instanceof RelayError) return Response.json(error.toJSON(), { status: error.status });
+  if (error instanceof RelayError) {
+    const headers = error.retryAfterSeconds === undefined ? undefined : { "Retry-After": String(error.retryAfterSeconds) };
+    return Response.json(error.toJSON(), { status: error.status, headers });
+  }
+  if (error instanceof Error && error.message.startsWith("CAPABILITY_")) return errorResponse(mapCapabilityFailure(error.message));
   const cause = error instanceof Error ? error.cause : undefined;
   console.error(JSON.stringify({ level: "error", event: "api_error", message: error instanceof Error ? error.message : "Unknown error",
     causeCode: cause && typeof cause === "object" && "code" in cause ? String(cause.code) : undefined,
