@@ -1,3 +1,4 @@
+import { advanceRelayPolicyFence } from "@/lib/v2/policy/ordering";
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { db, withTransaction } from "@/lib/db";
@@ -96,6 +97,8 @@ export async function suspendPrincipal(input: { accountId: string; principalId: 
     const [principal] = await transaction.update(principals).set({ status: "SUSPENDED", updatedAt: now() }).where(eq(principals.id, input.principalId)).returning({ id: principals.id, userId: principals.userId });
     await transaction.update(accountMemberships).set({ status: "SUSPENDED", updatedAt: now() }).where(and(eq(accountMemberships.accountId, input.accountId), eq(accountMemberships.principalId, input.principalId)));
     if (principal?.userId) await transaction.update(userSessions).set({ revokedAt: now() }).where(eq(userSessions.userId, principal.userId));
+    for (const accountId of [...new Set(memberships.map(m => m.accountId))].sort())
+      await advanceRelayPolicyFence(transaction, accountId, "revoke");
     return principal;
   });
 }

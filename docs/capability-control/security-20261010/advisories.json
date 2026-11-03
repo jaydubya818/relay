@@ -1,0 +1,685 @@
+{
+  "schema": "relay.dependency-security-qualification.v1",
+  "date": "2026-10-10",
+  "sourceParent": "7ecb33bc2aa87faad312654bace8152562c63efd",
+  "before": {
+    "info": 0,
+    "low": 0,
+    "moderate": 8,
+    "high": 9,
+    "critical": 3
+  },
+  "after": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0
+  },
+  "advisories": [
+    {
+      "id": 1102341,
+      "module_name": "esbuild",
+      "severity": "moderate",
+      "title": "esbuild enables any website to send any requests to the development server and read the response",
+      "vulnerable_versions": "<=0.24.2",
+      "patched_versions": ">=0.25.0",
+      "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+      "findings": [
+        {
+          "version": "0.18.20",
+          "paths": [
+            ". > drizzle-kit@0.31.10 > @esbuild-kit/esm-loader@2.6.5 > @esbuild-kit/core-utils@3.3.2 > esbuild@0.18.20"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1139528,
+      "module_name": "vitest",
+      "severity": "critical",
+      "title": "When Vitest UI server is listening, arbitrary file can be read and executed",
+      "vulnerable_versions": "<3.2.6",
+      "patched_versions": ">=3.2.6",
+      "url": "https://github.com/advisories/GHSA-5xrq-8626-4rwp",
+      "findings": [
+        {
+          "version": "3.2.4",
+          "paths": [
+            ". > vitest@3.2.4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1193683,
+      "module_name": "vitest",
+      "severity": "moderate",
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+      "vulnerable_versions": ">=2.1.0 <4.1.11",
+      "patched_versions": ">=4.1.11",
+      "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+      "findings": [
+        {
+          "version": "3.2.4",
+          "paths": [
+            ". > vitest@3.2.4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1193684,
+      "module_name": "@vitest/mocker",
+      "severity": "moderate",
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+      "vulnerable_versions": ">=2.1.0 <4.1.11",
+      "patched_versions": ">=4.1.11",
+      "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+      "findings": [
+        {
+          "version": "3.2.4",
+          "paths": [
+            ". > vitest@3.2.4 > @vitest/mocker@3.2.4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1240100,
+      "module_name": "brace-expansion",
+      "severity": "moderate",
+      "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+      "vulnerable_versions": "<1.1.21",
+      "patched_versions": ">=1.1.21",
+      "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr",
+      "findings": [
+        {
+          "version": "1.1.18",
+          "paths": [
+            ". > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react-hooks@5.2.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react-hooks@5.2.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react-hooks@5.2.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1240101,
+      "module_name": "brace-expansion",
+      "severity": "moderate",
+      "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+      "vulnerable_versions": ">=2.0.0 <2.1.7",
+      "patched_versions": ">=2.1.7",
+      "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr",
+      "findings": [
+        {
+          "version": "2.1.4",
+          "paths": [
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1240103,
+      "module_name": "brace-expansion",
+      "severity": "moderate",
+      "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+      "vulnerable_versions": ">=4.0.0 <5.0.12",
+      "patched_versions": ">=5.0.12",
+      "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr",
+      "findings": [
+        {
+          "version": "5.0.9",
+          "paths": [
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1240104,
+      "module_name": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+      "vulnerable_versions": "<1.1.20",
+      "patched_versions": ">=1.1.20",
+      "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7",
+      "findings": [
+        {
+          "version": "1.1.18",
+          "paths": [
+            ". > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react-hooks@5.2.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react-hooks@5.2.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react-hooks@5.2.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1240105,
+      "module_name": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+      "vulnerable_versions": ">=2.0.0 <2.1.6",
+      "patched_versions": ">=2.1.6",
+      "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7",
+      "findings": [
+        {
+          "version": "2.1.4",
+          "paths": [
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1240107,
+      "module_name": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+      "vulnerable_versions": ">=4.0.0 <5.0.11",
+      "patched_versions": ">=5.0.11",
+      "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7",
+      "findings": [
+        {
+          "version": "5.0.9",
+          "paths": [
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1240108,
+      "module_name": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+      "vulnerable_versions": "<1.1.19",
+      "patched_versions": ">=1.1.19",
+      "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p",
+      "findings": [
+        {
+          "version": "1.1.18",
+          "paths": [
+            ". > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-jsx-a11y@6.10.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react@7.37.5 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react-hooks@5.2.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react-hooks@5.2.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-react-hooks@5.2.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > eslint@9.35.0 > @eslint/config-array@0.21.2 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > eslint@9.35.0 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5 > brace-expansion@1.1.18",
+            ". > typescript-eslint@8.42.0 > eslint@9.35.0 > minimatch@3.1.5 > brace-expansion@1.1.18"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1240109,
+      "module_name": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+      "vulnerable_versions": ">=2.0.0 <2.1.5",
+      "patched_versions": ">=2.1.5",
+      "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p",
+      "findings": [
+        {
+          "version": "2.1.4",
+          "paths": [
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > minimatch@9.0.9 > brace-expansion@2.1.4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1240111,
+      "module_name": "brace-expansion",
+      "severity": "high",
+      "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+      "vulnerable_versions": ">=4.0.0 <5.0.10",
+      "patched_versions": ">=5.0.10",
+      "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p",
+      "findings": [
+        {
+          "version": "5.0.9",
+          "paths": [
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/parser@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/type-utils@8.70.0 > @typescript-eslint/utils@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/eslint-plugin@8.70.0 > @typescript-eslint/utils@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9",
+            ". > eslint-config-next@15.5.24 > @typescript-eslint/parser@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1240992,
+      "module_name": "braces",
+      "severity": "high",
+      "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+      "vulnerable_versions": "<=3.0.3",
+      "patched_versions": "<0.0.0",
+      "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "findings": [
+        {
+          "version": "3.0.3",
+          "paths": [
+            ". > eslint-config-next@15.5.24 > @next/eslint-plugin-next@15.5.24 > fast-glob@3.3.1 > micromatch@4.0.8 > braces@3.0.3",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3",
+            ". > eslint-config-next@15.5.24 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.14.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3",
+            ". > eslint-config-next@15.5.24 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/type-utils@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/eslint-plugin@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/parser@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3",
+            ". > typescript-eslint@8.42.0 > @typescript-eslint/utils@8.42.0 > @typescript-eslint/typescript-estree@8.42.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1241209,
+      "module_name": "source-map-js",
+      "severity": "high",
+      "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets",
+      "vulnerable_versions": ">=1.0.0 <1.2.2",
+      "patched_versions": ">=1.2.2",
+      "url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q",
+      "findings": [
+        {
+          "version": "1.2.1",
+          "paths": [
+            ". > next@15.5.24 > postcss@8.5.23 > source-map-js@1.2.1",
+            ". > vitest@3.2.4 > @vitest/mocker@3.2.4 > vite@7.3.6 > postcss@8.5.28 > source-map-js@1.2.1",
+            ". > vitest@3.2.4 > vite@7.3.6 > postcss@8.5.28 > source-map-js@1.2.1",
+            ". > vitest@3.2.4 > vite-node@3.2.4 > vite@7.3.6 > postcss@8.5.28 > source-map-js@1.2.1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1241260,
+      "module_name": "tinypool",
+      "severity": "critical",
+      "title": "Tinypool: Prototype Pollution gadget in worker options leads to Remote Code Execution",
+      "vulnerable_versions": "<=2.1.0",
+      "patched_versions": ">=2.1.1",
+      "url": "https://github.com/advisories/GHSA-5gmw-xhrv-c9v3",
+      "findings": [
+        {
+          "version": "1.1.1",
+          "paths": [
+            ". > vitest@3.2.4 > tinypool@1.1.1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1241261,
+      "module_name": "tinypool",
+      "severity": "critical",
+      "title": "Tinypool: Prototype Pollution Gadget to RCE in run() options",
+      "vulnerable_versions": "<2.1.2",
+      "patched_versions": ">=2.1.2",
+      "url": "https://github.com/advisories/GHSA-85c8-ppgw-ccpr",
+      "findings": [
+        {
+          "version": "1.1.1",
+          "paths": [
+            ". > vitest@3.2.4 > tinypool@1.1.1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1241331,
+      "module_name": "sharp",
+      "severity": "high",
+      "title": "sharp : Vulnerability in librsvg dependency CVE-2026-96889",
+      "vulnerable_versions": "<0.35.5",
+      "patched_versions": ">=0.35.5",
+      "url": "https://github.com/advisories/GHSA-wq5f-xc86-pv6w",
+      "findings": [
+        {
+          "version": "0.35.4",
+          "paths": [
+            ". > next@15.5.24 > sharp@0.35.4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1241491,
+      "module_name": "next",
+      "severity": "moderate",
+      "title": "Next.js has cache poisoning of SSG and ISR pages in self-hosted applications",
+      "vulnerable_versions": ">=15.0.0 <15.5.27",
+      "patched_versions": ">=15.5.27",
+      "url": "https://github.com/advisories/GHSA-4jqv-mc3x-m676",
+      "findings": [
+        {
+          "version": "15.5.24",
+          "paths": [
+            ". > next@15.5.24"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1241494,
+      "module_name": "next",
+      "severity": "moderate",
+      "title": "Next.js has cache poisoning in SSG/ISR rendering that leads to cross-user content substitution and persistent denial of service",
+      "vulnerable_versions": ">=15.0.0 <15.5.27",
+      "patched_versions": ">=15.5.27",
+      "url": "https://github.com/advisories/GHSA-mcj8-r9mp-w47p",
+      "findings": [
+        {
+          "version": "15.5.24",
+          "paths": [
+            ". > next@15.5.24"
+          ]
+        }
+      ]
+    }
+  ],
+  "patchProvenance": {
+    "readOnlyConsumerCommit": "63ede56c41041855dab6de1379f0313ccbf26760",
+    "file": "patches/@next__eslint-plugin-next@15.5.27.patch",
+    "sha256": "e6c902eb5707486dbfb2b9f0d1c50785e0b6bfea1b8836530aebd07374b265ac"
+  },
+  "auditSuppressions": [],
+  "productionDeployments": 0
+}

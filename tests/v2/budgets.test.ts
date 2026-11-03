@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { budgets } from "@/lib/db/schema";
-import { createBudget, expireBudgetReservations, listBudgetEvents, listBudgets, reconcileBudgetReservation, releaseBudgetReservation, reserveBudget, setBudgetBalanceStatus } from "@/lib/v2/budgets";
+import { budgets, budgetReservations } from "@/lib/db/schema";
+import { createBudget, expireBudgetReservations, listBudgetEvents, listBudgets, markBudgetReservationUnknown, reconcileBudgetReservation, releaseBudgetReservation, reserveBudget, setBudgetBalanceStatus } from "@/lib/v2/budgets";
 import { createLocalEd25519Signer } from "@/lib/v2/evidence";
 import { createV2Agent } from "@/lib/v2/passports";
 import { capabilityDefinitionSchema } from "@/lib/v2/policy/contracts";
@@ -74,6 +74,27 @@ describe("Relay V2 budget engine", () => {
     const [row] = await db().select().from(budgets).where(eq(budgets.id, budget.budgetId));
     expect(row).toMatchObject({ consumedAmount: "6.000000000", balanceStatus: "UNKNOWN" });
     expect(expiring.reservationId).not.toBe(released.reservationId);
+  });
+
+  it("canonical expiration preserves UNKNOWN exposure and cannot release a foreign account reservation", async () => {
+    const fixture = await setup();
+    const budget = await createBudget({ accountId: fixture.accountId, actorPrincipalId: fixture.principalId, scope: "ACCOUNT", dimension: "CONNECTOR_CALLS", unit: "call", hardLimit: "5" }, fixture.signer);
+    const input = { accountId: fixture.accountId, leafBudgetId: budget.budgetId, agentId: fixture.agentId, taskId: "tsk_terminal", actionIntentId: "act_terminal", expiresAt: future(1) };
+    const unknown = await reserveBudget({ ...input, amount: "3", idempotencyKey: "unknown-terminal" }, fixture.signer);
+    const unused = await reserveBudget({ ...input, amount: "1", idempotencyKey: "unused-terminal" }, fixture.signer);
+    await markBudgetReservationUnknown({ accountId: fixture.accountId, reservationId: unknown.reservationId, reason: "Receiving acknowledgment unavailable; no authoritative usage" }, fixture.signer);
+    const foreign = await secondAccount();
+    expect(await expireBudgetReservations(foreign, fixture.signer, future(2))).toBe(0);
+    expect(await expireBudgetReservations(fixture.accountId, fixture.signer, future(2))).toBe(1);
+    expect(await expireBudgetReservations(fixture.accountId, fixture.signer, future(2))).toBe(0);
+    const rows = await db().select().from(budgetReservations);
+    expect(rows.find(row => row.id === unknown.reservationId)?.status).toBe("UNKNOWN");
+    expect(rows.find(row => row.id === unused.reservationId)?.status).toBe("EXPIRED");
+    const [retained] = await db().select().from(budgets).where(eq(budgets.id, budget.budgetId));
+    expect(retained).toMatchObject({ reservedAmount: "3.000000000", consumedAmount: "0.000000000", balanceStatus: "UNKNOWN" });
+    await expect(releaseBudgetReservation({ accountId: fixture.accountId, reservationId: unknown.reservationId }, fixture.signer)).rejects.toMatchObject({ status: 409 });
+    await expect(releaseBudgetReservation({ accountId: foreign, reservationId: unknown.reservationId }, fixture.signer)).rejects.toMatchObject({ status: 404 });
+    await expect(reconcileBudgetReservation({ accountId: fixture.accountId, reservationId: unknown.reservationId, actualAmount: "0", usageIdempotencyKey: "decline-is-not-usage", source: "factory-decline", occurredAt: new Date().toISOString() }, fixture.signer)).rejects.toMatchObject({ status: 404 });
   });
 
   it("fails closed for stale or unknown purchase balances", async () => {

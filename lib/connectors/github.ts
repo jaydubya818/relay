@@ -1,5 +1,6 @@
 import { RelayError } from "@/lib/errors";
 import type { ConnectorProvider } from "@/lib/connectors/types";
+import { executeGitHubHealthRead, isGitHubHealthOperation } from "@/lib/connectors/github-health";
 
 const API = "https://api.github.com";
 
@@ -22,7 +23,7 @@ async function githubRequest(secret: string, path: string) {
 
 export const githubProvider: ConnectorProvider = {
   provider: "GITHUB",
-  capabilities: () => ["github.repo.read"],
+  capabilities: () => ["github.repo.read", "github.branch.read", "github.actions.read", "github.deployment.read"],
   async health(secret) {
     try {
       const user = await githubRequest(secret, "/user") as { id: number; login: string; name?: string };
@@ -32,6 +33,7 @@ export const githubProvider: ConnectorProvider = {
     }
   },
   async execute(secret, operation, input) {
+    if (isGitHubHealthOperation(operation)) return executeGitHubHealthRead(secret, operation, input);
     if (operation === "repo.list") return githubRequest(secret, "/user/repos?per_page=50&sort=updated");
     if (operation === "repo.get") {
       const owner = encodeURIComponent(String(input.owner ?? ""));

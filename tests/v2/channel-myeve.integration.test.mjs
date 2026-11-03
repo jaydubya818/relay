@@ -1,5 +1,6 @@
 import { runChannelCancellationCycle } from '@/lib/v2/channels/cancellation';
 import { readFile,readdir } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { Pool } from 'pg';
 import { sql } from 'drizzle-orm';
@@ -18,8 +19,14 @@ import { cleanupDatabase,freshDatabase } from '../helpers';
 const myeve=process.env.RELAY_MYEVE_SOURCE;
 const suite=process.env.RELAY_MYEVE_TESTS==='1'&&myeve&&process.env.RELAY_TEST_DATABASE_URL?describe:describe.skip;
 suite('Relay to canonical MyEve component golden path',()=>{
- let pool,fixture,handoff,controller,Gateway,consumeAction,consumeProvider,snapshot,transition,research=0,draft=0,effects=0,lostApprovalResponse=false;
+ let pool,myeveDatabaseName,fixture,handoff,controller,Gateway,consumeAction,consumeProvider,snapshot,transition,research=0,draft=0,effects=0,lostApprovalResponse=false;
  const query=async(text,params=[])=>(await pool.query(text,params)).rows;
+ const dropMyeveDatabase=async()=>{
+  if(!myeveDatabaseName)return;
+  if(!/^relay_test_myeve_[a-f0-9]{32}$/.test(myeveDatabaseName))throw new Error('Unsafe qualification database name.');
+  const admin=new Pool({connectionString:process.env.RELAY_TEST_DATABASE_URL});
+  try{await admin.query(`DROP DATABASE IF EXISTS ${myeveDatabaseName}`);}finally{await admin.end();}
+ };
  const database={query,transaction:async(build)=>{const client=await pool.connect();try{await client.query('BEGIN');const statements=build((strings,...params)=>({text:strings.reduce((s,part,i)=>s+(i?`$${i}`:'')+part,''),params}));for(const statement of statements)await client.query(statement.text,statement.params);await client.query('COMMIT');}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}}};
  beforeAll(async()=>{
   const owner=await freshDatabase(),signer=createLocalEd25519Signer();
@@ -31,9 +38,14 @@ suite('Relay to canonical MyEve component golden path',()=>{
   const post=(text,updateId)=>webhook({update_id:updateId,message:{message_id:updateId,date:Math.floor(Date.now()/1000),from:{id:123,is_bot:false},chat:{id:123,type:'private'},text}});
   const challenge=await setupTelegramPairing(owner.accountId,owner.principalId,config);expect((await post(`/start ${new URL(challenge.url).searchParams.get('start')}`,1)).status).toBe(200);
   const [binding]=await rows(sql`SELECT id FROM telegram_bindings`);
-  const url=new URL(process.env.RELAY_DATABASE_URL);if(!/^relay_test_/.test(url.pathname.slice(1)))throw new Error('Isolated test database required.');
-  const admin=new Pool({connectionString:url.toString()});try{await admin.query('CREATE SCHEMA myeve_qualification');}finally{await admin.end();}
-  pool=new Pool({connectionString:url.toString(),options:'-c search_path=myeve_qualification'});
+  const url=new URL(process.env.RELAY_DATABASE_URL);if(!/^relay_test_/.test(url.pathname.slice(1))||!['127.0.0.1','localhost'].includes(url.hostname))throw new Error('Isolated local test database required.');
+  // Canonical MyEve SECURITY DEFINER functions pin their search_path to public.
+  // Use a separate disposable database; never rewrite those security boundaries.
+  myeveDatabaseName=`relay_test_myeve_${randomUUID().replaceAll('-','')}`;
+  const admin=new Pool({connectionString:process.env.RELAY_TEST_DATABASE_URL});
+  try{await admin.query(`CREATE DATABASE ${myeveDatabaseName}`);}finally{await admin.end();}
+  url.pathname=`/${myeveDatabaseName}`;
+  pool=new Pool({connectionString:url.toString()});
   const migrations=path.join(myeve,'apps/eve/migrations');for(const file of (await readdir(migrations)).filter(name=>name.endsWith('.sql')).sort())await query(await readFile(path.join(migrations,file),'utf8'));
   await query("INSERT INTO agents(id,owner_id,slug,name,role,instructions,is_primary,status,max_steps,max_runtime_seconds,max_estimated_cost_usd) VALUES('myeve-agent','myeve-owner','fixture','Fixture','Qualification','Synthetic qualification only',true,'active',8,60,0.1)");
   const trust={environment:'preview',audience:config.audience,keys:{[signer.keyId]:await signer.publicKeyPem()},mappings:[{relayAccountId:owner.accountId,relayOwnerPrincipalId:owner.principalId,relayAgentId:agentId,sourceIdentity:binding.id,ownerId:'myeve-owner',agentId:'myeve-agent',enabled:true}]};
@@ -46,7 +58,12 @@ suite('Relay to canonical MyEve component golden path',()=>{
   transition=(await import(path.join(myeve,'apps/eve/lib/task-runs.ts'))).transitionTask;
   fixture={...owner,agentId,signer,config,webhook,post,bindingId:binding.id};
  });
- afterAll(async()=>{await pool?.end();await cleanupDatabase();vi.restoreAllMocks();});
+ afterAll(async()=>{
+  try{await pool?.end();}
+  finally{
+   try{await dropMyeveDatabase();}finally{await cleanupDatabase();vi.restoreAllMocks();}
+  }
+ });
  const adapter={resolveTarget:async()=>({provider:'synthetic',account:'myeve-owner',resource:'/workspace/qualification.txt'}),execute:async(parameters,context)=>{await consumeAction(context,parameters,'files.write');await consumeProvider(context,parameters,'files.write');effects++;return {};},verify:async()=>({verified:true,receipt:{id:'synthetic-artifact'}})};
  it('resumes once across a lost response and propagates subsequent revocation',async()=>{
   const transport=new HttpOwnerExecutor({endpoint:fixture.config.endpoint,audience:fixture.config.audience,environment:'preview',signer:fixture.signer},async(_url,init)=>{

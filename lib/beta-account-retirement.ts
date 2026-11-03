@@ -1,3 +1,4 @@
+import { advanceRelayPolicyFence } from "@/lib/v2/policy/ordering";
 import { sql } from "drizzle-orm";
 import { db, withTransaction, type RelayDatabase } from "@/lib/db";
 import { RelayError } from "@/lib/errors";
@@ -109,6 +110,7 @@ export async function retireDisposableBetaAccount(input: { accountId: string; ow
       WHERE published_at IS NULL AND cancelled_at IS NULL AND
         (account_id=${input.accountId} OR (aggregate_type='federation_request' AND aggregate_id IN
           (SELECT id FROM federation_requests WHERE account_id=${input.accountId} OR target_account_id=${input.accountId})))`);
+    await advanceRelayPolicyFence(transaction, input.accountId, "revoke");
     await transaction.execute(sql`UPDATE memories SET content='',forgotten_at=coalesce(forgotten_at,${timestamp}),updated_at=${timestamp}
       WHERE account_id=${input.accountId} AND (content<>'' OR forgotten_at IS NULL)`);
     await transaction.execute(sql`UPDATE delegation_context_entries SET content_snapshot='' WHERE account_id=${input.accountId} AND content_snapshot<>''`);

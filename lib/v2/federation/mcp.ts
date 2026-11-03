@@ -35,7 +35,7 @@ export async function handleFederationMcp(secret: string, value: unknown, bindin
     } else if (request.method === "ping") result = {};
     else if (request.method === "tools/list") result = { tools: tools.map(([name, operation]) => ({ name, description: `Federation ${operation}; receiving platform authorization is required.`, inputSchema: toolSchema(operation) })) };
     else if (request.method === "tools/call") {
-      const params = z.object({ name: z.string(), arguments: z.record(z.unknown()).default({}) }).strict().parse(request.params);
+      const params = z.object({ name: z.string(), arguments: z.record(z.string(), z.unknown()).default({}) }).strict().parse(request.params);
       const tool = tools.find(([name]) => name === params.name);
       if (!tool) throw new RelayError("INVALID_INPUT", "Unknown federation tool.");
       const operation = tool[1];

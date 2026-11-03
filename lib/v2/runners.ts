@@ -13,7 +13,7 @@ import { requireMembership } from "@/lib/v2/identity";
 import { lockActiveAccount } from "@/lib/account-fence";
 
 const digestSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
-const assignmentPayloadSchema = z.object({ command: z.array(z.string().max(10_000)).min(1).max(100), environment: z.record(z.string().max(10_000)).default({}), credentialHandles: z.array(z.string().regex(/^vlt_[A-Za-z0-9_-]{8,}$/)).max(100).default([]), gatewayResourceIds: z.array(z.string().regex(/^pgr_/)).max(100).default([]) }).strict();
+const assignmentPayloadSchema = z.object({ command: z.array(z.string().max(10_000)).min(1).max(100), environment: z.record(z.string(), z.string().max(10_000)).default({}), credentialHandles: z.array(z.string().regex(/^vlt_[A-Za-z0-9_-]{8,}$/)).max(100).default([]), gatewayResourceIds: z.array(z.string().regex(/^pgr_/)).max(100).default([]) }).strict();
 const attestationSchema = z.object({ format: z.string().max(64), document: z.string().max(100_000), nonce: z.string().max(512) }).strict();
 type Assurance = "registered" | "attested";
 

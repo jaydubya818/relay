@@ -23,6 +23,14 @@ V1 capability groups:
 - `relay_memory_add` → `memory.write`
 - `relay_memory_search`, `relay_memory_get`, `relay_memory_list` → `memory.read`
 - `relay_github_repo_list`, `relay_github_repo_get` → `github.repo.read`
+- `relay_github_branch_list`, `relay_github_branch_get` → `github.branch.read`
+- `relay_github_workflow_list`, `relay_github_run_list`, `relay_github_run_get` → `github.actions.read`
+- `relay_github_deployment_list`, `relay_github_deployment_status_list` → `github.deployment.read`
+
+The GitHub health read families require separate grants. See
+[the bounded read contract](github-health-reads.md) for pagination, provider
+permissions and failure semantics. Existing repository grants do not imply these
+new permissions.
 - `relay_email_search`, `relay_email_read` → Gmail read-only capabilities
 - `relay_calendar_event_list`, `relay_calendar_event_read`, `relay_calendar_availability_read` → Calendar reads
 - `relay_sandbox_*` → governed sandbox lifecycle, execution, and file operations
@@ -60,4 +68,6 @@ JSON-RPC errors include machine-readable `error.data`:
 }
 ```
 
-Other stable codes are `INVALID_CREDENTIAL`, `REVOKED_CREDENTIAL`, `CONNECTION_REQUIRED`, `PROVIDER_ERROR`, `RATE_LIMITED`, `INVALID_INPUT`, and `INTERNAL_ERROR`.
+V1 `/mcp` grant denials and GitHub-disconnect `CONNECTION_REQUIRED` keep that shape. Other stable codes are `INVALID_CREDENTIAL`, `REVOKED_CREDENTIAL`, `CONNECTION_REQUIRED`, `PROVIDER_ERROR`, `RATE_LIMITED`, `INVALID_INPUT`, `CAPABILITY_PENDING`, `CAPABILITY_UNAVAILABLE`, and `INTERNAL_ERROR`.
+
+Capability-control failures on V2 surfaces (`POST /api/v2/runtime/capability-leases`, `POST /api/v2/mcp`) add structured `reason` (the precise thrown `CAPABILITY_*` code) and `retryAfter` (seconds) when a retry is appropriate. Those fields are omitted on V1 grant denials. See [installed lease transport](capability-control/installed-lease-transport.md#failure-mapping).

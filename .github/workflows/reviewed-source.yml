@@ -1,0 +1,168 @@
+name: Reviewed source qualification
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: relay-reviewed-source-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  reviewed-source-quality:
+    name: reviewed-source-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      NODE_ENV: test
+      RELAY_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      RELAY_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/relay_ci
+      RELAY_SESSION_SECRET: ci-session-secret-not-for-production
+      RELAY_ENCRYPTION_KEY: ci-encryption-key-not-for-production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Verify and record the exact reviewed source
+        env:
+          REVIEWED_SOURCE_EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+          const git = (...args) => execFileSync('/usr/bin/git', args, { encoding: 'utf8' }).trim();
+          const expected = process.env.REVIEWED_SOURCE_EXPECTED_SHA;
+          assert.match(expected ?? '', /^[a-f0-9]{40}$/);
+          const executedWorkflowSha = process.env.GITHUB_WORKFLOW_SHA;
+          assert.match(executedWorkflowSha ?? '', /^[a-f0-9]{40}$/);
+          const sourceHead = git('rev-parse', 'HEAD');
+          assert.equal(sourceHead, expected, 'Checkout must equal the exact PR head');
+          const sourceTree = git('rev-parse', 'HEAD^{tree}');
+          assert.match(sourceTree, /^[a-f0-9]{40}$/);
+          const checkedOutWorkflowSha256 = createHash('sha256').update(readFileSync('.github/workflows/reviewed-source.yml')).digest('hex');
+          mkdirSync('output/qualification', { recursive: true });
+          writeFileSync('output/qualification/reviewed-source.json', JSON.stringify({
+            schema: 'relay.reviewed-source-checkout/v1', sourceHead, sourceTree, expected,
+            checkedOutWorkflowSha256, executedWorkflowSha, repository: process.env.GITHUB_REPOSITORY, repositoryId: process.env.GITHUB_REPOSITORY_ID,
+            eventName: process.env.GITHUB_EVENT_NAME, runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            job: process.env.GITHUB_JOB, workflowRef: process.env.GITHUB_WORKFLOW_REF,
+            scope: 'SOURCE_CHECKOUT_ONLY', deploymentOrLiveAuthority: false,
+          }, null, 2) + '\n');
+          NODE
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm audit
+      - run: pnpm v2:frontier:check
+      - run: pnpm db:check
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test:ci
+      - run: pnpm test:performance
+      - run: pnpm build
+      - name: Verify tracked source remains unchanged
+        run: git diff --exit-code HEAD
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reviewed-source-quality-checkout
+          path: output/qualification/reviewed-source.json
+          if-no-files-found: error
+          retention-days: 7
+  reviewed-source-owner-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      RELAY_OWNER_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/relay_e2e_owner_experience
+      # Committed screenshots are macOS Chromium baselines. Linux runs all
+      # journeys, viewport/overflow checks and axe checks without comparing fonts.
+      RELAY_OWNER_SKIP_VISUAL: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Verify and record the exact reviewed source
+        env:
+          REVIEWED_SOURCE_EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+          const git = (...args) => execFileSync('/usr/bin/git', args, { encoding: 'utf8' }).trim();
+          const expected = process.env.REVIEWED_SOURCE_EXPECTED_SHA;
+          assert.match(expected ?? '', /^[a-f0-9]{40}$/);
+          const executedWorkflowSha = process.env.GITHUB_WORKFLOW_SHA;
+          assert.match(executedWorkflowSha ?? '', /^[a-f0-9]{40}$/);
+          const sourceHead = git('rev-parse', 'HEAD');
+          assert.equal(sourceHead, expected, 'Checkout must equal the exact PR head');
+          const sourceTree = git('rev-parse', 'HEAD^{tree}');
+          assert.match(sourceTree, /^[a-f0-9]{40}$/);
+          const checkedOutWorkflowSha256 = createHash('sha256').update(readFileSync('.github/workflows/reviewed-source.yml')).digest('hex');
+          mkdirSync('output/qualification', { recursive: true });
+          writeFileSync('output/qualification/reviewed-source.json', JSON.stringify({
+            schema: 'relay.reviewed-source-checkout/v1', sourceHead, sourceTree, expected,
+            checkedOutWorkflowSha256, executedWorkflowSha, repository: process.env.GITHUB_REPOSITORY, repositoryId: process.env.GITHUB_REPOSITORY_ID,
+            eventName: process.env.GITHUB_EVENT_NAME, runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            job: process.env.GITHUB_JOB, workflowRef: process.env.GITHUB_WORKFLOW_REF,
+            scope: 'SOURCE_CHECKOUT_ONLY', deploymentOrLiveAuthority: false,
+          }, null, 2) + '\n');
+          NODE
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test --config=playwright.owner.config.ts
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: reviewed-source-owner-browser-failure-evidence
+          path: test-results/
+      - name: Verify tracked source remains unchanged
+        run: git diff --exit-code HEAD
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reviewed-source-owner-browser-checkout
+          path: output/qualification/reviewed-source.json
+          if-no-files-found: error
+          retention-days: 7

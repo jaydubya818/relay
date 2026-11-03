@@ -79,6 +79,60 @@ describe("Relay V2 REST, MCP, and runtime interoperability", () => {
     await expect(authenticateDeveloperClient({ accountId: fixture.accountId, credential: "oauth-token", expectedResource: "https://relay.example/api/v2/mcp", oauthVerifier: verifier })).rejects.toMatchObject({ status: 401 });
   });
 
+  it("denies a different live task before consuming authority or creating commands", async () => {
+    const fixture = await setup();
+    const event = await ingestVerifiedEvent({ envelope: { specversion: "1.0", id: "other-task",
+      source: "https://runtime.example/events", type: "runtime.task", time: new Date().toISOString(),
+      accountid: fixture.accountId, classification: "internal", correlationid: "other-task", dedupekey: "other-task",
+      schemaversion: "relay.event.v2", signaturestatus: "unverified", data: {} }, rawBody: new Uint8Array(), headers: {} },
+    { verify: async () => ({ valid: true }) }, fixture.signer);
+    expect(event.taskIds[0]).toBeTruthy();
+    expect(event.taskIds[0]).not.toBe(fixture.taskId);
+    const beforeOutbox = await db().select().from(controlOutbox);
+    await expect(submitDurableRuntimeAction({ ...submission(fixture, "other-live-task"),
+      action: { ...fixture.action, taskId: event.taskIds[0]! } }, fixture.signer, fixture.resolver))
+      .rejects.toMatchObject({ status: 403 });
+    expect(await db().select().from(taskCommands).where(eq(taskCommands.kind, "EXECUTE_ACTION"))).toHaveLength(0);
+    expect(await db().select().from(controlOutbox)).toEqual(beforeOutbox);
+    const [lease] = await db().select().from(capabilityLeases).where(eq(capabilityLeases.id, fixture.lease.leaseId));
+    expect(lease?.callCount).toBe(0);
+    await expect(submitDurableRuntimeAction(submission(fixture, "valid-after-denial"), fixture.signer, fixture.resolver))
+      .resolves.toMatchObject({ taskId: fixture.taskId, idempotentReplay: false });
+  });
+
+  it("binds replay to every immutable intent field, workload and audience", async () => {
+    const fixture = await setup();
+    const request = submission(fixture, "identity-replay");
+    const first = await submitDurableRuntimeAction(request, fixture.signer, fixture.resolver);
+    for (const changes of [
+      { agentId: "agt_other000" }, { taskId: "tsk_other000" }, { id: "act_other000" },
+      { idempotencyKey: "different-action-key" }, { createdAt: "2026-10-20T00:00:00.000Z" },
+    ]) {
+      await expect(submitDurableRuntimeAction({ ...request, action: { ...fixture.action, ...changes } },
+        fixture.signer, fixture.resolver)).rejects.toMatchObject({ status: 409 });
+    }
+    for (const changes of [{ workloadId: "wkl_other000" }, { expectedAudience: "other-api" }]) {
+      await expect(submitDurableRuntimeAction({ ...request, ...changes }, fixture.signer, fixture.resolver))
+        .rejects.toMatchObject({ status: 409 });
+    }
+    for (const changes of [{ accountId: "acct_other000" }, { runtimeClientId: "rtc_other000" }, { workloadId: "wkl_other000" }]) {
+      await expect(submitDurableRuntimeAction({ ...request, action: { ...fixture.action, ...changes } },
+        fixture.signer, fixture.resolver)).rejects.toMatchObject({ status: 403 });
+    }
+    await expect(submitDurableRuntimeAction({ ...request, action: { ...fixture.action, workloadId: request.workloadId } },
+      fixture.signer, fixture.resolver)).resolves.toMatchObject({ commandId: first.commandId, idempotentReplay: true });
+    const [lease] = await db().select().from(capabilityLeases).where(eq(capabilityLeases.id, fixture.lease.leaseId));
+    expect(lease?.callCount).toBe(1);
+    expect(await db().select().from(taskCommands).where(eq(taskCommands.kind, "EXECUTE_ACTION"))).toHaveLength(1);
+    expect(await db().select().from(controlOutbox).where(and(eq(controlOutbox.type, "task.command.ready"), eq(controlOutbox.aggregateId, first.commandId)))).toHaveLength(1);
+    // Historical payloads did not retain enough identity to establish a safe replay.
+    const [command] = await db().select().from(taskCommands).where(eq(taskCommands.id, first.commandId));
+    const legacyPayload = { ...(command!.payload as Record<string, unknown>) };
+    delete legacyPayload.actionIdentityHash;
+    await db().update(taskCommands).set({ payload: legacyPayload }).where(eq(taskCommands.id, first.commandId));
+    await expect(submitDurableRuntimeAction(request, fixture.signer, fixture.resolver)).rejects.toMatchObject({ status: 409 });
+  });
+
   it("supports stateless discovery, legacy negotiation, authenticated listing, and structured MCP results", async () => {
     const fixture = await setup();
     const context = { accountId: fixture.accountId, runtimeCredential: fixture.runtime.secret, expectedResource: "https://relay.example/api/v2/mcp", leaseToken: fixture.lease.token, expectedAudience: "relay-api", workloadId: fixture.workload.workloadId, protocolVersion: MCP_MODERN_VERSION };
