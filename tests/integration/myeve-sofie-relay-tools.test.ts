@@ -5,6 +5,7 @@
  * They do not import MyEve RelayClient, open an HTTPS wire, consume tester
  * chats, or enable V2 paid actions. Live MyEve-to-Relay remains NOT_RUN.
  */
+import { createServer } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as mcpGet, POST as mcpPost } from "@/app/mcp/route";
 import { POST as federationPost } from "@/app/api/v2/federation/route";
@@ -186,6 +187,100 @@ describe("Sofie → Relay MCP tool execution", () => {
     const revoked = await mcpRpc(rotated.secret, "tools/list");
     expect(revoked.status).toBe(401);
     expect(errorData(revoked.rpc)).toMatchObject({ code: "REVOKED_CREDENTIAL" });
+  });
+
+  it("executes separately granted GitHub health reads over /mcp without expanding repo grants", async () => {
+    const sofie = await createAgent(accountId, { name: "Sofie", capabilities: ["github.repo.read"] });
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.endsWith("/user")) return Response.json({ id: 818, login: "relay-sofie" });
+      if (url.includes("/actions/runs?")) return Response.json({ total_count: 0, workflow_runs: [] });
+      throw new Error(`Unexpected URL ${url}`);
+    }));
+    await connectGitHub(accountId, "github_pat_sofie_health_token_long_enough");
+    const denied = await mcpRpc(sofie.credential, "tools/call", {
+      name: "relay_github_run_list",
+      arguments: { owner: "example", repo: "dashboard" },
+    });
+    expect(denied.status).toBe(200);
+    expect(errorData(denied.rpc)).toMatchObject({ code: "CAPABILITY_DENIED", capability: "github.actions.read" });
+
+    await setCapabilityGrant(accountId, sofie.agentId, "github.actions.read", "ALLOW");
+    const advertised = await mcpRpc(sofie.credential, "tools/list");
+    expect((advertised.rpc.result?.tools ?? []).map((tool) => tool.name)).toEqual(expect.arrayContaining([
+      "relay_github_repo_list", "relay_github_run_list", "relay_github_run_get", "relay_github_workflow_list",
+    ]));
+    const runs = resultPayload((await mcpRpc(sofie.credential, "tools/call", {
+      name: "relay_github_run_list",
+      arguments: { owner: "example", repo: "dashboard" },
+    })).rpc);
+    expect(runs).toMatchObject({ items: [], hasMore: false });
+    expect(JSON.stringify(runs)).not.toContain("github_pat_sofie_health_token_long_enough");
+
+    const smuggled = await mcpRpc(sofie.credential, "tools/call", {
+      name: "relay_github_run_list",
+      arguments: { owner: "example", repo: "dashboard", accountId },
+    });
+    expect(errorData(smuggled.rpc)).toMatchObject({ code: "INVALID_INPUT" });
+
+    const peer = await createAgent(await secondAccount(), { name: "Peer", capabilities: ["github.actions.read"] });
+    const peerCall = await mcpRpc(peer.credential, "tools/call", {
+      name: "relay_github_run_list",
+      arguments: { owner: "example", repo: "dashboard" },
+    });
+    expect(errorData(peerCall.rpc)).toMatchObject({ code: "CONNECTION_REQUIRED" });
+  });
+
+  it("executes Sofie memory tools over a local HTTP listener", async () => {
+    const sofie = await createAgent(accountId, { name: "Sofie", capabilities: ["memory.read", "memory.write"] });
+    const server = createServer(async (req, res) => {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(Buffer.from(chunk));
+      const headers = new Headers();
+      for (const [key, value] of Object.entries(req.headers)) {
+        if (typeof value === "string") headers.set(key, value);
+      }
+      const response = await mcpPost(new Request("http://127.0.0.1/mcp", {
+        method: req.method,
+        headers,
+        body: req.method === "POST" ? Buffer.concat(chunks) : undefined,
+      }));
+      res.writeHead(response.status, Object.fromEntries(response.headers));
+      res.end(Buffer.from(await response.arrayBuffer()));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const { port } = server.address() as { port: number };
+      const listed = await fetch(`http://127.0.0.1:${port}/mcp`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${sofie.credential}`, "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      });
+      expect(listed.status).toBe(200);
+      const listedBody = await listed.json() as RpcBody;
+      expect((listedBody.result?.tools ?? []).map((tool) => tool.name).sort()).toEqual([
+        "relay_memory_add", "relay_memory_get", "relay_memory_list", "relay_memory_search",
+      ]);
+      const stored = await fetch(`http://127.0.0.1:${port}/mcp`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${sofie.credential}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 2, method: "tools/call",
+          params: { name: "relay_memory_add", arguments: { content: "HTTP listener memory.", type: "FACT", scope: "SHARED" } },
+        }),
+      });
+      expect(stored.status).toBe(200);
+      const storedBody = await stored.json() as RpcBody;
+      expect(JSON.parse(storedBody.result?.content?.[0]?.text ?? "")).toMatchObject({ content: "HTTP listener memory." });
+      const denied = await fetch(`http://127.0.0.1:${port}/mcp`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "tools/list" }),
+      });
+      expect(denied.status).toBe(401);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 
   it("keeps paid V2 runtime actions closed even if the enable flag is set", async () => {

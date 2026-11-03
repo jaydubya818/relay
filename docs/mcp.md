@@ -68,4 +68,6 @@ JSON-RPC errors include machine-readable `error.data`:
 }
 ```
 
-Other stable codes are `INVALID_CREDENTIAL`, `REVOKED_CREDENTIAL`, `CONNECTION_REQUIRED`, `PROVIDER_ERROR`, `RATE_LIMITED`, `INVALID_INPUT`, and `INTERNAL_ERROR`.
+V1 `/mcp` grant denials and GitHub-disconnect `CONNECTION_REQUIRED` keep that shape. Other stable codes are `INVALID_CREDENTIAL`, `REVOKED_CREDENTIAL`, `CONNECTION_REQUIRED`, `PROVIDER_ERROR`, `RATE_LIMITED`, `INVALID_INPUT`, `CAPABILITY_PENDING`, `CAPABILITY_UNAVAILABLE`, and `INTERNAL_ERROR`.
+
+Capability-control failures on V2 surfaces (`POST /api/v2/runtime/capability-leases`, `POST /api/v2/mcp`) add structured `reason` (the precise thrown `CAPABILITY_*` code) and `retryAfter` (seconds) when a retry is appropriate. Those fields are omitted on V1 grant denials. See [installed lease transport](capability-control/installed-lease-transport.md#failure-mapping).

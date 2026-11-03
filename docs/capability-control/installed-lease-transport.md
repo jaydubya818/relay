@@ -36,6 +36,23 @@ The response is the canonical issuer result, without an additional authority wra
 
 A 200 response is a lease/reference issuance receipt, not a receiving-backend admission or resource-start acknowledgment. The receiving backend must validate both signed policy references and exact owner, installation, Mission/Work, version, freshness, qualification, authority and budget in its existing native admission transaction. It must preserve original admitted Work and UNKNOWN accounting on disable and recover exact durable receipts on retry.
 
+## Failure mapping
+
+Thrown `CAPABILITY_*` reasons on this path are mapped before a lease can commit. The JSON body is `RelayError.toJSON()`: `code`, optional `capability`, structured `reason` (the precise thrown code), optional `retryAfter` in seconds, and `message`. `Retry-After` is also set as a response header when `retryAfter` is present. Unknown `CAPABILITY_*` codes fail closed as `500 INTERNAL_ERROR` with no lease and no `reason`.
+
+| Class | HTTP | `code` | `Retry-After` |
+| --- | --- | --- | --- |
+| Admission, scope, integrity, and peer-ACK denials (`CAPABILITY_ADMISSION_SCOPE`, `OWNER_POLICY_STALE`, `ACK_MISMATCH`, `ACK_SUPERSEDED`, `ACK_TOO_LARGE`, `ENROLLMENT_CHANGED`, `FENCE_REQUIRED`, `FENCE_CONFLICT`, `PROTOCOL_INVALID`, `SIGNATURE_INVALID`, `POLICY_IDENTITY_MISMATCH`, `REFERENCE_EXPIRED`, `LIFECYCLE_*`) | 403 | `CAPABILITY_DENIED` | omitted |
+| `CAPABILITY_PROPAGATION_PENDING` | 409 | `CAPABILITY_PENDING` | 1 |
+| `CAPABILITY_DELIVERY_UNAVAILABLE` | 503 | `CAPABILITY_UNAVAILABLE` | 1 |
+| Unavailable enrollment/installation/endpoint and `CAPABILITY_DESTINATION_LIMIT` | 503 | `CAPABILITY_UNAVAILABLE` | omitted |
+
+`CONNECTION_REQUIRED` remains the GitHub/Google disconnect and missing-binding code. It is not reused for capability-control states.
+
+`POST /api/v2/mcp` runs the same mapper, so a raw `CAPABILITY_*` throw becomes `error.data.code` `CAPABILITY_DENIED` / `CAPABILITY_PENDING` / `CAPABILITY_UNAVAILABLE` instead of `INTERNAL_ERROR`. V1 `/mcp` grant denials stay `{ code: "CAPABILITY_DENIED", capability, message }` on HTTP 200.
+
+Follow-up (not changed here): `POST /api/v2/control/capability-fences` still catch-alls to HTTP 503 `{ code: "CAPABILITY_PROPAGATION_UNAVAILABLE" }` and does not use this mapper.
+
 ## Enrollment and action mapping
 
 No installed enterprise capability definition or runtime is created by this change. The server enrollment must pin the existing canonical definition (`name`, `version`, resource type/schema and input schema), account, agent, runtime, task, workload and audience. `destination.capabilityNames['enterprise.fleet']` must equal that canonical definition's name. The synthetic tests use `resource.lease.execute@1.0` with a `target` resource; this read fixture is not a proposed enterprise execution grant.

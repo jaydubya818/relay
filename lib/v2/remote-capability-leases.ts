@@ -15,7 +15,10 @@ import {evaluatePolicyInTransaction,type PolicyResourceResolver,type PolicyFactR
 import {createApprovalRequestInTransaction} from './approvals';
 import {requireCurrentAgentPassport} from './passports';
 import {requireRemoteAdmissionPolicy} from './policy/ordering';
+import {asCapabilityRelayError} from './policy/capability-failures';
 import {verifyPolicyMessage,policyMessageHash} from './policy/ordering-wire';
+
+export {remoteAdmissionActionMaterial} from './policy/ordering';
 
 export const remoteLeaseRequestSchema=z.object({
  action:actionIntentSchema,workloadId:z.string().regex(/^wkl_/).max(200),workloadIdentityToken:z.string().min(1).max(16384),
@@ -25,6 +28,11 @@ export const remoteLeaseRequestSchema=z.object({
 }).strict();
 type RemoteInput={accountId:string;credential:string;expectedResource:string;request:unknown;oauthVerifier?:DeveloperAccessTokenVerifier};
 type RemoteContext={transaction:RelayDatabase;request:z.infer<typeof remoteLeaseRequestSchema>;current:Awaited<ReturnType<typeof requireRemoteAdmissionPolicy>>;signer:AuditSigner;resolver:LeaseKeyResolver};
+
+function denyCapability(error: unknown): never {
+  throw asCapabilityRelayError(error) ?? error;
+}
+
 async function withRemoteContext<T>(input:RemoteInput,signer:AuditSigner,resolver:LeaseKeyResolver,operation:(context:RemoteContext)=>Promise<T>){
  requireRuntimeActionsEnabled();
  signer=boundedRemoteSigner(signer);resolver=boundedRemoteResolver(resolver);
@@ -41,9 +49,11 @@ async function withRemoteContext<T>(input:RemoteInput,signer:AuditSigner,resolve
   const [runtime]=await transaction.select({id:runtimeClients.id}).from(runtimeClients).where(and(eq(runtimeClients.accountId,input.accountId),eq(runtimeClients.id,client.runtimeClientId),isNull(runtimeClients.revokedAt),sql`${runtimeClients.verificationStatus} <> 'REVOKED'`)).limit(1);
   if(!runtime)throw new RelayError('CAPABILITY_DENIED','Runtime authority was revoked.',undefined,403);
   await requireCurrentAgentPassport(input.accountId,request.action.agentId,signer,transaction);
-  const current=await requireRemoteAdmissionPolicy(transaction,{accountId:input.accountId,action:request.action,source:request.remoteAdmission});
-  await validateWorkloadForPreparation(transaction,{accountId:input.accountId,...request},resolver);
-  return operation({transaction,request,current,signer,resolver});
+  try {
+    const current=await requireRemoteAdmissionPolicy(transaction,{accountId:input.accountId,action:request.action,source:request.remoteAdmission});
+    await validateWorkloadForPreparation(transaction,{accountId:input.accountId,...request},resolver);
+    return operation({transaction,request,current,signer,resolver});
+  } catch (error) { denyCapability(error); }
  });
 }
 

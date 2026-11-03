@@ -15,9 +15,12 @@ import { createApprovalRequest, decideApproval } from '@/lib/v2/approvals';
 import { createBudget, reserveBudget } from '@/lib/v2/budgets';
 import { configureV2PlatformBindings } from '@/lib/v2/platform-bindings';
 import { advanceRelayPolicyFence, flushRelayPolicyFences, forwardOwnerPolicyFence, flushOwnerPolicyFences } from '@/lib/v2/policy/ordering';
-import { signPolicyMessage, verifyPolicyMessage, policyMessageHash, type PolicyKey } from '@/lib/v2/policy/ordering-wire';
+import { signPolicyMessage, verifyPolicyMessage, policyMessageHash, admissionActionDigest, type PolicyKey } from '@/lib/v2/policy/ordering-wire';
+import { remoteAdmissionActionMaterial } from '@/lib/v2/remote-capability-leases';
 import { POST } from '@/app/api/v2/runtime/capability-leases/route';
 import { POST as PREPARE } from '@/app/api/v2/runtime/capability-leases/prepare/route';
+import { errorResponse } from '@/lib/api';
+import { CAPABILITY_FAILURE_CODES } from '@/lib/v2/policy/capability-failures';
 import { cleanupDatabase, freshDatabase, secondAccount } from '../helpers';
 
 function proposedAction(accountId: string, agentId: string, runtimeClientId: string, capabilityName: string, target = "target-1"): ActionIntent {
@@ -87,16 +90,17 @@ async function remoteFixture(options: { approval?: boolean; metered?: boolean; s
   await withTransaction(async tx => { await lockActiveAccount(tx, f.accountId); await advanceRelayPolicyFence(tx, f.accountId); });
   await flushRelayPolicyFences(f.accountId);
   const issuedAt = Date.now();
-  const permit = { ...identity, kind: 'PERMIT' as const, authority: 'myeve' as const, version: 1, policyId: 'owner-policy-1', referenceId: crypto.randomUUID(), capabilityId: 'enterprise.fleet', requiredCapabilities: ['work', 'missioncontrol', 'enterprise.fleet'], registryVersion: 'qualification', agentId: f.agentId, agentRevision: 1, workId: 'work-1', missionId: 'mission-1', workGeneration: 1, actionDigest: 'a'.repeat(64), budgetMicros: 0, issuedAt, expiresAt: issuedAt + 30000, sourcePermitHash: 'SELF' };
+  const actionDigest = await admissionActionDigest(remoteAdmissionActionMaterial(f.action));
+  const permit = { ...identity, kind: 'PERMIT' as const, authority: 'myeve' as const, version: 1, policyId: 'owner-policy-1', referenceId: crypto.randomUUID(), capabilityId: 'enterprise.fleet', requiredCapabilities: ['work', 'missioncontrol', 'enterprise.fleet'], registryVersion: 'qualification', agentId: f.agentId, agentRevision: 1, workId: 'work-1', missionId: 'mission-1', workGeneration: 1, actionDigest, budgetMicros: 0, issuedAt, expiresAt: issuedAt + 30000, sourcePermitHash: 'SELF' };
   const remoteAdmission = await signPolicyMessage(permit, source);
-  f.action.parameters = { capabilityAdmissionDigest: await policyMessageHash(permit) };
+  f.action.parameters = { ...f.action.parameters, capabilityAdmissionDigest: await policyMessageHash(permit) };
   f.action.canonicalHash = canonicalHash({ capability: f.action.capability, resource: f.action.resource, parameters: f.action.parameters });
   const policy = options.skipRemoteEvaluation ? f.policy : await evaluatePolicy({ accountId: f.accountId, action: f.action, resourceResolver: { resolveOwnership: async () => ({ name: 'resource.account_id', value: f.accountId, authoritative: true, observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'fixture:1' }) } }, f.signer);
   const request = { action: f.action, workloadId: f.workload.workloadId, workloadIdentityToken: f.workload.token, audience: 'relay-pep', maxCalls: 1 as const, remoteAdmission, approvalRequestId: undefined as string | undefined, budgetReservationId: undefined as string | undefined };
   configureV2PlatformBindings({ signer: f.signer, keyResolver: f.resolver });
   const send = (body: unknown = request, accountId = f.accountId, credential = f.runtimeSecret) => POST(new Request('http://127.0.0.1/api/v2/runtime/capability-leases', { method: 'POST', headers: { authorization: `Bearer ${credential}`, 'x-relay-account-id': accountId, 'content-type': 'application/json' }, body: JSON.stringify(body) }));
   const prepare = (body: unknown = request) => PREPARE(new Request('http://127.0.0.1/api/v2/runtime/capability-leases/prepare', { method: 'POST', headers: { authorization: `Bearer ${f.runtimeSecret}`, 'x-relay-account-id': f.accountId, 'content-type': 'application/json' }, body: JSON.stringify(body) }));
-  return { ...f, policy, identity, permit, source, relay, transport, request, send, prepare };
+  return { ...f, policy, identity, permit, source, relay, destination, transport, request, send, prepare };
 }
 
 it('authenticates one canonical positive lease and recovers identical concurrent/lost-response retries without spending a call', async () => {
@@ -122,6 +126,152 @@ it('authenticates one canonical positive lease and recovers identical concurrent
   expect((await f.send({ ...f.request, ttlSeconds: 29 })).status).toBe(409);
   await authorizeLeaseCall({ token: results[0].token, expectedAccountId: f.accountId, expectedAudience: f.request.audience, expectedWorkloadId: f.workload.workloadId, action: f.action, callId: 'actual-relay-call', online: true }, f.resolver, f.signer);
   expect((await f.send()).status).toBe(403);
+});
+
+it('rejects a signed permit that maps money or binds a different action', async () => {
+  const f = await remoteFixture();
+  async function sendPatched(patch: { budgetMicros?: number; actionDigest?: string }) {
+    const permit = { ...f.permit, ...patch };
+    const remoteAdmission = await signPolicyMessage(permit, f.source);
+    const action = {
+      ...f.action,
+      id: `act_${crypto.randomUUID().replaceAll('-', '')}`,
+      parameters: { capabilityAdmissionDigest: await policyMessageHash(permit) },
+    };
+    action.canonicalHash = canonicalHash({ capability: action.capability, resource: action.resource, parameters: action.parameters });
+    await evaluatePolicy({
+      accountId: f.accountId, action, resourceResolver: {
+        resolveOwnership: async () => ({
+          name: 'resource.account_id', value: f.accountId, authoritative: true,
+          observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'fixture:1',
+        }),
+      },
+    }, f.signer);
+    return f.send({ ...f.request, action, remoteAdmission });
+  }
+  const monetary = await sendPatched({ budgetMicros: 1 });
+  expect(monetary.status).toBe(403);
+  expect(await monetary.json()).toMatchObject({ code: 'CAPABILITY_DENIED', reason: 'CAPABILITY_ADMISSION_SCOPE', message: 'CAPABILITY_ADMISSION_SCOPE' });
+  const mismatched = await sendPatched({ actionDigest: 'b'.repeat(64) });
+  expect(mismatched.status).toBe(403);
+  expect(await mismatched.json()).toMatchObject({ code: 'CAPABILITY_DENIED', reason: 'CAPABILITY_ADMISSION_SCOPE', message: 'CAPABILITY_ADMISSION_SCOPE' });
+  expect(await db().select().from(capabilityLeases)).toHaveLength(0);
+  expect((await f.send()).status).toBe(200);
+});
+
+it('rejects a signed permit after the resource or a parameter changes', async () => {
+  const f = await remoteFixture();
+  async function sendMutated(mutate: (action: ActionIntent) => void) {
+    const action: ActionIntent = {
+      ...f.action,
+      resource: { ...f.action.resource, ids: [...(f.action.resource.ids ?? [])], attributes: { ...f.action.resource.attributes } },
+      parameters: { ...f.action.parameters },
+    };
+    mutate(action);
+    action.canonicalHash = canonicalHash({ capability: action.capability, resource: action.resource, parameters: action.parameters });
+    await evaluatePolicy({
+      accountId: f.accountId, action, resourceResolver: {
+        resolveOwnership: async () => ({
+          name: 'resource.account_id', value: f.accountId, authoritative: true,
+          observedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString(), sourceRevision: 'fixture:1',
+        }),
+      },
+    }, f.signer);
+    return f.send({ ...f.request, action });
+  }
+  const resourceChanged = await sendMutated(action => { action.resource = { ...action.resource, ids: ['target-other'] }; });
+  expect(resourceChanged.status).toBe(403);
+  expect(await resourceChanged.json()).toMatchObject({ code: 'CAPABILITY_DENIED', reason: 'CAPABILITY_ADMISSION_SCOPE', message: 'CAPABILITY_ADMISSION_SCOPE' });
+  const parameterChanged = await sendMutated(action => { action.parameters = { ...action.parameters, operation: 'write' }; });
+  expect(parameterChanged.status).toBe(403);
+  expect(await parameterChanged.json()).toMatchObject({ code: 'CAPABILITY_DENIED', reason: 'CAPABILITY_ADMISSION_SCOPE', message: 'CAPABILITY_ADMISSION_SCOPE' });
+  expect(await db().select().from(capabilityLeases)).toHaveLength(0);
+});
+
+const CAPABILITY_FAILURE_HTTP = [
+  { reason: 'CAPABILITY_ACK_MISMATCH', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_ACK_SUPERSEDED', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_ACK_TOO_LARGE', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_ADMISSION_SCOPE', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_DELIVERY_UNAVAILABLE', status: 503, code: 'CAPABILITY_UNAVAILABLE', retryAfter: 1 },
+  { reason: 'CAPABILITY_DESTINATION_LIMIT', status: 503, code: 'CAPABILITY_UNAVAILABLE', retryAfter: null },
+  { reason: 'CAPABILITY_ENROLLMENT_CHANGED', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_ENROLLMENT_UNAVAILABLE', status: 503, code: 'CAPABILITY_UNAVAILABLE', retryAfter: null },
+  { reason: 'CAPABILITY_ENDPOINT_UNQUALIFIED', status: 503, code: 'CAPABILITY_UNAVAILABLE', retryAfter: null },
+  { reason: 'CAPABILITY_FENCE_CONFLICT', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_FENCE_REQUIRED', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_INSTALLATION_UNQUALIFIED', status: 503, code: 'CAPABILITY_UNAVAILABLE', retryAfter: null },
+  { reason: 'CAPABILITY_LIFECYCLE_FUTURE', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_LIFECYCLE_INVALID', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_LIFECYCLE_SIGNATURE', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_OWNER_POLICY_STALE', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_POLICY_IDENTITY_MISMATCH', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_PROPAGATION_PENDING', status: 409, code: 'CAPABILITY_PENDING', retryAfter: 1 },
+  { reason: 'CAPABILITY_PROTOCOL_INVALID', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_REFERENCE_EXPIRED', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_SIGNATURE_INVALID', status: 403, code: 'CAPABILITY_DENIED', retryAfter: null },
+  { reason: 'CAPABILITY_NOT_A_REAL_CODE', status: 500, code: 'INTERNAL_ERROR', retryAfter: null, message: 'Relay could not complete the request.' },
+] as const;
+
+function capabilityFailureBody(row: (typeof CAPABILITY_FAILURE_HTTP)[number]) {
+  if ('message' in row) return { code: row.code, message: row.message };
+  return {
+    code: row.code,
+    reason: row.reason,
+    ...(row.retryAfter === null ? {} : { retryAfter: row.retryAfter }),
+    message: row.reason,
+  };
+}
+
+it('maps every CAPABILITY_* code to a precise status and body with no lease', async () => {
+  expect(CAPABILITY_FAILURE_HTTP.map(row => row.reason).sort()).toEqual(
+    [...CAPABILITY_FAILURE_CODES, 'CAPABILITY_NOT_A_REAL_CODE'].sort(),
+  );
+  const f = await remoteFixture();
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    for (const row of CAPABILITY_FAILURE_HTTP) {
+      const response = errorResponse(new Error(row.reason));
+      expect(response.status, row.reason).toBe(row.status);
+      expect(await response.json(), row.reason).toEqual(capabilityFailureBody(row));
+      expect(response.headers.get('retry-after'), row.reason).toBe(row.retryAfter === null ? null : String(row.retryAfter));
+    }
+  } finally { errors.mockRestore(); }
+
+  const [epoch] = await db().select().from(controlOutbox).where(eq(controlOutbox.aggregateType, 'capability_epoch'));
+  const payload = epoch.payload as { pending: string[] };
+  await db().update(controlOutbox).set({ payload: { ...payload, pending: ['pending-dest'] } }).where(eq(controlOutbox.id, epoch.id));
+  const pending = await f.send();
+  expect(pending.status).toBe(409);
+  expect(pending.headers.get('retry-after')).toBe('1');
+  expect(await pending.json()).toEqual({
+    code: 'CAPABILITY_PENDING', reason: 'CAPABILITY_PROPAGATION_PENDING', retryAfter: 1, message: 'CAPABILITY_PROPAGATION_PENDING',
+  });
+  await db().update(controlOutbox).set({ payload: { ...payload, pending: [] } }).where(eq(controlOutbox.id, epoch.id));
+
+  vi.stubEnv('RELAY_CAPABILITY_COORDINATION_JSON', JSON.stringify({ signer: f.relay, destinations: [] }));
+  const enrollment = await f.send();
+  expect(enrollment.status).toBe(503);
+  expect(enrollment.headers.get('retry-after')).toBeNull();
+  expect(await enrollment.json()).toEqual({
+    code: 'CAPABILITY_UNAVAILABLE', reason: 'CAPABILITY_ENROLLMENT_UNAVAILABLE', message: 'CAPABILITY_ENROLLMENT_UNAVAILABLE',
+  });
+
+  vi.stubEnv('VERCEL', '1');
+  const unqualified = await f.send();
+  expect(unqualified.status).toBe(503);
+  expect(await unqualified.json()).toEqual({
+    code: 'CAPABILITY_UNAVAILABLE', reason: 'CAPABILITY_INSTALLATION_UNQUALIFIED', message: 'CAPABILITY_INSTALLATION_UNQUALIFIED',
+  });
+  delete process.env.VERCEL;
+  vi.stubEnv('RELAY_CAPABILITY_COORDINATION_JSON', JSON.stringify({ signer: f.relay, destinations: [f.destination] }));
+
+  const forged = await f.send({ ...f.request, remoteAdmission: { ...f.request.remoteAdmission, signature: 'a'.repeat(88) } });
+  expect(forged.status).toBe(403);
+  expect(await forged.json()).toEqual({
+    code: 'CAPABILITY_DENIED', reason: 'CAPABILITY_SIGNATURE_INVALID', message: 'CAPABILITY_SIGNATURE_INVALID',
+  });
+  expect(await db().select().from(capabilityLeases)).toHaveLength(0);
 });
 
 it('fails closed on disabled transport, wrong runtime/account, foreign identity, or changed Work proof', async () => {
