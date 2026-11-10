@@ -7,7 +7,7 @@ import { createApprovalRequest, decideApproval } from "@/lib/v2/approvals";
 import { createBudget, releaseBudgetReservation, reserveBudget } from "@/lib/v2/budgets";
 import { canonicalHash, type ActionIntent } from "@/lib/v2/contracts";
 import { createLocalEd25519Signer } from "@/lib/v2/evidence";
-import { authorizeLeaseCall, createWorkloadBootstrap, emergencyRevokeAgent, exchangeWorkloadBootstrap, introspectLease, issueCapabilityLease, revokeLease } from "@/lib/v2/leases";
+import { WORKLOAD_AGENT_ID, authorizeLeaseCall, createWorkloadBootstrap, emergencyRevokeAgent, exchangeWorkloadBootstrap, introspectLease, issueCapabilityLease, revokeLease } from "@/lib/v2/leases";
 import { createV2Agent, issueAgentPassport, exportAgentPassport, revokeAgentPassport } from "@/lib/v2/passports";
 import { evaluatePolicy, publishRelaySafetyPolicy, registerCapabilityDefinition, type PolicyRule } from "@/lib/v2/policy";
 import { registerRuntimeClient } from "@/lib/v2/runtime-clients";
@@ -89,6 +89,29 @@ describe("Relay V2 capability leases and workload identity", () => {
     const changed = { ...f.action, parameters: { token: 'changed' } };
     changed.canonicalHash = canonicalHash({ capability: changed.capability, resource: changed.resource, parameters: changed.parameters });
     await expect(issueCapabilityLease({ ...request, action: changed }, f.signer, f.resolver)).rejects.toThrow('Action or Passport changed');
+  });
+
+  it("accepts Relay agt_ ids and MyEve agent_<uuid> ids for workload identity, nothing else", () => {
+    for (const ok of ["agt_6b8143f3ef7746c6b5ea5f256007e3be", "agt_12345678", "agent_e0954312-6a71-4727-a915-f1484a0b8736"]) expect(WORKLOAD_AGENT_ID.test(ok)).toBe(true);
+    for (const bad of ["agent_E0954312-6A71-4727-A915-F1484A0B8736", "agent_e0954312", "agent_e0954312-6a71-4727-a915-f1484a0b8736x", "agt_", "agt_1234567", "agt_a-b", "usr_123", " agt_abc", "agent_e0954312-6a71-4727-a915-f1484a0b8736\n"])
+      expect(WORKLOAD_AGENT_ID.test(bad)).toBe(false);
+  });
+
+  it("issues a workload identity and a lease for a MyEve agent_<uuid> Agent id", async () => {
+    const fixture = await setup();
+    const { agents } = await import("@/lib/db/schema");
+    const myeveAgentId = "agent_e0954312-6a71-4727-a915-f1484a0b8736";
+    const [row] = await db().select().from(agents).where(eq(agents.id, fixture.agentId));
+    await db().insert(agents).values({ ...row!, id: myeveAgentId });
+    await issueAgentPassport({ accountId: fixture.accountId, agentId: myeveAgentId, ownerPrincipalId: fixture.principalId, policy: { trustTier: "HIGH_ASSURANCE", capabilityEligibility: [{ name: fixture.capabilityName, version: "1.0" }], policyReferences: ["lease-safety"], budgetReferences: [], allowedEnvironments: { providerIds: ["relay-managed"], minimumAssurance: "managed-equivalent" }, dataAccess: [], expiresAt: new Date(Date.now() + 86_400_000).toISOString() } }, fixture.signer);
+    const pair = generateKeyPairSync("ed25519");
+    const bootstrap = await createWorkloadBootstrap({ accountId: fixture.accountId, agentId: myeveAgentId, runtimeClientId: fixture.runtimeClientId, taskId: fixture.action.taskId, providerId: "relay-managed", assurance: "managed-equivalent", audience: "relay-pep", publicKeyPem: pair.publicKey.export({ type: "spki", format: "pem" }).toString() }, fixture.signer);
+    const workload = await exchangeWorkloadBootstrap({ accountId: fixture.accountId, secret: bootstrap.secret, proofSignature: sign(null, Buffer.from(bootstrap.challenge), pair.privateKey).toString("base64url") }, fixture.signer);
+    expect(workload.workloadId).toMatch(/^wkl_/);
+    const action = proposedAction(fixture.accountId, myeveAgentId, fixture.runtimeClientId, fixture.capabilityName);
+    await evaluatePolicy({ accountId: fixture.accountId, action, resourceResolver: { resolveOwnership: async () => ({ name: "resource.account_id", value: fixture.accountId, authoritative: true, observedAt: new Date(Date.now() - 100).toISOString(), expiresAt: new Date(Date.now() + 60_000).toISOString(), sourceRevision: "target:1" }) } }, fixture.signer);
+    const lease = await issueCapabilityLease({ accountId: fixture.accountId, action, workloadId: workload.workloadId, workloadIdentityToken: workload.token, audience: "relay-pep", maxCalls: 1 }, fixture.signer, fixture.resolver);
+    expect(await introspectLease(fixture.accountId, lease.leaseId)).toMatchObject({ active: true });
   });
 
   it("uses one-time proof-of-possession workload bootstrap with tenant binding", async () => {

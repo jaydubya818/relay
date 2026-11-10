@@ -19,7 +19,9 @@ import { verifyAuditSignature, type AuditSigner } from "@/lib/v2/evidence/crypto
 type Assurance = "registered" | "attested" | "managed-equivalent";
 const ASSURANCE_RANK: Record<Assurance, number> = { registered: 0, attested: 1, "managed-equivalent": 2 };
 
-const workloadClaimsSchema = z.object({ iss: z.string().url(), sub: z.string().regex(/^wkl_/), aud: z.string().min(1), accountId: z.string().regex(/^acct_/), agentId: z.string().regex(/^agt_/), runtimeClientId: z.string().regex(/^rtc_/), taskId: z.string().regex(/^tsk_/), providerId: z.string().min(1), assurance: z.enum(["registered", "attested", "managed-equivalent"]), publicKeyThumbprint: z.string().regex(/^sha256:/), iat: z.number().int(), exp: z.number().int() }).strict();
+export { RELAY_AGENT_ID as WORKLOAD_AGENT_ID } from "./contracts/schemas";
+import { RELAY_AGENT_ID as WORKLOAD_AGENT_ID } from "./contracts/schemas";
+const workloadClaimsSchema = z.object({ iss: z.string().url(), sub: z.string().regex(/^wkl_/), aud: z.string().min(1), accountId: z.string().regex(/^acct_/), agentId: z.string().regex(WORKLOAD_AGENT_ID), runtimeClientId: z.string().regex(/^rtc_/), taskId: z.string().regex(/^tsk_/), providerId: z.string().min(1), assurance: z.enum(["registered", "attested", "managed-equivalent"]), publicKeyThumbprint: z.string().regex(/^sha256:/), iat: z.number().int(), exp: z.number().int() }).strict();
 function issuer() {
   const configured = process.env.RELAY_ISSUER_URL;
   if (configured) return new URL(configured).toString().replace(/\/$/, "");

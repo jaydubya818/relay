@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// Relay Agent ids are minted as agt_*. A MyEve-owned Agent may also be enrolled under its own canonical id (agent_<uuid>), so ONE id spans
+// MyEve's source permit, this Relay's permit and the Factory enrollment (Mac-local qualification Relay). Nothing else is accepted.
+export const RELAY_AGENT_ID = /^(agt_[a-zA-Z0-9]{8,}|agent_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+export const relayAgentId = () => z.string().regex(RELAY_AGENT_ID);
 export const relayId = (prefix: string) => z.string().regex(new RegExp(`^${prefix}_[a-zA-Z0-9]{8,}$`));
 export const isoTimestamp = z.string().datetime({ offset: true });
 
@@ -20,7 +24,7 @@ export const resourceConstraintSchema = z.object({
 
 export const actionIntentSchema = z.object({
   schemaVersion: z.literal("relay.action-intent.v2"),
-  id: relayId("act"), accountId: relayId("acct"), agentId: relayId("agt"), runtimeClientId: relayId("rtc"),
+  id: relayId("act"), accountId: relayId("acct"), agentId: relayAgentId(), runtimeClientId: relayId("rtc"),
   workloadId: relayId("wkl").optional(), taskId: relayId("tsk"), capability: capabilityReferenceSchema,
   resource: resourceConstraintSchema, parameters: z.record(z.string(), z.unknown()), idempotencyKey: z.string().min(8).max(255),
   createdAt: isoTimestamp, canonicalHash: z.string().regex(/^sha256:[a-f0-9]{64}$/),
@@ -37,7 +41,7 @@ export const relayEventSchema = z.object({
 }).strict();
 
 export const capabilityLeaseClaimsSchema = z.object({
-  iss: z.string().url(), sub: relayId("agt"), aud: z.string().min(1).max(255), jti: relayId("lse"),
+  iss: z.string().url(), sub: relayAgentId(), aud: z.string().min(1).max(255), jti: relayId("lse"),
   iat: z.number().int().nonnegative(), nbf: z.number().int().nonnegative(), exp: z.number().int().positive(),
   accountId: relayId("acct"), taskId: relayId("tsk"), runtimeClientId: relayId("rtc"), workloadId: relayId("wkl"),
   capability: capabilityReferenceSchema, resource: resourceConstraintSchema,
@@ -61,7 +65,7 @@ export const approvalScopeSchema = z.discriminatedUnion("kind", [
 
 export const agentPassportObjectSchema = z.object({
   schemaVersion: z.literal("relay.agent-passport.v1"), issuer: z.string().url(), passportId: relayId("psp"),
-  agentId: relayId("agt"), owner: z.object({ accountId: relayId("acct"), principalId: relayId("prn") }).strict(),
+  agentId: relayAgentId(), owner: z.object({ accountId: relayId("acct"), principalId: relayId("prn") }).strict(),
   version: z.number().int().positive(), trustTier: z.enum(["UNVERIFIED", "REGISTERED", "VERIFIED", "HIGH_ASSURANCE"]),
   capabilityEligibility: z.array(capabilityReferenceSchema).max(1_000), policyReferences: z.array(z.string().min(1).max(255)).max(100),
   budgetReferences: z.array(z.string().min(1).max(255)).max(100),
