@@ -15,3 +15,6 @@ data/*.db-*
 .relay-e2e.db*
 .vercel
 .env*.local
+
+# Added by daily-repo-improvement (2026-11-19)
+.DS_Store
